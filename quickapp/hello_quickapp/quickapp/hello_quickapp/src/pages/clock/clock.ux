@@ -1,0 +1,1005 @@
+<import name="sportface" src="../../components/watchfaces/sport.ux"></import>
+<import name="simpleface" src="../../components/watchfaces/simple.ux"></import>
+<import name="dashboardface" src="../../components/watchfaces/dashboard.ux"></import>
+<import name="sportcircle" src="../../components/watchfaces/sport_circle.ux"></import>
+<import name="simplecircle" src="../../components/watchfaces/simple_circle.ux"></import>
+<import name="dashboardcircle" src="../../components/watchfaces/dashboard_circle.ux"></import>
+<import name="mechanicalcircle" src="../../components/watchfaces/mechanical_circle.ux"></import>
+<import name="alpineface" src="../../components/watchfaces/alpine.ux"></import>
+
+<template>
+  <div class="clock-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px; margin-top: {{ pageOffsetY }}px;" @swipe="handleSwipe" @longpress="handleLongPress" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+    <div class="face-shell {{ isRect ? 'rect-face-shell' : '' }}" if="{{ profileReady }}" style="background-color: {{ faceBackground }};">
+      <div class="pill-face-stage" if="{{ isPill }}">
+        <sportface
+          if="{{ faceIndex === 0 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-minutes="{{ displayMinutes }}"
+          display-hours="{{ displayHours }}"
+          face-accent="{{ faceAccent }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-width="{{ batteryWidth }}"
+          battery-color="{{ batteryColor }}"
+          heart-rate-data="{{ heartRateData }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          steps-text="{{ stepsText }}"
+          steps-goal-text="{{ stepsGoalText }}">
+        </sportface>
+        <simpleface
+          if="{{ faceIndex === 1 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-week="{{ displayWeek }}"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-hours="{{ displayHours }}"
+          display-minutes="{{ displayMinutes }}"
+          face-accent="{{ faceAccent }}"
+          goal-percent="{{ goalPercent }}"
+          steps-text="{{ stepsText }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-color="{{ batteryColor }}">
+        </simpleface>
+        <dashboardface
+          if="{{ faceIndex === 2 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-week="{{ displayWeek }}"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-hours="{{ displayHours }}"
+          display-minutes="{{ displayMinutes }}"
+          face-accent="{{ faceAccent }}"
+          steps-text="{{ stepsText }}"
+          steps-goal-text="{{ stepsGoalText }}"
+          steps-progress-width="{{ stepsProgressWidth }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          heart-rate-data="{{ heartRateData }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-width="{{ batteryWidth }}"
+          battery-color="{{ batteryColor }}">
+        </dashboardface>
+        <alpineface
+          if="{{ faceIndex === 3 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-week="{{ displayWeek }}"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-hours="{{ displayHours }}"
+          display-minutes="{{ displayMinutes }}"
+          steps-text="{{ stepsText }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-width="{{ batteryWidth }}"
+          battery-color="{{ batteryColor }}"
+          panel-glass-top="{{ alpineDataGlassTop }}"
+          panel-row-top="{{ alpineDataRowTop }}"
+          battery-row-top="{{ alpineBatteryRowTop }}">
+        </alpineface>
+      </div>
+
+      <div class="circle-face-stage" if="{{ !isPill }}">
+        <sportcircle
+          if="{{ faceIndex === 0 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-minutes="{{ displayMinutes }}"
+          display-hours="{{ displayHours }}"
+          face-accent="{{ faceAccent }}"
+          goal-percent="{{ goalPercent }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-color="{{ batteryColor }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          steps-text="{{ stepsText }}">
+        </sportcircle>
+        <simplecircle
+          if="{{ faceIndex === 1 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-week="{{ displayWeek }}"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-hours="{{ displayHours }}"
+          display-minutes="{{ displayMinutes }}"
+          face-accent="{{ faceAccent }}"
+          goal-percent="{{ goalPercent }}"
+          steps-text="{{ stepsText }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-color="{{ batteryColor }}">
+        </simplecircle>
+        <dashboardcircle
+          if="{{ faceIndex === 2 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-week="{{ displayWeek }}"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          display-hours="{{ displayHours }}"
+          display-minutes="{{ displayMinutes }}"
+          face-accent="{{ faceAccent }}"
+          steps-text="{{ stepsText }}"
+          steps-progress-width="{{ stepsProgressWidth }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          heart-rate-data="{{ heartRateData }}"
+          battery-percent="{{ batteryPercent }}"
+          battery-width="{{ batteryWidth }}"
+          battery-color="{{ batteryColor }}">
+        </dashboardcircle>
+        <mechanicalcircle
+          if="{{ isCircle && faceIndex === 3 }}"
+          @swipe="handleSwipe"
+          @longpress="handleLongPress"
+          display-month="{{ displayMonth }}"
+          display-date="{{ displayDate }}"
+          battery-percent="{{ batteryPercent }}"
+          current-heart-rate="{{ currentHeartRate }}"
+          analog-ticks="{{ analogTicks }}"
+          hour-hand-transform="{{ hourHandTransform }}"
+          minute-hand-transform="{{ minuteHandTransform }}"
+          second-hand-transform="{{ secondHandTransform }}">
+        </mechanicalcircle>
+      </div>
+
+    </div>
+
+    <!-- E: Dim cover makes lower-refresh mode visible in the simulator. -->
+    <div class="dim-cover" if="{{ powerDimVisible }}" @click="wakeByUser">
+      <text class="dim-text">{{ powerModeText }} · {{ powerRefreshText }}</text>
+    </div>
+
+    <!-- E: Sleep cover simulates screen-off; tap it to mimic raise-to-wake in the simulator. -->
+    <div class="sleep-cover" if="{{ powerSleepVisible }}" @click="wakeByRaise">
+      <text class="sleep-time">{{ displayHours }}:{{ displayMinutes }}</text>
+      <text class="sleep-label">息屏模式</text>
+      <text class="sleep-tip">点击模拟抬腕亮屏</text>
+    </div>
+
+    <!-- Full-screen notification overlay; placed last so it stacks above the dim/sleep covers via DOM order (flex-only layout, no z-index). -->
+    <div class="fullscreen-notify" if="{{ fullscreenNotifyVisible && isPill }}">
+      <div class="notify-body-wrap" if="{{ fullscreenNotifyType !== 'call' }}">
+        <div class="notify-app-row">
+          <image class="notify-app-icon" src="{{ fullscreenNotifyAppIcon }}"></image>
+          <text class="notify-app-name">{{ fullscreenNotifyAppName }}</text>
+        </div>
+        <text class="notify-content-text">{{ fullscreenNotifyContent }}</text>
+      </div>
+
+      <div class="notify-body-wrap call-wrap" if="{{ fullscreenNotifyType === 'call' }}">
+        <text class="notify-contact">{{ fullscreenNotifyContact }}</text>
+        <text class="notify-phone">{{ fullscreenNotifyPhone }}</text>
+      </div>
+
+      <div class="notify-actions">
+        <text class="notify-btn ignore-btn" @click="handleNotifyIgnore">忽略</text>
+        <text class="notify-btn hangup-btn {{ fullscreenNotifyHangUp ? 'hangup-gray' : '' }}" if="{{ fullscreenNotifyType === 'call' }}" @click="handleNotifyHangup">挂断</text>
+      </div>
+    </div>
+
+  </div>
+</template>
+
+<script>
+import battery from '@system.battery'
+import router from '@system.router'
+import watchData from '../../common/watch_data'
+import powerManager from '../../common/power_manager'
+import deviceSettings from '../../common/device_settings'
+import pageMotion from '../../common/page_motion'
+import notificationManager from '../../common/notification_manager'
+import faceRegistry from '../../common/face_registry'
+import pageViewport from '../../common/page_viewport'
+import healthSampleService from '../../common/health_sample_service'
+import analogFace from '../../common/analog_face'
+import { createContext } from '../../common/lifecycle_manager'
+import { pad2, clamp } from '../../common/utils'
+
+// 月份与星期标签是常量，提到模块级避免每秒重建两个数组。
+var MONTH_LABELS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+var WEEK_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+function getGestureDirection(dx, dy) {
+  var absX = Math.abs(dx)
+  var absY = Math.abs(dy)
+  if (Math.max(absX, absY) < 36) return ''
+  if (absY > absX * 1.2) return dy < 0 ? 'up' : 'down'
+  if (absX > absY * 1.2) return dx < 0 ? 'left' : 'right'
+  return ''
+}
+
+function consumeGestureEvent(event) {
+  if (!event) return
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
+}
+
+export default {
+  private: {
+    faceIndex: 0,
+    faceBackground: '#000000',
+    faceAccent: '#0A84FF',
+    faceScope: 'rect',
+    isCircle: false,
+    isPill: false,
+    isRect: false,
+    profileReady: false,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px',
+    displayMonth: 'JAN',
+    displayDate: '01',
+    displayWeek: 'MON',
+    displayMinutes: '00',
+    displayHours: '00',
+    analogTicks: analogFace.makeTickMarks(),
+    hourHandTransform: analogFace.rotationTransform(0),
+    minuteHandTransform: analogFace.rotationTransform(0),
+    secondHandTransform: analogFace.rotationTransform(0),
+    alpineDataGlassTop: '319px',
+    alpineDataRowTop: '327px',
+    alpineBatteryRowTop: '401px',
+    batteryPercent: 75,
+    batteryWidth: '75%',
+    batteryColor: '#30D158',
+    heartRateData: [],
+    currentHeartRate: 88,
+    stepsText: '4,567',
+    stepsGoalText: '6,000',
+    goalPercent: 0,
+    goalProgressWidth: '0%',
+    stepsProgressWidth: '0%',
+    fullscreenNotifyVisible: false,
+    fullscreenNotifyType: '',
+    fullscreenNotifyAppName: '',
+    fullscreenNotifyAppIcon: '',
+    fullscreenNotifyContent: '',
+    fullscreenNotifyContact: '',
+    fullscreenNotifyPhone: '',
+    fullscreenNotifyHangUp: false,
+    powerMode: 'ACTIVE',
+    powerModeText: '亮屏',
+    powerRefreshText: '1秒刷新',
+    powerColor: '#30D158',
+    powerDimVisible: false,
+    powerSleepVisible: false,
+    lowPowerEnabled: true,
+    raiseWakeEnabled: true,
+    activeBrightnessValue: 140,
+    pageOpacity: 1,
+    pageOffset: 0,
+    pageOffsetY: 0,
+    watchFaceHealthActive: false,
+    lastHeartRateUpdatedAt: 0,
+    touchTracking: false,
+    lastGestureAt: 0,
+    lastGestureDirection: '',
+    lastBackPressAt: 0
+  },
+
+  onInit() {
+    var self = this
+    this.pageReady = false
+    this.lifecycle = createContext()
+    this.updateTime()
+    this.watchFaceHealthListener = function (data) {
+      self.latestHealthSample = data
+      if (self.powerMode === powerManager.MODE_ACTIVE) {
+        self.updateHeartRateFromData()
+      }
+    }
+    pageViewport.bind(this, function (profile) {
+      self.isCircle = profile.isCircle
+      self.isPill = profile.isPill
+      self.isRect = profile.isRect
+      self.faceScope = profile.formFactor
+      if (profile.isBetaPillViewport) {
+        self.viewportTop = '0px'
+        self.viewportHeight = parseInt(profile.viewportHeight, 10) + parseInt(profile.viewportTop, 10) + 'px'
+      }
+      if (profile.isPill && profile.screenWidth > 0 && profile.screenHeight > 0) {
+        var pillBackgroundHeight = profile.isBetaPillViewport
+          ? parseInt(self.viewportHeight, 10)
+          : Math.round(profile.screenHeight * 192 / profile.screenWidth)
+        var pillLogicalHeight = pillBackgroundHeight - 36
+        self.alpineDataGlassTop = Math.max(244, pillLogicalHeight - 116) + 'px'
+        self.alpineDataRowTop = Math.max(252, pillLogicalHeight - 108) + 'px'
+        self.alpineBatteryRowTop = Math.max(326, pillLogicalHeight - 34) + 'px'
+      }
+      self.profileReady = true
+      console.log('screen profile: ' + profile.formFactor + ' ' + profile.screenWidth + 'x' + profile.screenHeight + ', betaPill=' + profile.isBetaPillViewport + ', source=' + profile.source)
+      self.startRuntime('profile')
+    })
+  },
+
+  onReady() {
+    this.pageReady = true
+    this.startRuntime('ready')
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    this.lifecycle.reactivate()
+    this.startRuntime('show')
+  },
+
+  onBackPress() {
+    var now = Date.now()
+    if (now - this.lastBackPressAt < 300) return true
+    this.lastBackPressAt = now
+    this.markUserActive('system-back-as-face-switch')
+    if (this.lastGestureDirection === 'right' && now - this.lastGestureAt < 1200) {
+      watchData.clearRightFaceTransition()
+    } else {
+      this.switchFaceByStep(-1)
+    }
+    return true
+  },
+
+  startRuntime(reason) {
+    if (!this.profileReady || this.runtimeStarted) {
+      return
+    }
+    this.runtimeStarted = true
+    this.applyStoredFace()
+    this.loadDeviceSettings()
+    this.refreshAllData()
+    watchData.ensureHealthHistory()
+    this.startPowerControl()
+    if (this.isPill) {
+      this.initNotificationManager()
+    }
+    console.log('clock runtime started: ' + reason)
+  },
+
+  initNotificationManager() {
+    var self = this
+    // The manager holds a single callback slot; re-bind on every re-show
+    // because other pages (notification_demo) overwrite it.
+    notificationManager.onChange(function (notifyState) {
+      self.fullscreenNotifyVisible = notifyState.visible
+      self.fullscreenNotifyType = notifyState.type
+      self.fullscreenNotifyAppName = notifyState.appName
+      self.fullscreenNotifyAppIcon = notifyState.appIcon
+      self.fullscreenNotifyContent = notifyState.content
+      self.fullscreenNotifyContact = notifyState.contact
+      self.fullscreenNotifyPhone = notifyState.phone
+      self.fullscreenNotifyHangUp = notifyState.hangUp
+      if (notifyState.visible) {
+        self.wakeByNotification()
+      }
+    })
+    // Init once per page lifetime: onHide keeps the listeners alive (the
+    // overlay belongs to this page), onDestroy releases them. Re-running this
+    // would replace the lifecycle subscription and destroy the live manager.
+    if (this.notificationReady) {
+      return
+    }
+    notificationManager.init()
+    this.notificationReady = true
+    this.lifecycle.addSubscription('notification', function () {
+      notificationManager.destroy()
+    })
+  },
+
+  onHide() {
+    this.runtimeStarted = false
+    pageMotion.clear(this)
+    watchData.saveTodayHealth()
+    this.stopPowerControl()
+    this.stopActiveTimers()
+  },
+
+  onDestroy() {
+    this.pageReady = false
+    this.runtimeStarted = false
+    pageMotion.clear(this)
+    this.stopPowerControl()
+    this.stopActiveTimers()
+    if (this.notificationReady) {
+      notificationManager.destroy()
+      this.notificationReady = false
+    }
+    this.lifecycle.cleanup()
+  },
+
+  // E: Timer intervals are selected by power mode to simulate lower refresh rates.
+  startActiveTimers() {
+    var self = this
+    var config = powerManager.getRefreshConfig(this.powerMode)
+    this.stopActiveTimers()
+    var lastBattery = 0
+    this.mainTimer = this.lifecycle.addInterval('main', setInterval(function () {
+      var now = Date.now()
+      self.updateTime()
+      if (config.batteryInterval > 0 && now - lastBattery >= config.batteryInterval) {
+        self.updateBattery()
+        lastBattery = now
+      }
+    }, config.timeInterval))
+    if (config.heartInterval > 0) {
+      this.heartTimer = this.lifecycle.addInterval('heart', setInterval(function () {
+        self.updateHeartRateFromData()
+      }, config.heartInterval))
+    }
+  },
+
+  stopActiveTimers() {
+    this.lifecycle.clearInterval('main')
+    this.lifecycle.clearInterval('heart')
+    this.mainTimer = null
+    this.heartTimer = null
+  },
+
+  refreshAllData() {
+    this.updateTime()
+    this.loadWatchData()
+    this.updateBattery()
+  },
+
+  // Settings are loaded from local storage so the settings pages can affect the watch face demo.
+  loadDeviceSettings() {
+    var self = this
+    deviceSettings.load(function (settings) {
+      self.lowPowerEnabled = settings.lowPowerEnabled !== false
+      self.raiseWakeEnabled = settings.raiseWakeEnabled !== false
+      self.activeBrightnessValue = deviceSettings.getBrightnessValue(settings.brightnessValue)
+      self.vibrationEnabled = settings.vibrationEnabled !== false
+      self.vibrationLevel = settings.vibrationLevel || 'medium'
+
+      if (self.runtimeStarted) {
+        self.startPowerControl()
+      }
+    })
+  },
+
+  // E: Power control starts when the watch face is visible and stops when leaving it.
+  startPowerControl() {
+    var self = this
+    this.stopPowerControl()
+    this.lastPowerActiveAt = Date.now()
+    // Reset so applyPowerMode always fully re-inits (and restarts the main timer) on re-show.
+    this.powerMode = null
+    this.applyPowerMode(powerManager.MODE_ACTIVE, 'show')
+
+    if (!this.lowPowerEnabled) {
+      console.log('low power disabled by settings')
+      return
+    }
+
+    if (this.raiseWakeEnabled) {
+      powerManager.startRaiseWake(function () {
+        self.wakeByRaise()
+      })
+      this.lifecycle.addSubscription('raiseWake', function () {
+        powerManager.stopRaiseWake()
+      })
+    }
+
+    this.powerIdleTimer = this.lifecycle.addInterval('powerIdle', setInterval(function () {
+      self.checkPowerIdle()
+    }, 1000))
+  },
+
+  stopPowerControl() {
+    this.lifecycle.clearInterval('powerIdle')
+    this.lifecycle.clearSubscription('raiseWake')
+    this.stopWatchFaceHealth()
+    powerManager.applyMode(powerManager.MODE_ACTIVE, this.activeBrightnessValue)
+  },
+
+  checkPowerIdle() {
+    if (!this.lowPowerEnabled) {
+      return
+    }
+    var idleMs = Date.now() - this.lastPowerActiveAt
+    var nextMode = powerManager.getModeByIdle(idleMs)
+    if (nextMode !== this.powerMode) {
+      this.applyPowerMode(nextMode, 'idle')
+    }
+  },
+
+  applyPowerMode(mode, reason) {
+    if (mode === this.powerMode) return
+    var ui = powerManager.getUiState(mode)
+    this.powerMode = mode
+    this.powerModeText = ui.label
+    this.powerRefreshText = ui.hint
+    this.powerColor = ui.color
+    this.powerDimVisible = ui.dimVisible
+    this.powerSleepVisible = ui.sleepVisible
+    powerManager.applyMode(mode, this.activeBrightnessValue)
+    if (mode === powerManager.MODE_SLEEP) {
+      this.stopWatchFaceHealth()
+    } else {
+      this.startWatchFaceHealth()
+    }
+    this.startActiveTimers()
+    console.log('power mode: ' + mode + ', reason: ' + reason)
+  },
+
+  markUserActive(reason) {
+    this.lastPowerActiveAt = Date.now()
+    if (this.powerMode !== powerManager.MODE_ACTIVE) {
+      this.applyPowerMode(powerManager.MODE_ACTIVE, reason)
+    }
+  },
+
+  wakeByUser() {
+    this.resetVisualOffsets()
+    this.markUserActive('touch')
+  },
+
+  wakeByRaise() {
+    this.resetVisualOffsets()
+    this.markUserActive('raise-wake')
+  },
+
+  wakeByNotification() {
+    this.resetVisualOffsets()
+    this.markUserActive('notification')
+  },
+
+  resetVisualOffsets() {
+    this.pageOffset = 0
+    this.pageOffsetY = 0
+    this.pageOpacity = 1
+    pageMotion.clear(this)
+  },
+
+  applyStoredFace() {
+    var self = this
+    watchData.loadSelectedFaceId(function (faceId) {
+      self.applyFace(faceId)
+    })
+  },
+
+  // 主定时器每秒调用一次。快应用的每次赋值都会触发一轮 diff/重绘，因此这里
+  // 只在值真正变化时才写回：分钟每 60 拍才变一次，日期字段一天只变一次。
+  // 原实现无条件写 9 个字段（含无人绑定的 displaySeconds），等于每秒制造
+  // 9 次无意义的重绘；现在数字表盘稳态下每秒 0 次写入，机械盘只写秒针。
+  updateTime() {
+    var now = new Date()
+    var hours = now.getHours()
+    var minutes = now.getMinutes()
+    var seconds = now.getSeconds()
+
+    var nextHours = pad2(hours)
+    if (nextHours !== this.displayHours) this.displayHours = nextHours
+
+    var nextMinutes = pad2(minutes)
+    if (nextMinutes !== this.displayMinutes) this.displayMinutes = nextMinutes
+
+    var nextDate = now.getDate().toString()
+    if (nextDate !== this.displayDate) {
+      this.displayDate = nextDate
+      this.displayMonth = MONTH_LABELS[now.getMonth()]
+      this.displayWeek = WEEK_LABELS[now.getDay()]
+    }
+
+    // 指针角度只有机械表盘用；非机械盘时跳过三次字符串拼装与赋值。
+    if (!this.usesAnalogHands) return
+    var angles = analogFace.handAngles(hours, minutes, seconds)
+    var nextSecondHand = analogFace.rotationTransform(angles.second)
+    if (nextSecondHand !== this.secondHandTransform) this.secondHandTransform = nextSecondHand
+    var nextMinuteHand = analogFace.rotationTransform(angles.minute)
+    if (nextMinuteHand !== this.minuteHandTransform) this.minuteHandTransform = nextMinuteHand
+    var nextHourHand = analogFace.rotationTransform(angles.hour)
+    if (nextHourHand !== this.hourHandTransform) this.hourHandTransform = nextHourHand
+  },
+
+  loadWatchData() {
+    this.applyHealthSnapshot(watchData.getSnapshot())
+  },
+
+  applyHealthSnapshot(snapshot) {
+    this.stepsText = snapshot.stepsText
+    this.stepsGoalText = snapshot.stepsGoalText
+    this.currentHeartRate = snapshot.currentHeartRate
+    // Only one face is mounted at a time (lazy if inside each swiper slide),
+    // so always refresh the chart data; the active face binds the latest value.
+    this.heartRateData = snapshot.heartRateData
+    this.goalPercent = snapshot.goalPercent
+    this.goalProgressWidth = snapshot.goalProgressWidth
+    this.stepsProgressWidth = snapshot.stepsProgressWidth
+  },
+
+  updateHeartRateFromData() {
+    var data = this.latestHealthSample || healthSampleService.getSnapshot()
+    if (!data || !data.heartRateUpdatedAt || data.heartRateUpdatedAt === this.lastHeartRateUpdatedAt) {
+      return
+    }
+    this.lastHeartRateUpdatedAt = data.heartRateUpdatedAt
+    this.applyHealthSnapshot(watchData.applyHeartRate(data.heartRate))
+  },
+
+  startWatchFaceHealth() {
+    if (this.watchFaceHealthActive) return
+    this.watchFaceHealthActive = true
+    healthSampleService.start(this.watchFaceHealthListener)
+  },
+
+  stopWatchFaceHealth() {
+    if (!this.watchFaceHealthActive) return
+    healthSampleService.stop(this.watchFaceHealthListener)
+    this.watchFaceHealthActive = false
+  },
+
+  updateBattery() {
+    if (this.isCircle) {
+      this.applyBatteryPercent(75)
+      return
+    }
+    var self = this
+    try {
+      if (battery && battery.getStatus) {
+        battery.getStatus({
+          success: function (data) {
+            var level = data.level
+            var percent = level <= 1 ? Math.round(level * 100) : Math.round(level)
+            self.applyBatteryPercent(percent)
+          },
+          fail: function () {
+            self.applyBatteryPercent(75)
+          },
+          complete: function () {}
+        })
+      } else {
+        self.applyBatteryPercent(75)
+      }
+    } catch (e) {
+      console.log('battery getStatus unavailable, use demo value')
+      self.applyBatteryPercent(75)
+    }
+  },
+
+  applyBatteryPercent(percent) {
+    percent = clamp(percent, 0, 100)
+    this.batteryPercent = percent
+    this.batteryWidth = percent + '%'
+    if (percent >= 60) {
+      this.batteryColor = '#30D158'
+    } else if (percent >= 20) {
+      this.batteryColor = '#FFD60A'
+    } else {
+      this.batteryColor = '#FF375F'
+    }
+  },
+
+  applyFace(faceId) {
+    var nextIndex = faceRegistry.getIndex(faceId, this.faceScope)
+    var face = faceRegistry.getByIndex(nextIndex, this.faceScope)
+    this.faceIndex = nextIndex
+    this.faceBackground = face.background
+    this.faceAccent = face.accent
+    // 仅圆屏机械盘挂载指针；非机械盘时 updateTime 跳过角度计算。
+    // 非响应式运行时标记，故不放进 private。
+    this.usesAnalogHands = this.isCircle && nextIndex === 3
+    if (this.usesAnalogHands) this.updateTime()
+  },
+
+  switchFaceByStep(step) {
+    var faces = faceRegistry.getAll(this.faceScope)
+    var nextIndex = (this.faceIndex + step + faces.length) % faces.length
+    this.applyFace(faces[nextIndex].id)
+    watchData.setSelectedFaceId(faces[nextIndex].id)
+    return faces[nextIndex].id
+  },
+
+  openFaceSelect() {
+    this.touchTracking = false
+    pageMotion.push(this, router, '/pages/watchface')
+  },
+
+  handleNotifyIgnore() {
+    notificationManager.dismiss()
+  },
+
+  handleNotifyHangup() {
+    notificationManager.hangUp()
+  },
+
+  handleTouchStart(e) {
+    this.touchTracking = false
+    if (!e.touches || !e.touches[0]) {
+      return
+    }
+    var wasSleeping = this.powerSleepVisible
+    this.markUserActive('touch')
+    if (wasSleeping) {
+      return
+    }
+    this.touchStartX = e.touches[0].pageX
+    this.touchStartY = e.touches[0].pageY
+    this.touchTracking = true
+  },
+
+  handleTouchMove(e) {
+    if (!this.touchTracking || !e.touches || !e.touches[0]) {
+      return
+    }
+    this.markUserActive('touch-move')
+    var dx = e.touches[0].pageX - this.touchStartX
+    var dy = e.touches[0].pageY - this.touchStartY
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) this.markUserActive('gesture-move')
+    var direction = getGestureDirection(dx, dy)
+    if (direction) {
+      if (direction !== 'right') consumeGestureEvent(e)
+      this.touchTracking = false
+      this.routeGesture(direction)
+    }
+  },
+
+  handleTouchEnd(e) {
+    this.markUserActive('touch-end')
+    if (!this.touchTracking || !e.changedTouches || !e.changedTouches[0]) {
+      this.touchTracking = false
+      return
+    }
+    var dx = e.changedTouches[0].pageX - this.touchStartX
+    var dy = e.changedTouches[0].pageY - this.touchStartY
+    var direction = getGestureDirection(dx, dy)
+    if (direction && direction !== 'right') consumeGestureEvent(e)
+    this.touchTracking = false
+    this.routeGesture(direction)
+  },
+
+  handleSwipe(e) {
+    if (!e || !e.direction) return
+    consumeGestureEvent(e)
+    this.routeGesture(e.direction)
+  },
+
+  handleLongPress() {
+    this.markUserActive('longpress')
+    this.openFaceSelect()
+  },
+
+  routeGesture(direction) {
+    if (direction !== 'up' && direction !== 'left' && direction !== 'right') return
+    var now = Date.now()
+    if (now - this.lastGestureAt < 300) return
+    this.lastGestureAt = now
+    this.lastGestureDirection = direction
+    this.markUserActive('gesture-' + direction)
+    if (direction === 'up') {
+      pageMotion.push(this, router, '/pages/applist', 'fromBottom')
+    } else if (direction === 'left') {
+      this.switchFaceByStep(1)
+    } else if (direction === 'right') {
+      var previousFaceId = this.switchFaceByStep(-1)
+      watchData.markRightFaceTransition(previousFaceId)
+    }
+  }
+}
+</script>
+
+<style>
+.clock-page {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.face-shell {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 0px;
+}
+
+.pill-face-stage {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-notify {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+}
+
+.notify-body-wrap {
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  width: 168px;
+}
+
+.notify-app-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.notify-app-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+}
+
+.notify-app-name {
+  font-size: 20px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.notify-content-text {
+  width: 168px;
+  font-size: 16px;
+  color: #CCCCCC;
+  text-align: center;
+  margin-top: 20px;
+  lines: 3;
+}
+
+.call-wrap {
+  flex-direction: column;
+  align-items: center;
+}
+
+.notify-contact {
+  font-size: 24px;
+  color: #FFFFFF;
+  font-weight: bold;
+  text-align: center;
+}
+
+.notify-phone {
+  font-size: 18px;
+  color: #CCCCCC;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.notify-actions {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 168px;
+  height: 60px;
+  margin-bottom: 40px;
+}
+
+.notify-btn {
+  width: 72px;
+  height: 36px;
+  font-size: 14px;
+  color: #FFFFFF;
+  text-align: center;
+  background-color: #1A1A1A;
+  border-radius: 18px;
+  margin: 0 8px;
+}
+
+.hangup-gray {
+  color: #888888;
+  background-color: #0F0F0F;
+}
+
+.dim-cover {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  background-color: #000000;
+  opacity: 0.55;
+  padding-bottom: 46px;
+}
+
+.dim-text {
+  width: 118px;
+  height: 22px;
+  font-size: 12px;
+  color: #FFD60A;
+  text-align: center;
+  background-color: #141414;
+  border-radius: 11px;
+}
+
+.sleep-cover {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+}
+
+.sleep-time {
+  font-size: 34px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.sleep-label {
+  font-size: 14px;
+  color: #8E8E93;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.sleep-tip {
+  width: 150px;
+  font-size: 12px;
+  color: #3A7DFF;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.circle-face-stage {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.rect-face-shell {
+  padding: 0px;
+}
+
+@media (shape: circle) {
+  .face-shell {
+    padding: 0px;
+  }
+
+  .dim-cover {
+    padding-bottom: 20px;
+  }
+
+  .dim-text {
+    width: 98px;
+    height: 18px;
+    font-size: 9px;
+    border-radius: 9px;
+  }
+
+  .sleep-time {
+    font-size: 30px;
+  }
+
+  .sleep-label {
+    font-size: 10px;
+    margin-top: 4px;
+  }
+
+  .sleep-tip {
+    width: 108px;
+    font-size: 8px;
+    margin-top: 7px;
+  }
+}
+
+</style>

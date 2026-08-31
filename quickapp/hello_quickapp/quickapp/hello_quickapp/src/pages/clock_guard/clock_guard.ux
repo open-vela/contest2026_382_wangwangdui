@@ -1,0 +1,128 @@
+<template>
+  <div class="clock-guard {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};"></div>
+</template>
+
+<script>
+import router from '@system.router'
+import faceRegistry from '../../common/face_registry'
+import pageViewport from '../../common/page_viewport'
+import watchData from '../../common/watch_data'
+
+var clockOpened = false
+
+export default {
+  private: {
+    faceScope: 'rect',
+    profileReady: false,
+    pageVisible: false,
+    redirecting: false,
+    resumeTimer: null,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportTop: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%'
+  },
+
+  onInit() {
+    var self = this
+    pageViewport.bind(this, function (profile) {
+      self.faceScope = profile.formFactor
+      self.profileReady = true
+      self.queueOpenClock()
+    })
+  },
+
+  onShow() {
+    this.pageVisible = true
+    this.redirecting = false
+    this.queueOpenClock()
+  },
+
+  onHide() {
+    this.pageVisible = false
+    this.redirecting = false
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer)
+      this.resumeTimer = null
+    }
+  },
+
+  onDestroy() {
+    this.pageVisible = false
+    this.redirecting = false
+    if (this.resumeTimer) {
+      clearTimeout(this.resumeTimer)
+      this.resumeTimer = null
+    }
+  },
+
+  onBackPress() {
+    this.queueOpenClock()
+    return true
+  },
+
+  queueOpenClock() {
+    if (!this.profileReady || !this.pageVisible || this.redirecting || this.resumeTimer) return
+    var self = this
+    this.resumeTimer = setTimeout(function () {
+      self.resumeTimer = null
+      self.openClock()
+    }, 50)
+  },
+
+  openClock() {
+    if (!this.profileReady || !this.pageVisible || this.redirecting) return
+    this.redirecting = true
+    if (!clockOpened) {
+      this.pushClock()
+      return
+    }
+    this.restoreOrSwitchFace()
+  },
+
+  restoreOrSwitchFace() {
+    var self = this
+    watchData.consumeRightFaceTransition(function (handledFaceId) {
+      if (!handledFaceId) {
+        self.switchToPreviousFace()
+        return
+      }
+      watchData.setSelectedFaceId(handledFaceId, function () {
+        self.pushClock()
+      })
+    })
+  },
+
+  switchToPreviousFace() {
+    var self = this
+    watchData.loadSelectedFaceId(function (faceId) {
+      var faces = faceRegistry.getAll(self.faceScope)
+      var currentIndex = faceRegistry.getIndex(faceId, self.faceScope)
+      var previousIndex = (currentIndex - 1 + faces.length) % faces.length
+      watchData.setSelectedFaceId(faces[previousIndex].id, function () {
+        self.pushClock()
+      })
+    })
+  },
+
+  pushClock() {
+    clockOpened = true
+    try {
+      router.push({ uri: '/pages/clock', params: {} })
+    } catch (error) {
+      this.redirecting = false
+      console.log('clock guard redirect unavailable')
+    }
+  }
+}
+</script>
+
+<style>
+.clock-guard {
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+}
+</style>

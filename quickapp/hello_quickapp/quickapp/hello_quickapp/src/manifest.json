@@ -1,0 +1,131 @@
+{
+  "package": "com.application.watch.demo",
+  "name": "vela_band",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minAPILevel": 2,
+  "minPlatformVersion": 1000,
+  "icon": "/common/logo.png",
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.device"
+    },
+    {
+      "name": "system.battery"
+    },
+    {
+      "name": "system.brightness"
+    },
+    {
+      "name": "system.sensor"
+    },
+    {
+      "name": "system.geolocation"
+    },
+    {
+      "name": "system.vibrator"
+    },
+    {
+      "name": "system.event"
+    },
+    {
+      "name": "system.interconnect"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "service.health"
+    }
+  ],
+  "permissions": [
+    {
+      "name": "hapjs.permission.LOCATION"
+    },
+    {
+      "name": "hapjs.permission.HEALTH"
+    }
+  ],
+  "config": {
+    "logLevel": "log",
+    "designWidth": 192
+  },
+  "display": {
+    "fullScreen": true,
+    "titleBar": false,
+    "backgroundColor": "#000000",
+    "statusBarImmersive": true,
+    "statusBarTextStyle": "light"
+  },
+  "router": {
+    "entry": "pages/clock_guard",
+    "pages": {
+      "pages/index": {
+        "component": "index"
+      },
+      "pages/detail": {
+        "component": "detail"
+      },
+      "pages/clock": {
+        "component": "clock"
+      },
+      "pages/clock_guard": {
+        "component": "clock_guard"
+      },
+      "pages/heartrate": {
+        "component": "heartrate"
+      },
+      "pages/steps": {
+        "component": "steps"
+      },
+      "pages/applist": {
+        "component": "applist"
+      },
+      "pages/notification_demo": {
+        "component": "notification_demo"
+      },
+      "pages/history": {
+        "component": "history"
+      },
+      "pages/workout_select": {
+        "component": "workout_select"
+      },
+      "pages/workout": {
+        "component": "workout"
+      },
+      "pages/workout_history": {
+        "component": "workout_history"
+      },
+      "pages/watchface": {
+        "component": "index"
+      },
+      "pages/settings/settings": {
+        "component": "settings"
+      },
+      "pages/settings/bluetooth": {
+        "component": "bluetooth"
+      },
+      "pages/settings/vibration": {
+        "component": "vibration"
+      },
+      "pages/settings/brightness": {
+        "component": "brightness"
+      },
+      "pages/settings/diagnostics": {
+        "component": "diagnostics"
+      },
+      "pages/settings/motion": {
+        "component": "motion"
+      },
+      "pages/today": {
+        "component": "today"
+      }
+    }
+  }
+}

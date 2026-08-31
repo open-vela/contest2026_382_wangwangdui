@@ -1,0 +1,272 @@
+<template>
+  <stack class="alpine-face">
+    <image class="alpine-background" src="/common/watchfaces/alpine_night.jpg"></image>
+    <div class="alpine-veil"></div>
+
+    <div class="alpine-date-glass" @click="goToToday"></div>
+    <div class="alpine-date-row" @click="goToToday">
+      <div class="alpine-date-copy">
+        <text class="alpine-week">{{ displayWeek }}</text>
+        <text class="alpine-date">{{ displayMonth }} {{ displayDate }}</text>
+      </div>
+      <text class="alpine-brand">VELA / ALPINE</text>
+    </div>
+
+    <text class="alpine-eyebrow">MIDNIGHT TRAIL</text>
+    <text class="alpine-hour">{{ displayHours }}</text>
+    <div class="alpine-time-accent"></div>
+    <text class="alpine-minute">{{ displayMinutes }}</text>
+
+    <div class="alpine-data-glass" style="top: {{ panelGlassTop }};"></div>
+    <div class="alpine-data-row" style="top: {{ panelRowTop }};">
+      <div class="alpine-metric" @click="goToSteps">
+        <text class="alpine-metric-label">STEPS</text>
+        <text class="alpine-step-value">{{ stepsText }}</text>
+      </div>
+      <div class="alpine-metric" @click="goToHeartRate">
+        <text class="alpine-metric-label">HEART</text>
+        <text class="alpine-heart-value">{{ currentHeartRate }}</text>
+      </div>
+    </div>
+
+    <div class="alpine-battery-row" style="top: {{ batteryRowTop }};">
+      <text class="alpine-battery-label">POWER</text>
+      <div class="alpine-battery-track">
+        <div class="alpine-battery-fill" style="width: {{ batteryWidth }}; background-color: {{ batteryColor }};"></div>
+      </div>
+      <text class="alpine-battery-value">{{ batteryPercent }}%</text>
+    </div>
+  </stack>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  props: [
+    'displayWeek',
+    'displayMonth',
+    'displayDate',
+    'displayHours',
+    'displayMinutes',
+    'stepsText',
+    'currentHeartRate',
+    'batteryPercent',
+    'batteryWidth',
+    'batteryColor',
+    'panelGlassTop',
+    'panelRowTop',
+    'batteryRowTop'
+  ],
+
+  goToToday() {
+    router.push({ uri: '/pages/today', params: {} })
+  },
+
+  goToHeartRate() {
+    router.push({ uri: '/pages/heartrate', params: {} })
+  },
+
+  goToSteps() {
+    router.push({ uri: '/pages/steps', params: {} })
+  }
+}
+</script>
+
+<style>
+.alpine-face {
+  width: 100%;
+  height: 100%;
+  background-color: #020713;
+}
+
+.alpine-background {
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.alpine-veil {
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: #02050C;
+  opacity: 0.2;
+}
+
+.alpine-date-glass {
+  left: 24px;
+  top: 38px;
+  width: 144px;
+  height: 34px;
+  border-radius: 10px;
+  border-width: 1px;
+  border-color: #8D99B8;
+  background-color: #08101F;
+  opacity: 0.55;
+}
+
+.alpine-date-row {
+  left: 30px;
+  top: 42px;
+  width: 132px;
+  height: 26px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alpine-date-copy {
+  width: 52px;
+  height: 25px;
+  flex-direction: column;
+}
+
+.alpine-week {
+  width: 52px;
+  height: 10px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #FFB15C;
+}
+
+.alpine-date {
+  width: 52px;
+  height: 12px;
+  font-size: 8px;
+  color: #FFFFFF;
+  margin-top: 1px;
+}
+
+.alpine-brand {
+  width: 72px;
+  font-size: 6px;
+  color: #DCE4F7;
+  text-align: right;
+}
+
+.alpine-eyebrow {
+  left: 29px;
+  top: 91px;
+  width: 110px;
+  height: 12px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #DCE4F7;
+}
+
+.alpine-hour {
+  left: 24px;
+  top: 100px;
+  width: 100px;
+  height: 90px;
+  font-size: 76px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: left;
+}
+
+.alpine-time-accent {
+  left: 115px;
+  top: 130px;
+  width: 3px;
+  height: 42px;
+  border-radius: 2px;
+  background-color: #FF9F4A;
+}
+
+.alpine-minute {
+  left: 124px;
+  top: 133px;
+  width: 44px;
+  height: 38px;
+  font-size: 31px;
+  font-weight: bold;
+  color: #FFE2C2;
+  text-align: left;
+}
+
+.alpine-data-glass {
+  left: 24px;
+  width: 144px;
+  height: 69px;
+  border-radius: 16px;
+  border-width: 1px;
+  border-color: #8995B1;
+  background-color: #07101E;
+  opacity: 0.6;
+}
+
+.alpine-data-row {
+  left: 32px;
+  width: 128px;
+  height: 51px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alpine-metric {
+  width: 58px;
+  height: 45px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.alpine-metric-label {
+  width: 58px;
+  height: 10px;
+  font-size: 6px;
+  color: #AEB9D0;
+}
+
+.alpine-step-value,
+.alpine-heart-value {
+  width: 58px;
+  height: 25px;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.alpine-step-value { color: #FFFFFF; }
+.alpine-heart-value { color: #FF8A8A; text-align: right; }
+
+.alpine-battery-row {
+  left: 30px;
+  width: 132px;
+  height: 16px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.alpine-battery-label {
+  width: 31px;
+  font-size: 6px;
+  color: #AFBBD3;
+}
+
+.alpine-battery-track {
+  width: 68px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #263246;
+}
+
+.alpine-battery-fill {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.alpine-battery-value {
+  width: 29px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: right;
+  margin-left: 4px;
+}
+</style>

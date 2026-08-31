@@ -1,0 +1,335 @@
+<template>
+  <div class="vibration-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
+    <div class="top-row">
+      <text class="page-title">震动反馈</text>
+      <text class="page-number">{{ pageIndex + 1 }} / 2</text>
+    </div>
+
+    <div class="setting-panel" if="{{ pageIndex === 0 }}">
+      <div class="status-card" style="border-color: {{ statusColor }}">
+        <div class="status-copy">
+          <text class="status-label">通知与交互反馈</text>
+          <text class="status-value" style="color: {{ statusColor }}">{{ statusText }}</text>
+          <text class="status-sub">强度：{{ vibrationLevelText }} · 模式：{{ selectedPatternText }}</text>
+        </div>
+        <div class="status-switch" style="background-color: {{ statusColor }}" @click="toggleVibration"><div class="switch-knob" style="margin-left: {{ switchOffset }}px"></div></div>
+      </div>
+
+      <text class="section-label">基础强度</text>
+      <div class="level-row">
+        <text class="level-button" style="background-color: {{ lightBg }}; color: {{ lightText }};" @click="setLight">轻</text>
+        <text class="level-button" style="background-color: {{ mediumBg }}; color: {{ mediumText }};" @click="setMedium">中</text>
+        <text class="level-button" style="background-color: {{ strongBg }}; color: {{ strongText }};" @click="setStrong">强</text>
+      </div>
+
+      <div class="preview-card" @click="testCurrentLevel">
+        <div class="preview-icon" style="background-color: {{ pulseColor }}"><div class="preview-core"></div></div>
+        <div class="preview-copy"><text class="preview-title">测试当前模式</text><text class="preview-sub">{{ feedbackText }}</text></div>
+        <text class="preview-arrow">›</text>
+      </div>
+      <text class="setting-tip">设置会同时影响通知提醒和应用内反馈。</text>
+    </div>
+
+    <div class="pattern-panel" if="{{ pageIndex === 1 }}">
+      <div class="capability-card">
+        <text class="capability-label">反馈引擎</text>
+        <text class="capability-value" style="color: {{ customColor }}">{{ customText }}</text>
+        <text class="capability-mode">系统模式：{{ systemModeText }}</text>
+      </div>
+      <div class="pattern-item" style="background-color: {{ tapBg }}" @click="testTap"><div class="pattern-mark one"><div class="beat"></div></div><div class="pattern-copy"><text class="pattern-name">轻触</text><text class="pattern-desc">单次短反馈</text></div><text class="pattern-state" style="color: {{ tapStateColor }}">{{ tapState }}</text></div>
+      <div class="pattern-item" style="background-color: {{ goalBg }}" @click="testGoal"><div class="pattern-mark two"><div class="beat"></div><div class="beat"></div></div><div class="pattern-copy"><text class="pattern-name">达标</text><text class="pattern-desc">两次确认反馈</text></div><text class="pattern-state" style="color: {{ goalStateColor }}">{{ goalState }}</text></div>
+      <div class="pattern-item" style="background-color: {{ countdownBg }}" @click="testCountdown"><div class="pattern-mark three"><div class="beat"></div><div class="beat"></div><div class="beat"></div></div><div class="pattern-copy"><text class="pattern-name">倒计时</text><text class="pattern-desc">三次节奏反馈</text></div><text class="pattern-state" style="color: {{ countdownStateColor }}">{{ countdownState }}</text></div>
+      <div class="pattern-item" style="background-color: {{ alertBg }}" @click="testAlert"><div class="pattern-mark alert"><div class="beat long-beat"></div><div class="beat long-beat"></div></div><div class="pattern-copy"><text class="pattern-name">警报</text><text class="pattern-desc">两次长震动</text></div><text class="pattern-state" style="color: {{ alertStateColor }}">{{ alertState }}</text></div>
+      <text class="pattern-status">{{ feedbackText }}</text>
+    </div>
+
+    <div class="pager-row">
+      <text class="pager-button" style="color: {{ previousColor }}" @click="previousPage">‹</text>
+      <text class="page-label">{{ pageIndex === 0 ? '开关与强度' : '反馈模式' }}</text>
+      <text class="pager-button" style="color: {{ nextColor }}" @click="nextPage">›</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import deviceSettings from '../../../common/device_settings'
+import hapticFeedback from '../../../common/haptic_feedback'
+import pageMotion from '../../../common/page_motion'
+import pageViewport from '../../../common/page_viewport'
+
+export default {
+  private: {
+    pageIndex: 0,
+    vibrationEnabled: true,
+    vibrationLevel: 'medium',
+    vibrationLevelText: '中',
+    vibrationPattern: 'goal',
+    selectedPatternText: '达标',
+    statusText: '已开启',
+    statusColor: '#30D158',
+    switchOffset: 21,
+    lightBg: '#1C1C1E',
+    mediumBg: '#FF9F0A',
+    strongBg: '#1C1C1E',
+    lightText: '#8E8E93',
+    mediumText: '#000000',
+    strongText: '#8E8E93',
+    feedbackText: '点击播放反馈',
+    pulseColor: '#2C2C2E',
+    customText: '检测中',
+    customColor: '#8E8E93',
+    systemModeText: '未知',
+    tapBg: '#14181F',
+    goalBg: '#2D210F',
+    countdownBg: '#14181F',
+    alertBg: '#14181F',
+    tapState: '›',
+    goalState: '已选',
+    countdownState: '›',
+    alertState: '›',
+    tapStateColor: '#636366',
+    goalStateColor: '#FF9F0A',
+    countdownStateColor: '#636366',
+    alertStateColor: '#636366',
+    previousColor: '#3A3A3C',
+    nextColor: '#FF9F0A',
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    pageViewport.bind(this)
+    this.refreshCapability()
+    this.loadSettings()
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    this.refreshCapability()
+    this.loadSettings()
+  },
+
+  onHide() {
+    hapticFeedback.stop()
+    clearTimeout(this.feedbackTimer)
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    hapticFeedback.stop()
+    clearTimeout(this.feedbackTimer)
+    pageMotion.clear(this)
+  },
+
+  loadSettings() {
+    var self = this
+    deviceSettings.load(function (settings) {
+      self.vibrationEnabled = settings.vibrationEnabled
+      self.vibrationLevel = settings.vibrationLevel
+      self.vibrationPattern = settings.vibrationPattern
+      self.refreshView()
+      self.feedbackText = '当前模式：' + self.selectedPatternText
+    })
+  },
+
+  refreshCapability() {
+    var custom = hapticFeedback.supportsCustom()
+    this.customText = custom ? '分段节奏可用' : '基础模式降级'
+    this.customColor = custom ? '#30D158' : '#FFD60A'
+    var mode = hapticFeedback.getSystemMode()
+    var map = { 0: '关闭', 1: '标准', 2: '加强' }
+    this.systemModeText = map[mode] || '未提供'
+  },
+
+  refreshView() {
+    this.statusText = this.vibrationEnabled ? '已开启' : '已关闭'
+    this.statusColor = this.vibrationEnabled ? '#30D158' : '#8E8E93'
+    this.switchOffset = this.vibrationEnabled ? 21 : 3
+    this.vibrationLevelText = deviceSettings.getVibrationText(this.vibrationLevel)
+    this.selectedPatternText = deviceSettings.getVibrationPatternText(this.vibrationPattern)
+    this.lightBg = this.vibrationLevel === 'light' ? '#FF9F0A' : '#1C1C1E'
+    this.mediumBg = this.vibrationLevel === 'medium' ? '#FF9F0A' : '#1C1C1E'
+    this.strongBg = this.vibrationLevel === 'strong' ? '#FF9F0A' : '#1C1C1E'
+    this.lightText = this.vibrationLevel === 'light' ? '#000000' : '#8E8E93'
+    this.mediumText = this.vibrationLevel === 'medium' ? '#000000' : '#8E8E93'
+    this.strongText = this.vibrationLevel === 'strong' ? '#000000' : '#8E8E93'
+    this.tapBg = this.vibrationPattern === 'tap' ? '#2D210F' : '#14181F'
+    this.goalBg = this.vibrationPattern === 'goal' ? '#2D210F' : '#14181F'
+    this.countdownBg = this.vibrationPattern === 'countdown' ? '#2D210F' : '#14181F'
+    this.alertBg = this.vibrationPattern === 'alert' ? '#2D210F' : '#14181F'
+    this.tapState = this.vibrationPattern === 'tap' ? '已选' : '›'
+    this.goalState = this.vibrationPattern === 'goal' ? '已选' : '›'
+    this.countdownState = this.vibrationPattern === 'countdown' ? '已选' : '›'
+    this.alertState = this.vibrationPattern === 'alert' ? '已选' : '›'
+    this.tapStateColor = this.vibrationPattern === 'tap' ? '#FF9F0A' : '#636366'
+    this.goalStateColor = this.vibrationPattern === 'goal' ? '#FF9F0A' : '#636366'
+    this.countdownStateColor = this.vibrationPattern === 'countdown' ? '#FF9F0A' : '#636366'
+    this.alertStateColor = this.vibrationPattern === 'alert' ? '#FF9F0A' : '#636366'
+  },
+
+  toggleVibration() {
+    this.vibrationEnabled = !this.vibrationEnabled
+    this.refreshView()
+    deviceSettings.update('vibrationEnabled', this.vibrationEnabled)
+  },
+
+  setLevel(level) {
+    this.vibrationLevel = level
+    this.refreshView()
+    deviceSettings.update('vibrationLevel', level)
+  },
+
+  setLight() { this.setLevel('light') },
+  setMedium() { this.setLevel('medium') },
+  setStrong() { this.setLevel('strong') },
+
+  testCurrentLevel() {
+    this.playPattern(this.vibrationPattern)
+  },
+
+  testTap() { this.selectPattern('tap') },
+  testGoal() { this.selectPattern('goal') },
+  testCountdown() { this.selectPattern('countdown') },
+  testAlert() { this.selectPattern('alert') },
+
+  selectPattern(name) {
+    this.vibrationPattern = name
+    this.refreshView()
+    this.feedbackText = '当前模式：' + this.selectedPatternText
+    deviceSettings.update('vibrationPattern', name)
+    this.playPattern(name)
+  },
+
+  playPattern(name) {
+    if (!this.vibrationEnabled) {
+      this.feedbackText = '请先开启震动反馈'
+      this.pulseColor = '#8E8E93'
+      return
+    }
+    var self = this
+    this.feedbackText = '正在播放…'
+    this.pulseColor = '#FF9F0A'
+    hapticFeedback.play(name, function (result) {
+      self.feedbackText = result.ok ? result.label + (result.custom ? ' · 自定义节奏' : ' · 基础降级') : '当前设备无法震动'
+    }, this.vibrationLevel)
+    clearTimeout(this.feedbackTimer)
+    this.feedbackTimer = setTimeout(function () {
+      self.pulseColor = '#2C2C2E'
+    }, 1000)
+  },
+
+  previousPage() {
+    if (this.pageIndex === 0) return
+    this.pageIndex = 0
+    this.previousColor = '#3A3A3C'
+    this.nextColor = '#FF9F0A'
+  },
+
+  nextPage() {
+    if (this.pageIndex === 1) return
+    this.pageIndex = 1
+    this.previousColor = '#FF9F0A'
+    this.nextColor = '#3A3A3C'
+  },
+
+  handleSwipe(event) {
+    if (!event) return
+    if (event.direction === 'left') this.nextPage()
+    else if (event.direction === 'right') {
+      if (this.pageIndex > 0) this.previousPage()
+      else pageMotion.back(this, router)
+    }
+  }
+}
+</script>
+
+<style>
+.vibration-page { width: 100%; height: 100%; flex-direction: column; align-items: center; padding: 16px 13px; background-color: #000000; }
+.top-row { width: 166px; height: 38px; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+.page-title { font-size: 22px; font-weight: bold; color: #FF9F0A; }
+.page-number { font-size: 11px; color: #8E8E93; }
+.setting-panel, .pattern-panel { width: 166px; height: 282px; flex-direction: column; align-items: center; }
+.status-card { width: 166px; height: 90px; flex-direction: row; align-items: center; justify-content: space-between; padding: 11px; border-width: 1px; border-radius: 12px; background-color: #14181F; }
+.status-copy { width: 99px; flex-direction: column; }
+.status-label { font-size: 9px; color: #8E8E93; }
+.status-value { font-size: 23px; font-weight: bold; margin-top: 3px; }
+.status-sub { font-size: 9px; color: #D1D1D6; margin-top: 4px; }
+.status-switch { width: 43px; height: 25px; border-radius: 13px; align-items: center; }
+.switch-knob { width: 19px; height: 19px; border-radius: 10px; background-color: #FFFFFF; }
+.section-label { width: 164px; font-size: 10px; color: #8E8E93; margin-top: 12px; margin-bottom: 7px; }
+.level-row { width: 166px; height: 38px; flex-direction: row; justify-content: space-between; }
+.level-button { width: 51px; height: 34px; border-radius: 10px; font-size: 14px; font-weight: bold; text-align: center; }
+.preview-card { width: 166px; height: 67px; flex-direction: row; align-items: center; padding: 10px; margin-top: 12px; border-radius: 11px; background-color: #14181F; }
+.preview-icon { width: 34px; height: 34px; border-radius: 17px; justify-content: center; align-items: center; margin-right: 10px; }
+.preview-core { width: 12px; height: 12px; border-radius: 6px; background-color: #FFFFFF; }
+.preview-copy { width: 97px; flex-direction: column; }
+.preview-title { font-size: 13px; font-weight: bold; color: #FFFFFF; }
+.preview-sub { width: 96px; font-size: 8px; color: #8E8E93; margin-top: 4px; lines: 1; text-overflow: ellipsis; }
+.preview-arrow { width: 10px; font-size: 19px; color: #636366; }
+.setting-tip { width: 158px; font-size: 8px; color: #5E626A; text-align: center; margin-top: 9px; }
+.capability-card { width: 166px; height: 54px; flex-direction: row; align-items: center; padding: 9px; border-radius: 11px; background-color: #21190F; margin-bottom: 7px; }
+.capability-label { width: 52px; font-size: 9px; color: #8E8E93; }
+.capability-value { width: 70px; font-size: 10px; font-weight: bold; text-align: center; }
+.capability-mode { width: 30px; font-size: 6px; line-height: 8px; color: #8E8E93; text-align: right; }
+.pattern-item { width: 166px; height: 45px; flex-direction: row; align-items: center; padding: 7px 9px; margin-bottom: 6px; border-radius: 10px; background-color: #14181F; }
+.pattern-mark { width: 36px; height: 27px; flex-direction: row; justify-content: center; align-items: center; margin-right: 8px; }
+.beat { width: 5px; height: 15px; border-radius: 3px; background-color: #FF9F0A; margin-left: 2px; margin-right: 2px; }
+.long-beat { width: 8px; height: 21px; }
+.pattern-copy { width: 78px; flex-direction: column; }
+.pattern-name { font-size: 12px; font-weight: bold; color: #FFFFFF; }
+.pattern-desc { font-size: 7px; color: #8E8E93; margin-top: 2px; }
+.pattern-state { width: 26px; font-size: 7px; text-align: right; }
+.pattern-status { width: 158px; font-size: 7px; color: #8E8E93; text-align: center; }
+.pager-row { width: 152px; height: 32px; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 7px; }
+.pager-button { width: 34px; height: 29px; font-size: 24px; font-weight: bold; text-align: center; }
+.page-label { width: 72px; font-size: 9px; color: #8E8E93; text-align: center; }
+
+@media (shape: circle) {
+  .vibration-page { padding: 8px 22px; }
+  .top-row { width: 128px; height: 23px; margin-top: 8px; margin-bottom: 4px; }
+  .page-title { font-size: 12px; }
+  .page-number { font-size: 7px; }
+  .setting-panel, .pattern-panel { width: 148px; height: 124px; }
+  .status-card { width: 148px; height: 45px; padding: 6px 10px; border-radius: 22px; }
+  .status-copy { width: 80px; }
+  .status-label, .status-sub { font-size: 5px; }
+  .status-value { font-size: 12px; margin-top: 1px; }
+  .status-sub { margin-top: 1px; }
+  .status-switch { width: 43px; height: 19px; border-radius: 10px; }
+  .switch-knob { width: 15px; height: 15px; }
+  .section-label { width: 140px; font-size: 6px; margin-top: 4px; margin-bottom: 2px; }
+  .level-row { width: 148px; height: 24px; }
+  .level-button { width: 46px; height: 21px; border-radius: 11px; font-size: 8px; }
+  .preview-card { width: 148px; height: 37px; padding: 5px 9px; margin-top: 4px; border-radius: 18px; }
+  .preview-icon { width: 24px; height: 24px; border-radius: 12px; margin-right: 7px; }
+  .preview-core { width: 8px; height: 8px; }
+  .preview-copy { width: 96px; }
+  .preview-title { font-size: 8px; }
+  .preview-sub { width: 94px; font-size: 5px; margin-top: 1px; }
+  .preview-arrow { font-size: 11px; }
+  .setting-tip { display: none; }
+  .capability-card { width: 148px; height: 24px; padding: 3px 8px; margin-bottom: 3px; border-radius: 12px; }
+  .capability-label { width: 42px; font-size: 5px; }
+  .capability-value { width: 67px; font-size: 6px; }
+  .capability-mode { width: 30px; font-size: 4px; line-height: 5px; }
+  .pattern-item { width: 148px; height: 21px; padding: 2px 7px; margin-bottom: 3px; border-radius: 11px; }
+  .pattern-mark { width: 30px; height: 17px; margin-right: 5px; }
+  .beat { width: 3px; height: 10px; margin-left: 1px; margin-right: 1px; }
+  .long-beat { width: 5px; height: 14px; }
+  .pattern-copy { width: 76px; }
+  .pattern-name { font-size: 7px; }
+  .pattern-desc { font-size: 4px; margin-top: 0px; }
+  .pattern-state { width: 22px; font-size: 5px; }
+  .pattern-status { display: none; }
+  .pager-row { width: 132px; height: 21px; margin-top: 3px; }
+  .pager-button { width: 30px; height: 20px; font-size: 17px; }
+  .page-label { font-size: 6px; }
+}
+</style>

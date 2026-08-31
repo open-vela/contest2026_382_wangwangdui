@@ -1,0 +1,276 @@
+<template>
+  <div class="today-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
+    <div class="summary-page" if="{{ profileReady && (!isCircle || circlePageIndex === 0) }}">
+      <div class="date-card">
+        <div class="month-badge"><text class="month-text">{{ monthText }}</text></div>
+        <text class="day-value">{{ dayText }}</text>
+        <div class="date-copy">
+          <text class="weekday-text">{{ weekdayText }}</text>
+          <text class="year-text">{{ yearText }}</text>
+          <text class="progress-text">{{ lunarText }}</text>
+        </div>
+      </div>
+
+      <div class="summary-title-row">
+        <text class="summary-title">今日摘要</text>
+        <text class="summary-goal">目标 {{ goalPercent }}%</text>
+      </div>
+      <div class="goal-track"><div class="goal-fill" style="width: {{ goalWidth }}"></div></div>
+
+      <div class="metric-grid">
+        <div class="metric-card blue-card"><text class="metric-label">步数</text><text class="metric-value">{{ stepsText }}</text><text class="metric-unit">步</text></div>
+        <div class="metric-card orange-card"><text class="metric-label">热量</text><text class="metric-value">{{ caloriesText }}</text><text class="metric-unit">千卡</text></div>
+        <div class="metric-card red-card"><text class="metric-label">心率</text><text class="metric-value">{{ heartText }}</text><text class="metric-unit">次/分</text></div>
+        <div class="metric-card green-card"><text class="metric-label">站立</text><text class="metric-value">{{ standText }}</text><text class="metric-unit">小时</text></div>
+      </div>
+
+      <text class="today-tip">数据与表盘、健康趋势使用同一份本地快照</text>
+      <div class="circle-pager" if="{{ isCircle }}">
+        <div class="circle-pager-dot is-active"></div>
+        <div class="circle-pager-dot"></div>
+      </div>
+    </div>
+
+    <div class="calendar-page" if="{{ profileReady && isCircle && circlePageIndex === 1 }}">
+      <div class="calendar-title-row">
+        <text class="calendar-title">{{ calendarTitle }}</text>
+      </div>
+      <div class="calendar-week-row">
+        <text class="calendar-week weekend">日</text>
+        <text class="calendar-week">一</text>
+        <text class="calendar-week">二</text>
+        <text class="calendar-week">三</text>
+        <text class="calendar-week">四</text>
+        <text class="calendar-week">五</text>
+        <text class="calendar-week weekend">六</text>
+      </div>
+      <div class="calendar-grid">
+        <div class="calendar-cell" for="{{ calendarCells }}" tid="key">
+          <text class="calendar-day" style="color: {{ $item.textColor }}; background-color: {{ $item.backgroundColor }};">{{ $item.day }}</text>
+        </div>
+      </div>
+      <div class="calendar-status-row">
+        <text class="calendar-lunar">今天 · {{ lunarText }}</text>
+        <text class="calendar-live-heart">心率 {{ heartText }}</text>
+      </div>
+      <div class="circle-pager">
+        <div class="circle-pager-dot"></div>
+        <div class="circle-pager-dot is-active"></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import pageMotion from '../../common/page_motion'
+import pageViewport from '../../common/page_viewport'
+import watchData from '../../common/watch_data'
+import healthSampleService from '../../common/health_sample_service'
+import calendarUtils from '../../common/calendar_utils'
+
+var WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+
+export default {
+  private: {
+    yearText: '',
+    monthText: '',
+    dayText: '',
+    weekdayText: '',
+    lunarText: '',
+    stepsText: '--',
+    caloriesText: '--',
+    heartText: '--',
+    standText: '--',
+    goalPercent: 0,
+    goalWidth: '0%',
+    profileReady: false,
+    isCircle: false,
+    circlePageIndex: 0,
+    calendarYear: 0,
+    calendarMonth: 0,
+    calendarTitle: '',
+    calendarCells: [],
+    lastHeartRateUpdatedAt: 0,
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    var self = this
+    this.healthListener = function (data) {
+      self.applyHealthData(data)
+    }
+    pageViewport.bind(this, function (profile) {
+      self.profileReady = true
+      self.isCircle = profile.isCircle
+    })
+    this.refreshToday()
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    this.refreshToday()
+    healthSampleService.start(this.healthListener)
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+    healthSampleService.stop(this.healthListener)
+  },
+
+  onDestroy() {
+    pageMotion.clear(this)
+    healthSampleService.stop(this.healthListener)
+    this.calendarCells = []
+  },
+
+  refreshToday() {
+    var now = new Date()
+    var snapshot = watchData.getSnapshot()
+    this.yearText = now.getFullYear() + ' 年'
+    this.monthText = now.getMonth() + 1 + '月'
+    this.dayText = now.getDate().toString()
+    this.weekdayText = WEEKDAYS[now.getDay()]
+    this.lunarText = calendarUtils.formatLunar(now)
+    this.stepsText = snapshot.stepsText
+    this.caloriesText = snapshot.calories.toString()
+    this.heartText = snapshot.currentHeartRate.toString()
+    this.standText = snapshot.standHours.toString()
+    this.goalPercent = snapshot.goalPercent
+    this.goalWidth = snapshot.goalProgressWidth
+    this.calendarYear = now.getFullYear()
+    this.calendarMonth = now.getMonth()
+    this.refreshCalendar()
+  },
+
+  applyHealthData(data) {
+    if (!data || data.heartRate === undefined || data.heartRate === null) return
+    if (!data.heartRateUpdatedAt || data.heartRateUpdatedAt === this.lastHeartRateUpdatedAt) return
+    this.lastHeartRateUpdatedAt = data.heartRateUpdatedAt
+    var snapshot = watchData.applyHeartRate(data.heartRate)
+    this.heartText = snapshot.currentHeartRate.toString()
+  },
+
+  refreshCalendar() {
+    var today = new Date()
+    this.calendarTitle = this.calendarYear + '年 ' + (this.calendarMonth + 1) + '月'
+    this.calendarCells = calendarUtils.buildMonth(this.calendarYear, this.calendarMonth, today)
+  },
+
+  changeCalendarMonth(delta) {
+    var next = calendarUtils.shiftMonth(this.calendarYear, this.calendarMonth, delta)
+    this.calendarYear = next.year
+    this.calendarMonth = next.month
+    this.refreshCalendar()
+  },
+
+  handleSwipe(event) {
+    if (!event) return
+    if (!this.isCircle) {
+      if (event.direction === 'right') pageMotion.back(this, router)
+      return
+    }
+    if (this.circlePageIndex === 0) {
+      if (event.direction === 'left') this.circlePageIndex = 1
+      else if (event.direction === 'right') pageMotion.back(this, router)
+      return
+    }
+    if (event.direction === 'up') this.changeCalendarMonth(1)
+    else if (event.direction === 'down') this.changeCalendarMonth(-1)
+    else if (event.direction === 'right') this.circlePageIndex = 0
+  }
+}
+</script>
+
+<style>
+.today-page { width: 100%; height: 100%; flex-direction: column; align-items: center; padding: 18px 12px; background-color: #000000; }
+.summary-page { width: 100%; flex-direction: column; align-items: center; }
+.date-card { width: 166px; height: 128px; flex-direction: row; align-items: center; padding: 13px; border-radius: 15px; background-color: #171318; }
+.month-badge { position: absolute; left: 12px; top: 10px; width: 45px; height: 23px; border-radius: 12px; background-color: #FF375F; justify-content: center; align-items: center; }
+.month-text { width: 42px; font-size: 10px; font-weight: bold; color: #FFFFFF; text-align: center; }
+.day-value { width: 70px; font-size: 64px; font-weight: bold; color: #FFFFFF; text-align: center; margin-top: 18px; }
+.date-copy { width: 69px; flex-direction: column; margin-left: 8px; }
+.weekday-text { font-size: 16px; font-weight: bold; color: #FF375F; }
+.year-text { font-size: 11px; color: #D1D1D6; margin-top: 8px; }
+.progress-text { font-size: 8px; color: #8E8E93; margin-top: 6px; }
+.summary-title-row { width: 162px; height: 30px; flex-direction: row; justify-content: space-between; align-items: flex-end; margin-top: 12px; }
+.summary-title { font-size: 15px; font-weight: bold; color: #FFFFFF; }
+.summary-goal { font-size: 9px; color: #30D158; }
+.goal-track { width: 162px; height: 5px; border-radius: 3px; background-color: #242426; margin-top: 5px; }
+.goal-fill { height: 5px; border-radius: 3px; background-color: #30D158; }
+.metric-grid { width: 166px; height: 152px; flex-direction: row; flex-wrap: wrap; justify-content: space-between; margin-top: 12px; }
+.metric-card { width: 79px; height: 70px; flex-direction: column; padding: 9px; border-radius: 12px; margin-bottom: 8px; }
+.blue-card { background-color: #101D2B; } .orange-card { background-color: #2A1B0B; } .red-card { background-color: #2B1117; } .green-card { background-color: #10251A; }
+.metric-label { font-size: 9px; color: #8E8E93; }
+.metric-value { font-size: 22px; font-weight: bold; color: #FFFFFF; margin-top: 3px; }
+.metric-unit { font-size: 7px; color: #8E8E93; }
+.today-tip { width: 164px; font-size: 8px; color: #5E626A; text-align: center; margin-top: 7px; }
+.circle-page-tip { display: none; }
+/*
+ * 月历页与摘要页共用同一条 136px 宽 / 130px 高的圆屏安全带：
+ *   14(标题) + 11(星期行) + 90(6 行 × 15) + 12(状态行) + 3 + 4(分页点) = 134
+ * 其中标题与星期行之间不留额外间距，正好落在 130px 预算内（含 4px 弹性）。
+ * 一个月最多跨 6 个自然周，因此网格必须按 6 行预留，否则月末会被挤出安全区。
+ */
+.calendar-page { width: 136px; height: 130px; flex-direction: column; align-items: center; }
+.calendar-title-row { width: 136px; height: 14px; justify-content: center; align-items: center; }
+.calendar-title { width: 136px; font-size: 10px; font-weight: bold; color: #FFFFFF; text-align: center; }
+.calendar-week-row { width: 133px; height: 11px; flex-direction: row; }
+.calendar-week { width: 19px; font-size: 6px; color: #8E8E93; text-align: center; }
+.calendar-week.weekend { color: #FF6B81; }
+.calendar-grid { width: 133px; height: 90px; flex-direction: row; flex-wrap: wrap; }
+.calendar-cell { width: 19px; height: 15px; justify-content: center; align-items: center; }
+.calendar-day { width: 15px; height: 13px; border-radius: 7px; font-size: 7px; text-align: center; }
+.calendar-status-row { width: 133px; height: 12px; flex-direction: row; justify-content: space-between; align-items: center; }
+.calendar-lunar { width: 90px; font-size: 7px; color: #E5E5EA; }
+.calendar-live-heart { width: 43px; font-size: 7px; color: #FF375F; text-align: right; }
+
+/*
+ * 圆屏安全区排版
+ *
+ * 圆屏可视范围是 192 画布的内切圆，内容越宽能用的纵向区间越短。136px 宽的元素
+ * 对应 y=29..163（safe_area.circleBandForWidth(192, 136)），留 2px 视觉余量后
+ * 是 y=31..161，共 130px。整摞内容严格排在这 130px 内：
+ *
+ *   50(日期卡) + 3 + 13(标题行) + 2 + 3(进度条) + 4 + 48(指标网格) + 3 + 4(分页点) = 130
+ *
+ * 改动任一高度都要同步这笔账，npm run safearea:check 会按几何模型回归校验。
+ * 底部用两个分页点代替“左滑查看月历”文案：占位从 8px 降到 4px，
+ * 也比说明文字更符合手表的视觉语言。
+ */
+@media (shape: circle) {
+  .today-page { padding: 31px 28px 31px 28px; }
+  .summary-page { width: 136px; height: 130px; }
+  .date-card { width: 136px; height: 50px; padding: 6px 11px; border-radius: 24px; }
+  .month-badge { left: 11px; top: 5px; width: 30px; height: 13px; border-radius: 7px; }
+  .month-text { width: 28px; font-size: 6px; }
+  .day-value { width: 48px; height: 32px; font-size: 28px; margin-top: 8px; }
+  .date-copy { width: 58px; margin-left: 4px; }
+  .weekday-text { font-size: 9px; }
+  .year-text { font-size: 6px; margin-top: 2px; }
+  .progress-text { font-size: 5px; margin-top: 1px; }
+  .summary-title-row { width: 136px; height: 13px; margin-top: 3px; }
+  .summary-title { font-size: 8px; }
+  .summary-goal { font-size: 6px; }
+  .goal-track { width: 136px; height: 3px; margin-top: 2px; }
+  .goal-fill { height: 3px; }
+  .metric-grid { width: 136px; height: 48px; margin-top: 4px; }
+  .metric-card { width: 66px; height: 22px; padding: 0px 7px; border-radius: 11px; margin-bottom: 4px; justify-content: center; }
+  .metric-label { position: absolute; left: 7px; top: 8px; width: 24px; font-size: 5px; }
+  /* 数值右对齐、单位紧随其后，圆屏窄卡里仍保留完整语义。 */
+  .metric-value { position: absolute; left: 24px; top: 5px; width: 26px; font-size: 11px; margin-top: 0px; text-align: right; }
+  .metric-unit { position: absolute; left: 52px; top: 10px; width: 12px; font-size: 4px; }
+  .today-tip { display: none; }
+  .circle-page-tip { display: none; }
+  .circle-pager { display: flex; width: 136px; height: 4px; flex-direction: row; justify-content: center; align-items: center; margin-top: 3px; }
+  .circle-pager-dot { width: 4px; height: 4px; border-radius: 2px; background-color: #3A3A3C; margin-left: 2px; margin-right: 2px; }
+  .circle-pager-dot.is-active { width: 10px; background-color: #FF375F; }
+}
+</style>

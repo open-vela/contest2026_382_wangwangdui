@@ -1,0 +1,253 @@
+<template>
+  <div class="demo-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px; margin-top: {{ pageOffsetY }}px;" @swipe="handleSwipe">
+    <text class="demo-title">通知演示</text>
+    <input class="demo-btn" type="button" value="短信演示" @click="demoSms" />
+    <input class="demo-btn" type="button" value="电话演示" @click="demoCall" />
+    <input class="demo-btn" type="button" value="应用演示" @click="demoApp" />
+    <input class="demo-btn back-btn" type="button" value="返回" @click="goBack" />
+
+    <!-- Inline full-screen notification overlay, same pattern as clock.ux sleep/dim covers. -->
+    <div class="fullscreen-notify" if="{{ notifyVisible }}">
+      <div class="notify-body-wrap" if="{{ notifyType !== 'call' }}">
+        <div class="notify-app-row">
+          <image class="notify-app-icon" src="{{ notifyAppIcon }}"></image>
+          <text class="notify-app-name">{{ notifyAppName }}</text>
+        </div>
+        <text class="notify-content-text">{{ notifyContent }}</text>
+      </div>
+
+      <div class="notify-body-wrap call-wrap" if="{{ notifyType === 'call' }}">
+        <text class="notify-contact">{{ notifyContact }}</text>
+        <text class="notify-phone">{{ notifyPhone }}</text>
+      </div>
+
+      <div class="notify-actions">
+        <text class="notify-btn ignore-btn" @click="handleIgnore">忽略</text>
+        <text class="notify-btn hangup-btn {{ notifyHangUp ? 'hangup-gray' : '' }}" if="{{ notifyType === 'call' }}" @click="handleHangup">挂断</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import notificationManager from '../../common/notification_manager'
+import pageMotion from '../../common/page_motion'
+import pageViewport from '../../common/page_viewport'
+
+export default {
+  private: {
+    pageOpacity: 1,
+    pageOffset: 0,
+    pageOffsetY: 0,
+    notifyVisible: false,
+    notifyType: '',
+    notifyAppName: '',
+    notifyAppIcon: '',
+    notifyContent: '',
+    notifyContact: '',
+    notifyPhone: '',
+    notifyHangUp: false,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    pageViewport.bind(this)
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    var self = this
+    notificationManager.onChange(function (state) {
+      self.notifyVisible = state.visible
+      self.notifyType = state.type
+      self.notifyAppName = state.appName
+      self.notifyAppIcon = state.appIcon
+      self.notifyContent = state.content
+      self.notifyContact = state.contact
+      self.notifyPhone = state.phone
+      self.notifyHangUp = state.hangUp
+    })
+    notificationManager.init()
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+  },
+
+  // Paired with the single init() in onShow; the manager is refcounted, so
+  // releasing here as well (onHide+onDestroy both fire on back) would
+  // over-decrement and tear down listeners still held by the clock page.
+  onDestroy() {
+    pageMotion.clear(this)
+    notificationManager.destroy()
+  },
+
+  demoSms() {
+    console.log('demoSms clicked')
+    notificationManager.showDemo('sms')
+  },
+
+  demoCall() {
+    console.log('demoCall clicked')
+    notificationManager.showDemo('call')
+  },
+
+  demoApp() {
+    console.log('demoApp clicked')
+    notificationManager.showDemo('app')
+  },
+
+  handleIgnore() {
+    notificationManager.dismiss()
+  },
+
+  handleHangup() {
+    notificationManager.hangUp()
+  },
+
+  goBack() {
+    pageMotion.back(this, router)
+  },
+
+  handleSwipe(e) {
+    if (e.direction === 'right') {
+      pageMotion.back(this, router)
+    }
+  }
+}
+</script>
+
+<style>
+.demo-page {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+  width: 100%;
+  height: 100%;
+  padding: 16px 12px;
+  position: relative;
+}
+
+.demo-title {
+  width: 168px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 24px;
+}
+
+.demo-btn {
+  width: 140px;
+  height: 44px;
+  font-size: 16px;
+  color: #FFFFFF;
+  text-align: center;
+  background-color: #1A1A1A;
+  border-radius: 22px;
+  margin-bottom: 14px;
+}
+
+.back-btn {
+  margin-top: 20px;
+  background-color: #2C2C2E;
+}
+
+.fullscreen-notify {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000000;
+}
+
+.notify-body-wrap {
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+  width: 168px;
+}
+
+.notify-app-row {
+  flex-direction: row;
+  align-items: center;
+}
+
+.notify-app-icon {
+  width: 40px;
+  height: 40px;
+  margin-right: 12px;
+}
+
+.notify-app-name {
+  font-size: 20px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.notify-content-text {
+  width: 168px;
+  font-size: 16px;
+  color: #CCCCCC;
+  text-align: center;
+  margin-top: 20px;
+  lines: 3;
+}
+
+.call-wrap {
+  flex-direction: column;
+  align-items: center;
+}
+
+.notify-contact {
+  font-size: 24px;
+  color: #FFFFFF;
+  font-weight: bold;
+  text-align: center;
+}
+
+.notify-phone {
+  font-size: 18px;
+  color: #CCCCCC;
+  text-align: center;
+  margin-top: 12px;
+}
+
+.notify-actions {
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 168px;
+  height: 60px;
+  margin-bottom: 40px;
+}
+
+.notify-btn {
+  width: 72px;
+  height: 36px;
+  font-size: 14px;
+  color: #FFFFFF;
+  text-align: center;
+  background-color: #1A1A1A;
+  border-radius: 18px;
+  margin: 0 8px;
+}
+
+.hangup-gray {
+  color: #888888;
+  background-color: #0F0F0F;
+}
+</style>

@@ -1,0 +1,368 @@
+<template>
+  <div class="history-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @touchstart="onTouchStart" @touchend="onTouchEnd">
+    <div class="top-row">
+      <text class="page-title" static>运动记录</text>
+      <text class="back-text" @click="goBack">返回</text>
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-item">
+        <text class="summary-value">{{ totalCount }}</text>
+        <text class="summary-label" static>运动次数</text>
+      </div>
+      <div class="summary-item">
+        <text class="summary-value step-color">{{ totalSteps }}</text>
+        <text class="summary-label" static>累计步数</text>
+      </div>
+    </div>
+
+    <div class="empty-state" if="{{ emptyVisible }}">
+      <text class="empty-title" static>暂无运动记录</text>
+      <text class="empty-sub" static>完成一次步行或跑步后会显示在这里</text>
+    </div>
+    <list class="record-scroll" if="{{ !emptyVisible }}">
+      <list-item type="record" class="record-item" for="{{ records }}" tid="id">
+        <div class="record-head">
+          <text class="record-type">{{ $item.typeName }}</text>
+          <text class="sync-state">{{ $item.syncText }}</text>
+        </div>
+        <text class="record-time">{{ $item.startText }} · {{ $item.durationText }}</text>
+        <div class="record-metrics">
+          <text class="record-value">{{ $item.steps }} 步</text>
+          <text class="record-value">{{ $item.distanceText }}</text>
+          <text class="record-value">{{ $item.calories }} kcal</text>
+        </div>
+        <text class="gps-source">{{ $item.distanceSourceText }}</text>
+      </list-item>
+    </list>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import workoutManager from '../../common/workout_manager'
+import pageMotion from '../../common/page_motion'
+import swipeBack from '../../common/swipe_back'
+import pageViewport from '../../common/page_viewport'
+
+export default {
+  private: {
+    totalCount: '0',
+    totalSteps: '0',
+    emptyVisible: true,
+    records: [],
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    pageViewport.bind(this)
+  },
+
+  onShow() {
+    this.pageVisible = true
+    pageMotion.enter(this)
+    this.loadRecords()
+  },
+
+  onHide() {
+    this.pageVisible = false
+    pageMotion.clear(this)
+    this.releaseRecords()
+  },
+
+  onDestroy() {
+    this.pageVisible = false
+    pageMotion.clear(this)
+    this.releaseRecords()
+  },
+
+  loadRecords() {
+    var self = this
+    workoutManager.getRecords(function (records) {
+      if (!self.pageVisible) {
+        return
+      }
+      var totalSteps = 0
+      for (var i = 0; i < records.length; i++) {
+        totalSteps += records[i].steps
+        records[i].syncText = records[i].synced ? '已同步' : '待同步'
+        records[i].distanceSourceText = records[i].distanceSource === 'gps' ? 'GPS 距离' : '步幅估算'
+      }
+      self.records = records
+      self.totalCount = records.length.toString()
+      self.totalSteps = totalSteps.toString()
+      self.emptyVisible = records.length === 0
+    })
+  },
+
+  releaseRecords() {
+    // Drop list references when hidden; storage remains the source of truth.
+    this.records = []
+  },
+
+  goBack() {
+    pageMotion.back(this, router)
+  },
+
+  onTouchStart(e) {
+    swipeBack.start(this, e)
+  },
+
+  onTouchEnd(e) {
+    swipeBack.end(this, e, router)
+  }
+}
+</script>
+
+<style>
+.history-page {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 18px 14px;
+  background-color: #000000;
+}
+
+.top-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 128px;
+  height: 32px;
+}
+
+.page-title {
+  font-size: 18px;
+  color: #FFFFFF;
+  font-weight: bold;
+  width: 78px;
+}
+
+.back-text {
+  font-size: 10px;
+  color: #8E8E93;
+  width: 38px;
+  text-align: right;
+}
+
+.summary-row {
+  flex-direction: row;
+  justify-content: space-between;
+  width: 164px;
+  height: 64px;
+  margin-top: 14px;
+}
+
+.summary-item {
+  flex-direction: column;
+  justify-content: center;
+  width: 78px;
+  height: 62px;
+  padding-left: 10px;
+  background-color: #14181F;
+  border-radius: 8px;
+}
+
+.summary-value {
+  font-size: 20px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.step-color {
+  color: #FFD60A;
+}
+
+.summary-label {
+  font-size: 10px;
+  color: #8E8E93;
+  margin-top: 5px;
+}
+
+.record-scroll {
+  width: 164px;
+  height: 340px;
+  margin-top: 16px;
+}
+
+.record-item {
+  flex-direction: column;
+  width: 164px;
+  height: 88px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #111317;
+  border-radius: 8px;
+}
+
+.record-head {
+  flex-direction: row;
+  justify-content: space-between;
+  width: 144px;
+}
+
+.record-type {
+  font-size: 16px;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.sync-state {
+  font-size: 10px;
+  color: #0A84FF;
+}
+
+.record-time {
+  font-size: 10px;
+  color: #8E8E93;
+  margin-top: 5px;
+}
+
+.record-metrics {
+  flex-direction: row;
+  justify-content: space-between;
+  width: 144px;
+  margin-top: 12px;
+}
+
+.record-value {
+  font-size: 10px;
+  color: #D1D1D6;
+}
+
+.gps-source {
+  font-size: 9px;
+  color: #30D158;
+  margin-top: 6px;
+}
+
+.empty-state {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 164px;
+  height: 150px;
+}
+
+.empty-title {
+  font-size: 16px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.empty-sub {
+  width: 140px;
+  font-size: 10px;
+  color: #8E8E93;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/*
+ * 圆屏安全栈：24 → 标题 120×14 → 汇总 148×38 → 记录列表 148×78(+2)，结束 y=156
+ *
+ * 汇总行与列表都是 148px 宽，两者必须共享内切圆中段的 y=35..157（仅 122px）。
+ * 因此把标题行压到 120px 宽提到 y=24，腾出的空间全部让给可滚动列表——
+ * 原布局给列表 104px 却起始于 y=103，底部一直冲到 y=207，被圆弧整块切掉。
+ */
+@media (shape: circle) {
+  .history-page {
+    padding: 24px 22px 0px 22px;
+  }
+
+  .top-row {
+    width: 120px;
+    height: 14px;
+    margin-top: 0px;
+  }
+
+  .page-title {
+    width: 76px;
+    font-size: 12px;
+  }
+
+  .back-text {
+    font-size: 7px;
+  }
+
+  .summary-row {
+    width: 148px;
+    height: 38px;
+    margin-top: 0px;
+  }
+
+  .summary-item {
+    width: 71px;
+    height: 38px;
+    border-radius: 14px;
+  }
+
+  .summary-value {
+    font-size: 13px;
+  }
+
+  .summary-label {
+    font-size: 6px;
+    margin-top: 1px;
+  }
+
+  /* 列表视口 78px；单条 68px 让下一条露出 10px，作为可滚动的视觉暗示。 */
+  .record-scroll {
+    width: 148px;
+    height: 78px;
+    margin-top: 2px;
+  }
+
+  .record-item {
+    width: 148px;
+    height: 68px;
+    border-radius: 18px;
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+
+  .record-head,
+  .record-metrics {
+    width: 130px;
+  }
+
+  .record-type {
+    font-size: 11px;
+  }
+
+  .sync-state,
+  .record-time,
+  .record-value,
+  .gps-source {
+    font-size: 7px;
+  }
+
+  .record-metrics {
+    margin-top: 7px;
+  }
+
+  /* 空态与列表互斥（if 分支），占同一块 78px 视口。 */
+  .empty-state {
+    width: 148px;
+    height: 78px;
+    margin-top: 2px;
+  }
+
+  .empty-title {
+    font-size: 11px;
+  }
+
+  .empty-sub {
+    width: 112px;
+    font-size: 7px;
+  }
+}
+</style>

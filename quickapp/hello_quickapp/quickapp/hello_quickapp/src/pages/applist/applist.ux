@@ -1,0 +1,768 @@
+<template>
+  <div class="applist-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px; margin-top: {{ pageOffsetY }}px;" @swipe="handleSwipe">
+    <div class="top-row" if="{{ profileReady && !isCircle }}">
+      <text class="page-side-spacer"></text>
+      <text class="page-title">应用</text>
+      <text class="page-number">{{ pageText }}</text>
+    </div>
+
+    <div class="pill-list" if="{{ profileReady && !isCircle }}">
+      <div class="app-item" for="{{ pageApps }}" tid="id" @click="openApp($item)">
+        <image class="app-icon" src="{{ $item.icon }}"></image>
+        <text class="app-name">{{ $item.label }}</text>
+        <text class="app-arrow">›</text>
+      </div>
+    </div>
+
+    <stack class="circle-honeycomb" if="{{ profileReady && isCircle }}" @touchstart="handleCircleTouchStart" @touchmove="handleCircleTouchMove" @touchend="handleCircleTouchEnd">
+      <!--
+        触摸事件同时绑在图标上：beta 运行时不跨组件冒泡（见 docs/TECHNICAL.md），
+        而 .circle-app 自带 @click，会吃掉从图标上起手的整串触摸事件，
+        导致「按在图标上拖不动、只有拖空白处才有反应」。
+        与 clock.ux 在根节点和各表盘组件上重复绑定 swipe/longpress 同理。
+        处理函数按事件时间戳去重，父子都收到时也只生效一次。
+      -->
+      <div class="circle-app {{ $item.isCenter ? 'is-center' : '' }}" for="{{ circleSlots }}" tid="slotKey" style="left: {{ $item.left }}px; top: {{ $item.top }}px; width: {{ $item.size }}px; height: {{ $item.size }}px; opacity: {{ $item.opacity }};" @click="focusOrOpenCircleApp($item)" @touchstart="handleCircleTouchStart" @touchmove="handleCircleTouchMove" @touchend="handleCircleTouchEnd">
+        <image class="circle-icon" style="width: {{ $item.size }}px; height: {{ $item.size }}px; border-radius: {{ $item.radius }}px;" src="{{ $item.icon }}"></image>
+      </div>
+      <div class="circle-position-track">
+        <div class="circle-position-dot" style="top: {{ circleIndicatorTop }}px;"></div>
+      </div>
+      <!-- 名称条排在图标之后：本运行时按 DOM 顺序叠放，靠后即在上层。
+           它盖在图标上方，同样要能起手拖拽，否则底部中央会留下一块死区。 -->
+      <div class="center-label-glass" @touchstart="handleCircleTouchStart" @touchmove="handleCircleTouchMove" @touchend="handleCircleTouchEnd"></div>
+      <div class="center-label-sheen"></div>
+      <div class="center-label" @touchstart="handleCircleTouchStart" @touchmove="handleCircleTouchMove" @touchend="handleCircleTouchEnd">
+        <text class="center-name">{{ focusedLabel }}</text>
+        <text class="center-hint">点按打开</text>
+      </div>
+    </stack>
+
+    <div class="pager-row" if="{{ profileReady && !isCircle }}">
+      <text class="pager-button" style="color: {{ previousColor }}" @click="previousPage">‹</text>
+      <div class="pager-track">
+        <div class="pager-fill" style="width: {{ pageProgress }}"></div>
+      </div>
+      <text class="pager-button" style="color: {{ nextColor }}" @click="nextPage">›</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import pageMotion from '../../common/page_motion'
+import launcherApps from '../../common/launcher_apps'
+import fixedPager from '../../common/fixed_pager'
+import pageViewport from '../../common/page_viewport'
+
+var CIRCLE_DRAG_LIMIT = 132
+var CIRCLE_SNAP_DISTANCE = 20
+var CIRCLE_DRAG_DAMPING = 0.58
+var CIRCLE_CENTER_RADIUS = 27
+var CIRCLE_MAX_FRAME_DELTA = 18
+
+// 蜂巢几何：真正的六边形晶格，而不是手工点出来的近似排布。
+// 旧坐标表的最近邻间距在 44.1~48.4 之间漂移，到中心的距离是
+// 48/48/57/57/63/63/89/89/95/96——因此看起来是「散落」而非「蜂巢」。
+// 现在按晶格公式生成：行距 = 间距×√3/2，奇数行横向错开半个间距。
+// 吸附动画：280ms + 16ms 心跳。回弹系数从 0.72 降到 0.34——
+// 0.72 在 46px 的位移上会冲出约 6px，像弹簧没夹紧；0.34 只过冲 2~3px。
+var CIRCLE_SNAP_DURATION = 280
+var CIRCLE_FRAME_MS = 16
+var CIRCLE_SNAP_BACK = 0.34
+var CIRCLE_SPACING = 46
+var CIRCLE_ROW_HEIGHT = Math.round(CIRCLE_SPACING * Math.sqrt(3) / 2)
+var CIRCLE_HALF_STEP = Math.round(CIRCLE_SPACING / 2)
+// 聚焦点比画布正中(96,96)略高，把底部弧线让给名称条。
+var CIRCLE_FOCUS_X = 96
+var CIRCLE_FOCUS_Y = 90
+var CIRCLE_ICON_BASE = 34
+var CIRCLE_ICON_GROW = 16
+// 放大衰减半径。60 < 间距 46×√3，聚焦图标与邻居的体量差足够明显。
+var CIRCLE_EMPHASIS_FALLOFF = 60
+// 弹性跟随：近处图标跟手多、远处少，制造纵深。
+// 差值必须留在 0.10 以内——0.14 时 132px 的拖拽极值会把相邻图标压到重叠。
+var CIRCLE_ELASTIC_BASE = 0.9
+var CIRCLE_ELASTIC_RANGE = 0.1
+// 名称条几何（与 .center-label-glass 样式保持一致）。
+var CIRCLE_LABEL_CENTER_Y = 162
+var CIRCLE_LABEL_HALF_HEIGHT = 10
+var CIRCLE_LABEL_HALF_WIDTH = 48
+
+// 八向滑动改为「空间方向向量」而不是固定的序号步长。
+// 旧表把 up 写成 -3、upLeft 写成 -4，是绑定在旧坐标表顺序上的魔法数字；
+// 换成向量后由 moveCircleFocus 就近选格，方向语义对任何排布都成立。
+var CIRCLE_DIRECTION_STEPS = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+  upLeft: { x: -0.7071, y: -0.7071 },
+  upRight: { x: 0.7071, y: -0.7071 },
+  downLeft: { x: -0.7071, y: 0.7071 },
+  downRight: { x: 0.7071, y: 0.7071 }
+}
+
+// 中心 + 6 邻居（间距 46）+ 4 外环（79.8）＝ 经典蜂巢花瓣，左右上下对称。
+// 应用整个会话保持这些坐标，拖拽只平移画布。
+var CIRCLE_GRID_COORDS = [
+  { x: CIRCLE_FOCUS_X, y: CIRCLE_FOCUS_Y },
+  { x: CIRCLE_FOCUS_X - CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y - CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X + CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y - CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X - CIRCLE_SPACING, y: CIRCLE_FOCUS_Y },
+  { x: CIRCLE_FOCUS_X + CIRCLE_SPACING, y: CIRCLE_FOCUS_Y },
+  { x: CIRCLE_FOCUS_X - CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y + CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X + CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y + CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X - CIRCLE_SPACING - CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y - CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X + CIRCLE_SPACING + CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y - CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X - CIRCLE_SPACING - CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y + CIRCLE_ROW_HEIGHT },
+  { x: CIRCLE_FOCUS_X + CIRCLE_SPACING + CIRCLE_HALF_STEP, y: CIRCLE_FOCUS_Y + CIRCLE_ROW_HEIGHT }
+]
+
+function buildCircleSlots(apps) {
+  var slots = []
+  for (var index = 0; index < apps.length; index++) {
+    var source = apps[index]
+    var coordinate = CIRCLE_GRID_COORDS[index % CIRCLE_GRID_COORDS.length]
+    var gridX = coordinate.x
+    var gridY = coordinate.y
+    slots.push({
+      slotKey: source.id + '-' + index,
+      id: source.id,
+      label: source.label,
+      icon: source.softIcon,
+      normalIcon: source.icon,
+      softIcon: source.softIcon,
+      route: source.route,
+      sourceIndex: index,
+      isCenter: false,
+      gridX: gridX,
+      gridY: gridY,
+      left: gridX - 17,
+      top: gridY - 17,
+      size: 34,
+      radius: 17,
+      opacity: 0.5
+    })
+  }
+  return slots
+}
+
+export default {
+  private: {
+    isCircle: false,
+    profileReady: false,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px',
+    allApps: [],
+    pageApps: [],
+    circleSlots: [],
+    focusedLabel: '',
+    circleDragOffset: 0,
+    circleDragOffsetX: 0,
+    circleDragOffsetY: 0,
+    circleDragFocusIndex: 0,
+    circlePanX: 0,
+    circlePanY: 0,
+    circleTouchLastY: 0,
+    circleTouchActive: false,
+    circleAnimationTimer: null,
+    circleAnimating: false,
+    circleIndicatorTop: 0,
+    pageIndex: 0,
+    pageText: '1 / 1',
+    pageProgress: '100%',
+    previousColor: '#3A3A3C',
+    nextColor: '#3A3A3C',
+    pageOpacity: 1,
+    pageOffset: 0,
+    pageOffsetY: 0
+  },
+
+  onInit() {
+    var self = this
+    pageViewport.bind(this, function (profile) {
+      self.isCircle = profile.isCircle
+      self.allApps = self.isCircle ? launcherApps.createCircleApps() : launcherApps.createPillApps()
+      if (self.isCircle) {
+        self.circleSlots = buildCircleSlots(self.allApps)
+        // 槽位重建会把位置复位，必须让下一次 updateCircleSlotPositions 的
+        // 签名缓存失效，否则相同平移量会被误判为「无变化」而跳过重排。
+        self.lastSlotSignature = null
+      }
+      self.profileReady = true
+      self.refreshPage()
+    })
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    if (this.profileReady) this.refreshPage()
+  },
+
+  onHide() {
+    clearTimeout(this.circleAnimationTimer)
+    this.circleAnimationTimer = null
+    this.circleAnimating = false
+    this.circleTouchActive = false
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    clearTimeout(this.circleAnimationTimer)
+    this.circleAnimationTimer = null
+    this.circleAnimating = false
+    this.circleTouchActive = false
+    pageMotion.clear(this)
+  },
+
+  refreshPage() {
+    if (this.isCircle) {
+      this.refreshCirclePage()
+      return
+    }
+    var state = fixedPager.build(this.allApps, this.pageIndex, 4)
+    this.pageIndex = state.pageIndex
+    this.pageApps = state.items
+    this.pageText = state.pageText
+    this.pageProgress = Math.round((state.pageNumber / state.pageCount) * 100) + '%'
+    this.previousColor = state.hasPrevious ? '#0A84FF' : '#3A3A3C'
+    this.nextColor = state.hasNext ? '#0A84FF' : '#3A3A3C'
+  },
+
+  refreshCirclePage(keepOffset) {
+    var count = this.allApps.length
+    if (!count) return
+    if (this.pageIndex < 0) this.pageIndex = 0
+    if (this.pageIndex >= count) this.pageIndex = count - 1
+    if (!keepOffset) {
+      this.circleDragOffset = 0
+      this.circleDragOffsetX = 0
+      this.circleDragOffsetY = 0
+      var selected = this.circleSlots[this.pageIndex]
+      if (selected) {
+        this.circlePanX = 96 - selected.gridX
+        this.circlePanY = 74 - selected.gridY
+      }
+    }
+    this.circleDragFocusIndex = this.pageIndex
+    this.focusedLabel = this.allApps[this.pageIndex].label
+    this.pageText = this.pageIndex + 1 + ' / ' + count
+    this.pageProgress = Math.round(((this.pageIndex + 1) / count) * 100) + '%'
+    this.previousColor = this.pageIndex > 0 ? '#0A84FF' : '#3A3A3C'
+    this.nextColor = this.pageIndex < count - 1 ? '#0A84FF' : '#3A3A3C'
+    // 指示点在轨道内可移动的行程 = 轨道高 56 − 指示点高 14 = 42。
+    this.circleIndicatorTop = count > 1 ? Math.round((this.pageIndex / (count - 1)) * 42) : 0
+    this.updateCircleSlotPositions()
+  },
+
+  updateCircleSlotPositions() {
+    var offsetX = this.circleDragOffsetX || 0
+    var offsetY = this.circleDragOffsetY || 0
+    var panX = this.circlePanX || 0
+    var panY = this.circlePanY || 0
+
+    // 拖拽时这个函数每帧都会跑。输入只有「画布平移 + 手指偏移」四个量，
+    // 四个量没变时结果必然相同——吸附动画结尾、手指停住、以及 refreshCirclePage
+    // 的重复调用都会命中这里，直接跳过整帧计算与一次列表重绘。
+    var signature = offsetX + '|' + offsetY + '|' + panX + '|' + panY
+    if (signature === this.lastSlotSignature) return
+    this.lastSlotSignature = signature
+
+    var nearest = null
+    var nearestDistance = Infinity
+    var nextSlots = this.circleSlots.map(function (slot) {
+      var baseX = slot.gridX + panX
+      var baseY = slot.gridY + panY
+      var baseDx = baseX - CIRCLE_FOCUS_X
+      var baseDy = baseY - CIRCLE_FOCUS_Y
+      var baseDistance = Math.sqrt(baseDx * baseDx + baseDy * baseDy)
+      var elasticFollow = CIRCLE_ELASTIC_BASE +
+        Math.max(0, Math.min(1, 1 - baseDistance / 90)) * CIRCLE_ELASTIC_RANGE
+      var centerX = baseX + offsetX * elasticFollow
+      var centerY = baseY + offsetY * elasticFollow
+      var dx = centerX - CIRCLE_FOCUS_X
+      var dy = centerY - CIRCLE_FOCUS_Y
+      var distance = Math.sqrt(dx * dx + dy * dy)
+      var emphasis = Math.max(0, Math.min(1, 1 - distance / CIRCLE_EMPHASIS_FALLOFF))
+      emphasis = emphasis * emphasis * (3 - 2 * emphasis)
+      var center = distance < CIRCLE_CENTER_RADIUS
+      if (distance < nearestDistance) {
+        nearestDistance = distance
+        nearest = slot
+      }
+      // 逐字段构造，而不是 `for (var key in slot)` 深拷贝：
+      // 原写法每帧要遍历原型链复制 16 个键 × 11 个槽位。
+      var size = Math.round(CIRCLE_ICON_BASE + emphasis * CIRCLE_ICON_GROW)
+      // 名称条改为「压在图标之上的毛玻璃」，图标从下方平移穿过并淡出，
+      // 而不是被横向弹开。旧写法把进入条带的图标推到 x=28/164，
+      // 拖拽时会看到图标突然横向蹿一截；淡出是连续的，视觉上安静得多。
+      var bandFadeY = Math.max(0, Math.min(1, 1 -
+        Math.abs(centerY - CIRCLE_LABEL_CENTER_Y) / (CIRCLE_LABEL_HALF_HEIGHT + size / 2)))
+      var bandFadeX = Math.max(0, Math.min(1, 1 -
+        Math.abs(centerX - CIRCLE_FOCUS_X) / (CIRCLE_LABEL_HALF_WIDTH + size / 2)))
+      var avoidanceProgress = bandFadeY * bandFadeX
+      avoidanceProgress = avoidanceProgress * avoidanceProgress * (3 - 2 * avoidanceProgress)
+      var next = {
+        slotKey: slot.slotKey,
+        id: slot.id,
+        label: slot.label,
+        normalIcon: slot.normalIcon,
+        softIcon: slot.softIcon,
+        route: slot.route,
+        sourceIndex: slot.sourceIndex,
+        gridX: slot.gridX,
+        gridY: slot.gridY,
+        isCenter: center,
+        size: size,
+        radius: Math.round(size / 2),
+        opacity: 0.5 + emphasis * 0.5,
+        // 阈值取 30：必须落在 CIRCLE_CENTER_RADIUS(27) 与晶格间距(46) 之间。
+        // 旧值 45 距离邻居静止位 46.0 只差 1px，稍一拖动就来回换图闪烁。
+        icon: distance < 30 ? slot.normalIcon : slot.softIcon
+      }
+      // 越接近名称条越透明，让毛玻璃上的文字始终可读。
+      next.opacity = next.opacity * (1 - avoidanceProgress * 0.8)
+      next.displayCenterX = centerX
+      next.displayCenterY = centerY
+      return next
+    })
+    // 这里原本有一段两遍 O(n²) 斥力循环，用来把被放大的图标推开。
+    // 均匀晶格让它变成了多余的：间距 46 恒定，最大图标 50(r=25)、
+    // 邻居约 36(r=18)，半径和 43 < 46；把弹性差值收到 0.10 之后，
+    // 全拖拽空间的最小边缘间隙是 +1.00px。不重叠现在是几何保证，
+    // 由 tests/circle_honeycomb.test.js 穷举 pan × offset 验证，
+    // 而不是每帧靠迭代修正——顺带去掉了斥力带来的抖动。
+    // 取整后再写样式：左上角是内联 px，亚像素抖动只会产生无效重绘。
+    for (var index = 0; index < nextSlots.length; index++) {
+      var placed = nextSlots[index]
+      placed.left = Math.round(placed.displayCenterX - placed.size / 2)
+      placed.top = Math.round(placed.displayCenterY - placed.size / 2)
+    }
+    this.circleDragFocusIndex = nearest ? nearest.sourceIndex : this.pageIndex
+    if (nearest && nearest.label !== this.focusedLabel) this.focusedLabel = nearest.label
+    this.circleSlots = nextSlots
+  },
+
+  // 按空间方向就近选格：在给定方向的 ±60° 锥形内，挑投影距离最近的邻居。
+  // 旧实现用固定序号步长（up = -3），只对旧坐标表成立，换排布就会乱跳。
+  moveCircleFocus(direction, keepOffset) {
+    var count = this.allApps.length
+    if (!count) return false
+    var current = this.circleSlots[this.pageIndex]
+    if (!current || !direction) return false
+    var bestIndex = -1
+    var bestScore = Infinity
+    for (var index = 0; index < this.circleSlots.length; index++) {
+      if (index === this.pageIndex) continue
+      var slot = this.circleSlots[index]
+      var dx = slot.gridX - current.gridX
+      var dy = slot.gridY - current.gridY
+      var distance = Math.sqrt(dx * dx + dy * dy)
+      if (!distance) continue
+      // 方向余弦 0.5 == ±60°，保证同一方向不会跳到侧后方的格子。
+      var alignment = (dx * direction.x + dy * direction.y) / distance
+      if (alignment < 0.5) continue
+      // 优先同方向、再优先近距离。
+      var score = distance / alignment
+      if (score < bestScore) {
+        bestScore = score
+        bestIndex = index
+      }
+    }
+    if (bestIndex < 0) return false
+    this.pageIndex = bestIndex
+    this.refreshCirclePage(keepOffset)
+    return true
+  },
+
+  previousPage() {
+    if (this.isCircle) {
+      this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.left)
+      return
+    }
+    var state = fixedPager.move(this.allApps, this.pageIndex, 4, -1)
+    if (state.pageIndex === this.pageIndex) return
+    this.pageIndex = state.pageIndex
+    this.refreshPage()
+  },
+
+  nextPage() {
+    if (this.isCircle) {
+      this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.right)
+      return
+    }
+    var state = fixedPager.move(this.allApps, this.pageIndex, 4, 1)
+    if (state.pageIndex === this.pageIndex) return
+    this.pageIndex = state.pageIndex
+    this.refreshPage()
+  },
+
+  openApp(item) {
+    if (!item) return
+    if (!item.route) {
+      pageMotion.back(this, router)
+      return
+    }
+    pageMotion.push(this, router, item.route)
+  },
+
+  focusOrOpenCircleApp(item) {
+    if (!item || Date.now() < (this.suppressCircleClickUntil || 0)) return
+    if (item.isCenter) {
+      this.openApp(item)
+      return
+    }
+    this.pageIndex = item.sourceIndex
+    this.refreshCirclePage()
+  },
+
+  handleCircleTouchStart(event) {
+    if (this.circleAnimating) return
+    // 同一串触摸若父子都派发，第二次会把起点重置成当前位置，
+    // 后续位移全部从零算起——表现为拖拽「粘一下」。已在进行中就忽略。
+    if (this.circleTouchActive) return
+    if (!event.touches || !event.touches[0]) return
+    var point = event.touches[0]
+    this.circleTouchStartX = point.pageX
+    this.circleTouchStartY = point.pageY
+    this.circleTouchLastX = point.pageX
+    this.circleTouchLastY = point.pageY
+    this.circleTouchActive = true
+    this.circleDragMoved = false
+  },
+
+  handleCircleTouchMove(event) {
+    if (this.circleAnimating || !this.circleTouchActive) return
+    if (!event.touches || !event.touches[0]) return
+    var point = event.touches[0]
+    var deltaX = point.pageX - this.circleTouchLastX
+    var deltaY = point.pageY - this.circleTouchLastY
+    var totalX = point.pageX - this.circleTouchStartX
+    var totalY = point.pageY - this.circleTouchStartY
+    if (Math.abs(totalX) > 7 || Math.abs(totalY) > 7) this.circleDragMoved = true
+    this.circleTouchLastX = point.pageX
+    this.circleTouchLastY = point.pageY
+    if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return
+    deltaX = Math.max(-CIRCLE_MAX_FRAME_DELTA, Math.min(CIRCLE_MAX_FRAME_DELTA, deltaX))
+    deltaY = Math.max(-CIRCLE_MAX_FRAME_DELTA, Math.min(CIRCLE_MAX_FRAME_DELTA, deltaY))
+    this.circleDragOffsetX = Math.max(-CIRCLE_DRAG_LIMIT, Math.min(CIRCLE_DRAG_LIMIT, (this.circleDragOffsetX || 0) + deltaX * CIRCLE_DRAG_DAMPING))
+    this.circleDragOffsetY = Math.max(-CIRCLE_DRAG_LIMIT, Math.min(CIRCLE_DRAG_LIMIT, (this.circleDragOffsetY || 0) + deltaY * CIRCLE_DRAG_DAMPING))
+    this.updateCircleSlotPositions()
+  },
+
+  handleCircleTouchEnd(event) {
+    // 图标与 stack 都绑了 touchend；若运行时确实冒泡，这里会被调用两次。
+    // touchmove 靠增量天然幂等（第二次 delta=0 直接返回），touchend 不然——
+    // 会吸附两次。用 circleTouchActive 兼作「本串触摸尚未收尾」的凭据。
+    if (!this.circleTouchActive) return
+    this.lastCircleTouchEndAt = Date.now()
+    this.circleTouchActive = false
+    var point = event.changedTouches && event.changedTouches[0]
+    var totalX = point ? point.pageX - this.circleTouchStartX : 0
+    var totalY = point ? point.pageY - this.circleTouchStartY : 0
+    if (totalX > 60 && Math.abs(totalY) < 28 && this.circleTouchStartX < 24) {
+      this.backFromCircle()
+      return
+    }
+    if (this.circleDragMoved) {
+      this.suppressCircleClickUntil = Date.now() + 220
+      var distance = Math.sqrt(totalX * totalX + totalY * totalY)
+      var targetIndex = distance >= CIRCLE_SNAP_DISTANCE ? this.circleDragFocusIndex : this.pageIndex
+      this.snapCircleFocus(targetIndex)
+    }
+  },
+
+  snapCircleFocus(targetIndex) {
+    if (this.circleAnimating) return
+    var self = this
+    var startPanX = (this.circlePanX || 0) + (this.circleDragOffsetX || 0)
+    var startPanY = (this.circlePanY || 0) + (this.circleDragOffsetY || 0)
+    var selected = this.circleSlots[targetIndex]
+    var targetPanX = selected ? CIRCLE_FOCUS_X - selected.gridX : startPanX
+    var targetPanY = selected ? CIRCLE_FOCUS_Y - selected.gridY : startPanY
+    this.pageIndex = targetIndex
+    this.circlePanX = startPanX
+    this.circlePanY = startPanY
+    this.circleDragOffsetX = 0
+    this.circleDragOffsetY = 0
+    this.refreshCirclePage(true)
+    this.circleAnimating = true
+    this.suppressCircleClickUntil = Date.now() + 220
+    // 按时间推进，而不是按固定帧数。原来是 8 帧 × 20ms：定时器一旦被
+    // 别的工作挤开，动画就会连跳几格；而且 8 段线性采样在 46px 的位移上
+    // 每步跨 6px 左右，肉眼能看出台阶。改成按真实耗时求进度后，
+    // 掉帧只会让中间帧变少、总时长不变，观感始终一致。
+    var startedAt = Date.now()
+    var duration = CIRCLE_SNAP_DURATION
+    clearTimeout(this.circleAnimationTimer)
+    function tick() {
+      var progress = Math.min(1, (Date.now() - startedAt) / duration)
+      // 轻微回弹的 back-out 缓动：先冲过目标再收回，落位有「吸住」的手感。
+      var backStrength = CIRCLE_SNAP_BACK
+      var backOffset = progress - 1
+      var eased = 1 + (backStrength + 1) * Math.pow(backOffset, 3) + backStrength * Math.pow(backOffset, 2)
+      self.circlePanX = startPanX + (targetPanX - startPanX) * eased
+      self.circlePanY = startPanY + (targetPanY - startPanY) * eased
+      self.updateCircleSlotPositions()
+      if (progress >= 1) {
+        self.circleDragOffset = 0
+        self.circleDragOffsetX = 0
+        self.circleDragOffsetY = 0
+        self.circlePanX = targetPanX
+        self.circlePanY = targetPanY
+        self.refreshCirclePage(true)
+        self.circleAnimating = false
+        self.circleAnimationTimer = null
+        return
+      }
+      self.circleAnimationTimer = setTimeout(tick, CIRCLE_FRAME_MS)
+    }
+    tick()
+  },
+
+  backFromCircle() {
+    var now = Date.now()
+    if (now - (this.lastCircleBackAt || 0) < 300) return
+    this.lastCircleBackAt = now
+    pageMotion.back(this, router)
+  },
+
+  handleSwipe(event) {
+    if (!event) return
+    if (this.isCircle) {
+      if (this.circleTouchActive) return
+      if (Date.now() - (this.lastCircleTouchEndAt || 0) < 260) return
+      if (event.direction === 'up') this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.up)
+      else if (event.direction === 'down') this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.down)
+      else if (event.direction === 'left') this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.left)
+      else if (event.direction === 'right') this.moveCircleFocus(CIRCLE_DIRECTION_STEPS.right)
+      return
+    }
+    if (event.direction === 'left') {
+      this.nextPage()
+    } else if (event.direction === 'right') {
+      if (this.pageIndex > 0) this.previousPage()
+      else pageMotion.back(this, router)
+    } else if (event.direction === 'down') {
+      pageMotion.back(this, router)
+    }
+  }
+}
+</script>
+
+<style>
+.applist-page {
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+  width: 100%;
+  height: 100%;
+  padding: 16px 12px;
+}
+
+.top-row {
+  width: 168px;
+  height: 30px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 50px;
+  margin-bottom: 8px;
+}
+
+.page-title {
+  width: 112px;
+  font-size: 21px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.page-side-spacer,
+.page-number {
+  width: 28px;
+  font-size: 11px;
+  color: #8E8E93;
+  text-align: right;
+}
+
+.pill-list {
+  width: 168px;
+  height: 292px;
+  flex-direction: column;
+}
+
+.app-item {
+  flex-direction: row;
+  align-items: center;
+  width: 168px;
+  height: 64px;
+  padding-left: 10px;
+  padding-right: 9px;
+  margin-bottom: 9px;
+  background-color: #14181F;
+  border-radius: 11px;
+}
+
+.app-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  margin-right: 11px;
+}
+
+.app-name {
+  width: 91px;
+  font-size: 16px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.app-arrow {
+  width: 12px;
+  font-size: 20px;
+  color: #636366;
+  text-align: right;
+}
+
+/*
+ * 圆屏蜂巢：中心 + 六邻居 + 四外环，间距恒为 46px。
+ * 聚焦点 (96,90) 略高于画布中心，把底部弧线让给名称条。
+ * 名称条压在图标之上（DOM 顺序靠后即在上层，本运行时不用 z-index），
+ * 图标穿过时淡出而不是横向弹开。
+ */
+.circle-honeycomb {
+  width: 192px;
+  height: 192px;
+}
+
+.circle-app {
+  position: absolute;
+}
+
+.circle-icon {
+  object-fit: cover;
+}
+
+.circle-app.is-center {
+  z-index: 3;
+}
+
+/* 名称条：96 宽落在 y=152..172，四角均在内切圆内（已由安全区模型验证）。 */
+.center-label {
+  left: 48px;
+  top: 152px;
+  width: 96px;
+  height: 20px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.center-label-glass {
+  left: 48px;
+  top: 152px;
+  width: 96px;
+  height: 20px;
+  border-radius: 10px;
+  border-width: 1px;
+  border-color: #5A6675;
+  background-color: #0E141C;
+  opacity: 0.82;
+}
+
+/* 顶边高光：一条 1px 亮线，暗示玻璃的厚度与曲面。 */
+.center-label-sheen {
+  left: 62px;
+  top: 153px;
+  width: 68px;
+  height: 1px;
+  border-radius: 1px;
+  background-color: #FFFFFF;
+  opacity: 0.22;
+}
+
+.center-name {
+  width: 92px;
+  height: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+  lines: 1;
+  text-overflow: ellipsis;
+}
+
+.center-hint {
+  width: 92px;
+  height: 7px;
+  font-size: 5px;
+  color: #7C8794;
+  text-align: center;
+}
+
+/* 位置指示器：贴着右侧弧线，圆心 (96,96) 半径 96，x=178 处安全。 */
+.circle-position-track {
+  left: 178px;
+  top: 68px;
+  width: 3px;
+  height: 56px;
+  border-radius: 2px;
+  background-color: #23262C;
+}
+
+.circle-position-dot {
+  left: 0px;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background-color: #0A84FF;
+}
+
+/*
+ * 原来这里有 .circle-gesture-tip「上下滑动」，位于 y=181..190、宽 58px。
+ * 内切圆在 y=190 处只有 39px 宽，那行字左右两端本来就被弧线切掉了。
+ * 名称条第二行的「点按打开」已经承担提示职责，故整体移除。
+ */
+
+.pager-row {
+  width: 156px;
+  height: 28px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0px;
+}
+
+.pager-button {
+  width: 36px;
+  height: 26px;
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.pager-track {
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #24262B;
+}
+
+.pager-fill {
+  height: 4px;
+  border-radius: 2px;
+  background-color: #0A84FF;
+}
+
+@media (shape: circle) {
+  .applist-page {
+    padding: 0px;
+  }
+}
+</style>

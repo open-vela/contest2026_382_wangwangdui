@@ -1,0 +1,197 @@
+<template>
+  <div class="dashboard-face">
+    <div class="dash-time-block">
+      <text class="dash-time">{{ displayHours }}:{{ displayMinutes }}</text>
+      <text class="dash-date" style="color: {{ faceAccent }}">{{ displayWeek }}  {{ displayMonth }} {{ displayDate }}</text>
+    </div>
+    <div class="dash-progress-card" @click="goToSteps">
+      <div class="dash-card-row">
+        <text class="dash-label">今日步数</text>
+        <text class="dash-value" style="color: #FFD60A">{{ stepsText }}</text>
+      </div>
+      <div class="dash-track">
+        <div class="dash-fill" style="width: {{ stepsProgressWidth }}; background-color: #FFD60A;"></div>
+      </div>
+      <text class="dash-small">目标 {{ stepsGoalText }} 步</text>
+    </div>
+    <div class="dash-progress-card" @click="goToHeartRate">
+      <div class="dash-card-row">
+        <text class="dash-label">实时心率</text>
+        <text class="dash-value" style="color: #FF375F">{{ currentHeartRate }}</text>
+      </div>
+      <div class="dash-heart-chart">
+        <div class="dash-heart-bar" for="{{ heartRateData }}" style="height: {{ $item.barHeight }}px;"></div>
+      </div>
+      <text class="dash-small">bpm</text>
+    </div>
+    <div class="dash-battery-row">
+      <image class="dash-battery-icon" src="/common/lightning.png"></image>
+      <div class="dash-battery-track">
+        <div class="dash-battery-fill" style="width: {{ batteryWidth }}; background-color: {{ batteryColor }};"></div>
+      </div>
+      <text class="dash-battery-text" style="color: {{ batteryColor }}">{{ batteryPercent }}%</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  // Dashboard face is display-only except for existing detail-page shortcuts.
+  props: [
+    'displayWeek',
+    'displayMonth',
+    'displayDate',
+    'displayHours',
+    'displayMinutes',
+    'faceAccent',
+    'stepsText',
+    'stepsGoalText',
+    'stepsProgressWidth',
+    'currentHeartRate',
+    'heartRateData',
+    'batteryPercent',
+    'batteryWidth',
+    'batteryColor'
+  ],
+
+  goToHeartRate() {
+    router.push({
+      uri: '/pages/heartrate',
+      params: {}
+    })
+  },
+
+  goToSteps() {
+    router.push({
+      uri: '/pages/steps',
+      params: {}
+    })
+  }
+}
+</script>
+
+<style>
+.dashboard-face {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.dash-time-block {
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dash-time {
+  font-size: 46px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.dash-date {
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+.dash-progress-card {
+  flex-direction: column;
+  width: 168px;
+  height: 88px;
+  background-color: #14181F;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.dash-card-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 148px;
+}
+
+.dash-label {
+  font-size: 13px;
+  color: #C7C7CC;
+}
+
+.dash-value {
+  font-size: 23px;
+  font-weight: bold;
+}
+
+.dash-track {
+  width: 148px;
+  height: 7px;
+  background-color: #2C2C2E;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+
+.dash-fill {
+  height: 7px;
+  border-radius: 4px;
+}
+
+.dash-small {
+  font-size: 11px;
+  color: #8E8E93;
+  margin-top: 6px;
+}
+
+.dash-heart-chart {
+  flex-direction: row;
+  align-items: flex-end;
+  width: 148px;
+  height: 28px;
+  margin-top: 5px;
+}
+
+.dash-heart-bar {
+  width: 12px;
+  border-radius: 3px;
+  background-color: #FF375F;
+  margin-right: 10px;
+}
+
+.dash-battery-row {
+  flex-direction: row;
+  align-items: center;
+  width: 168px;
+  height: 36px;
+  background-color: #14181F;
+  border-radius: 8px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.dash-battery-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+.dash-battery-track {
+  width: 94px;
+  height: 6px;
+  background-color: #2C2C2E;
+  border-radius: 3px;
+}
+
+.dash-battery-fill {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.dash-battery-text {
+  font-size: 12px;
+  margin-left: 8px;
+  font-weight: bold;
+}
+</style>

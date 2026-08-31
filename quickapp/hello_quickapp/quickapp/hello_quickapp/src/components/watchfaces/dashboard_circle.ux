@@ -1,0 +1,182 @@
+<template>
+  <div class="circle-dashboard-face">
+    <text class="dashboard-circle-time">{{ displayHours }}:{{ displayMinutes }}</text>
+    <text class="dashboard-circle-date" style="color: {{ faceAccent }}">{{ displayWeek }}  {{ displayMonth }} {{ displayDate }}</text>
+    <div class="dashboard-circle-grid">
+      <div class="dashboard-circle-card" @click="goToSteps">
+        <text class="dashboard-circle-label">步数</text>
+        <text class="dashboard-circle-value step-color">{{ stepsText }}</text>
+        <div class="dashboard-circle-track">
+          <div class="dashboard-circle-fill" style="width: {{ stepsProgressWidth }}; background-color: #FFD60A;"></div>
+        </div>
+      </div>
+      <div class="dashboard-circle-card" @click="goToHeartRate">
+        <text class="dashboard-circle-label">心率</text>
+        <text class="dashboard-circle-value heart-color">{{ currentHeartRate }}</text>
+        <div class="dashboard-circle-bars">
+          <div class="dashboard-circle-bar" for="{{ heartRateData }}" style="height: {{ $item.circleBarHeight }}px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="dashboard-circle-battery">
+      <image class="dashboard-circle-icon" src="/common/lightning.png"></image>
+      <div class="dashboard-circle-battery-track">
+        <div class="dashboard-circle-battery-fill" style="width: {{ batteryWidth }}; background-color: {{ batteryColor }};"></div>
+      </div>
+      <text class="dashboard-circle-battery-text" style="color: {{ batteryColor }}">{{ batteryPercent }}%</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  props: [
+    'displayWeek',
+    'displayMonth',
+    'displayDate',
+    'displayHours',
+    'displayMinutes',
+    'faceAccent',
+    'stepsText',
+    'stepsProgressWidth',
+    'currentHeartRate',
+    'heartRateData',
+    'batteryPercent',
+    'batteryWidth',
+    'batteryColor'
+  ],
+
+  goToHeartRate() {
+    router.push({ uri: '/pages/heartrate', params: {} })
+  },
+
+  goToSteps() {
+    router.push({ uri: '/pages/steps', params: {} })
+  }
+}
+</script>
+
+<style>
+.circle-dashboard-face {
+  width: 192px;
+  height: 192px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #080B10;
+}
+
+.dashboard-circle-time {
+  font-size: 35px;
+  color: #FFFFFF;
+  font-weight: bold;
+  margin-top: 14px;
+}
+
+.dashboard-circle-date {
+  font-size: 8px;
+  font-weight: bold;
+  margin-top: -1px;
+}
+
+.dashboard-circle-grid {
+  width: 142px;
+  height: 71px;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.dashboard-circle-card {
+  width: 68px;
+  height: 71px;
+  flex-direction: column;
+  align-items: center;
+  background-color: #14181F;
+  border-radius: 16px;
+  padding-top: 8px;
+}
+
+.dashboard-circle-label {
+  font-size: 7px;
+  color: #8E8E93;
+}
+
+.dashboard-circle-value {
+  font-size: 15px;
+  font-weight: bold;
+  margin-top: 3px;
+}
+
+.dashboard-circle-track {
+  width: 48px;
+  height: 4px;
+  background-color: #2C2C2E;
+  border-radius: 2px;
+  margin-top: 7px;
+}
+
+.dashboard-circle-fill {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.dashboard-circle-bars {
+  width: 50px;
+  height: 18px;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.dashboard-circle-bar {
+  width: 4px;
+  max-height: 18px;
+  background-color: #FF375F;
+  border-radius: 2px;
+}
+
+.dashboard-circle-battery {
+  width: 104px;
+  height: 24px;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 7px;
+}
+
+.dashboard-circle-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dashboard-circle-battery-track {
+  width: 62px;
+  height: 4px;
+  background-color: #2C2C2E;
+  border-radius: 2px;
+  margin-left: 5px;
+}
+
+.dashboard-circle-battery-fill {
+  height: 4px;
+  border-radius: 2px;
+}
+
+.dashboard-circle-battery-text {
+  width: 24px;
+  font-size: 7px;
+  font-weight: bold;
+  text-align: right;
+  margin-left: 3px;
+}
+
+.heart-color {
+  color: #FF375F;
+}
+
+.step-color {
+  color: #FFD60A;
+}
+</style>

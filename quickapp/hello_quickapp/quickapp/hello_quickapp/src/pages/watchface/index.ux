@@ -1,0 +1,850 @@
+<template>
+  <div class="select-page {{ isRect ? 'rect-select-page' : '' }} {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @touchstart="onTouchStart" @touchend="onTouchEnd">
+    <div class="top-row" if="{{ profileReady && isPill }}">
+      <text class="page-title">选择表盘</text>
+      <text class="back-text" @click="goBack">返回</text>
+    </div>
+
+    <div class="face-card" if="{{ profileReady && isPill && pillPageIndex === 0 }}" style="border-color: {{ sportBorder }}" @click="selectSport">
+      <div class="preview-panel sport-preview">
+        <text class="preview-date">06/01</text>
+        <text class="preview-big sport-time">08</text>
+        <text class="preview-small">4,567 步</text>
+      </div>
+      <div class="face-copy">
+        <div class="face-name-row">
+          <text class="face-name">活力数字</text>
+          <text class="face-badge" if="{{ sportSelected }}">已选</text>
+        </div>
+        <text class="face-desc">时间、心率、步数集中展示</text>
+        <text class="face-tag">运动日常</text>
+      </div>
+    </div>
+
+    <div class="face-card" if="{{ profileReady && isPill && pillPageIndex === 0 }}" style="border-color: {{ simpleBorder }}" @click="selectSimple">
+      <div class="preview-panel simple-preview">
+        <text class="simple-preview-time">08:32</text>
+        <stack class="mini-ring">
+          <progress class="mini-arc" type="arc" percent="68"></progress>
+          <div class="mini-ring-center">
+            <text class="mini-ring-text">68%</text>
+          </div>
+        </stack>
+      </div>
+      <div class="face-copy">
+        <div class="face-name-row">
+          <text class="face-name">极简霓虹</text>
+          <text class="face-badge cyan-badge" if="{{ simpleSelected }}">已选</text>
+        </div>
+        <text class="face-desc">大时间和目标完成度</text>
+        <text class="face-tag">简洁耐看</text>
+      </div>
+    </div>
+
+    <div class="face-card" if="{{ profileReady && isPill && pillPageIndex === 1 }}" style="border-color: {{ dashboardBorder }}" @click="selectDashboard">
+      <div class="preview-panel dash-preview">
+        <text class="dash-preview-time">08:32</text>
+        <div class="mini-bars">
+          <div class="mini-bar bar-one"></div>
+          <div class="mini-bar bar-two"></div>
+          <div class="mini-bar bar-three"></div>
+        </div>
+        <text class="preview-small">心率 88</text>
+      </div>
+      <div class="face-copy">
+        <div class="face-name-row">
+          <text class="face-name">运动仪表</text>
+          <text class="face-badge green-badge" if="{{ dashboardSelected }}">已选</text>
+        </div>
+        <text class="face-desc">进度条和心率趋势图</text>
+        <text class="face-tag">数据控</text>
+      </div>
+    </div>
+
+    <div class="face-card" if="{{ profileReady && isPill && pillPageIndex === 1 }}" style="border-color: {{ alpineBorder }}" @click="selectAlpine">
+      <stack class="preview-panel alpine-preview">
+        <image class="alpine-preview-background" src="/common/watchfaces/alpine_night.jpg"></image>
+        <div class="alpine-preview-veil"></div>
+        <text class="alpine-preview-hour">08</text>
+        <text class="alpine-preview-minute">32</text>
+        <text class="alpine-preview-label">ALPINE</text>
+      </stack>
+      <div class="face-copy">
+        <div class="face-name-row">
+          <text class="face-name">星野远山</text>
+          <text class="face-badge orange-badge" if="{{ alpineSelected }}">已选</text>
+        </div>
+        <text class="face-desc">星空雪山和透明数据层</text>
+        <text class="face-tag">沉浸夜景</text>
+      </div>
+    </div>
+
+    <div class="pill-face-pager" if="{{ profileReady && isPill }}">
+      <text class="pill-page-button" @click="previousPillPage">‹</text>
+      <text class="pill-page-number">{{ pillPageText }}</text>
+      <text class="pill-page-button" @click="nextPillPage">›</text>
+    </div>
+    <text class="page-hint" if="{{ profileReady && isPill }}">左右翻页，点击表盘立即应用</text>
+
+    <div class="circle-select-header" if="{{ profileReady && !isPill }}">
+      <text class="circle-select-title">表盘库</text>
+      <text class="circle-back" @click="goBack">返回</text>
+    </div>
+    <swiper class="circle-face-swiper" if="{{ profileReady && !isPill }}" index="{{ circlePreviewIndex }}" indicator="true" @change="onCircleFaceChange">
+      <div class="circle-preview-slide" @click="selectSport">
+        <stack class="circle-preview sport-preview-circle">
+          <progress class="circle-preview-arc sport-circle-arc" type="arc" percent="72"></progress>
+          <div class="circle-preview-center">
+            <div class="circle-preview-vital">
+              <text class="circle-preview-minute">32</text>
+              <text class="circle-preview-hour">08</text>
+            </div>
+            <text class="circle-preview-sub">4,567 步</text>
+          </div>
+        </stack>
+      </div>
+      <div class="circle-preview-slide" @click="selectSimple">
+        <stack class="circle-preview simple-preview-circle">
+          <progress class="circle-preview-arc simple-circle-arc" type="arc" percent="68"></progress>
+          <div class="circle-preview-center">
+            <text class="circle-preview-time">08:32</text>
+            <text class="circle-preview-sub">目标 68%</text>
+          </div>
+        </stack>
+      </div>
+      <div class="circle-preview-slide" @click="selectDashboard">
+        <div class="circle-preview dash-preview-circle">
+          <text class="circle-preview-time">08:32</text>
+          <div class="circle-preview-metrics">
+            <text class="circle-preview-chip">步数</text>
+            <text class="circle-preview-chip">心率</text>
+          </div>
+          <text class="circle-preview-sub">运动仪表</text>
+        </div>
+      </div>
+      <div class="circle-preview-slide" if="{{ isCircle }}" @click="selectMechanical">
+        <stack class="circle-preview mechanical-preview-circle">
+          <div class="mechanical-preview-ring"></div>
+          <text class="mechanical-preview-twelve">XII</text>
+          <text class="mechanical-preview-six">VI</text>
+          <text class="mechanical-preview-brand">VELA</text>
+          <div class="mechanical-preview-hour"></div>
+          <div class="mechanical-preview-minute"></div>
+          <div class="mechanical-preview-second"></div>
+          <div class="mechanical-preview-pin"></div>
+        </stack>
+      </div>
+    </swiper>
+    <text class="circle-preview-name" if="{{ profileReady && !isPill }}">{{ circlePreviewName }} · 点击应用</text>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import watchData from '../../common/watch_data'
+import pageMotion from '../../common/page_motion'
+import faceRegistry from '../../common/face_registry'
+import pageViewport from '../../common/page_viewport'
+
+export default {
+  private: {
+    sportBorder: '#0A84FF',
+    simpleBorder: '#2C2C2E',
+    dashboardBorder: '#2C2C2E',
+    alpineBorder: '#2C2C2E',
+    sportSelected: true,
+    simpleSelected: false,
+    dashboardSelected: false,
+    mechanicalSelected: false,
+    alpineSelected: false,
+    isCircle: false,
+    isPill: false,
+    isRect: false,
+    profileReady: false,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px',
+    circlePreviewIndex: 0,
+    circlePreviewName: '活力数字',
+    loadedFaceId: 'sport',
+    faceScope: 'rect',
+    pillPageIndex: 0,
+    pillPageText: '1 / 2',
+    pageOpacity: 1,
+    pageOffset: 0
+  },
+
+  onInit() {
+    var self = this
+    pageViewport.bind(this, function (profile) {
+      self.isCircle = profile.isCircle
+      self.isPill = profile.isPill
+      self.isRect = profile.isRect
+      self.faceScope = profile.formFactor
+      self.profileReady = true
+      self.updateSelectedState(self.loadedFaceId)
+    })
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    this.loadSelectedState()
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    pageMotion.clear(this)
+  },
+
+  loadSelectedState() {
+    watchData.loadSelectedFaceId((selected) => {
+      this.loadedFaceId = selected
+      this.updateSelectedState(selected)
+    })
+  },
+
+  // Highlighting is local UI state; the selected id itself lives in the data adapter.
+  updateSelectedState(selected) {
+    var normalized = faceRegistry.getById(selected, this.faceScope).id
+    this.sportSelected = normalized === 'sport'
+    this.simpleSelected = normalized === 'simple'
+    this.dashboardSelected = normalized === 'dashboard'
+    this.mechanicalSelected = normalized === 'mechanical'
+    this.alpineSelected = normalized === 'alpine'
+    this.sportBorder = this.sportSelected ? '#0A84FF' : '#2C2C2E'
+    this.simpleBorder = this.simpleSelected ? '#00E5FF' : '#2C2C2E'
+    this.dashboardBorder = this.dashboardSelected ? '#32D74B' : '#2C2C2E'
+    this.alpineBorder = this.alpineSelected ? '#FF9F4A' : '#2C2C2E'
+    this.circlePreviewIndex = faceRegistry.getIndex(normalized, this.faceScope)
+    this.circlePreviewName = faceRegistry.getByIndex(this.circlePreviewIndex, this.faceScope).name
+    if (this.isPill) {
+      this.pillPageIndex = normalized === 'dashboard' || normalized === 'alpine' ? 1 : 0
+      this.refreshPillPageText()
+    }
+  },
+
+  onCircleFaceChange(event) {
+    var index = event && (event.index !== undefined ? event.index : event.detail && event.detail.index)
+    if (index === undefined || index === null) return
+    this.circlePreviewIndex = index
+    this.circlePreviewName = faceRegistry.getByIndex(index, this.faceScope).name
+  },
+
+  selectSport() {
+    this.selectFace('sport')
+  },
+
+  selectSimple() {
+    this.selectFace('simple')
+  },
+
+  selectDashboard() {
+    this.selectFace('dashboard')
+  },
+
+  selectMechanical() {
+    if (this.isCircle) this.selectFace('mechanical')
+  },
+
+  selectAlpine() {
+    if (this.isPill) this.selectFace('alpine')
+  },
+
+  refreshPillPageText() {
+    this.pillPageText = this.pillPageIndex + 1 + ' / 2'
+  },
+
+  previousPillPage() {
+    if (this.pillPageIndex > 0) this.pillPageIndex--
+    this.refreshPillPageText()
+  },
+
+  nextPillPage() {
+    if (this.pillPageIndex < 1) this.pillPageIndex++
+    this.refreshPillPageText()
+  },
+
+  // The common adapter keeps this page independent from clock.ux internals.
+  selectFace(id) {
+    if (this.savingFace) {
+      return
+    }
+    this.savingFace = true
+    this.updateSelectedState(id)
+    var self = this
+    watchData.setSelectedFaceId(id, function () {
+      self.savingFace = false
+      pageMotion.back(self, router)
+    })
+  },
+
+  goBack() {
+    pageMotion.back(this, router)
+  },
+
+  onTouchStart(e) {
+    if (e.touches && e.touches[0]) {
+      this.touchStartX = e.touches[0].pageX
+    }
+  },
+
+  onTouchEnd(e) {
+    if (!e.changedTouches || !e.changedTouches[0]) {
+      return
+    }
+    var touchEndX = e.changedTouches[0].pageX
+    var diffX = touchEndX - this.touchStartX
+
+    if (diffX < -30 && this.isPill) this.nextPillPage()
+    else if (diffX > 30 && this.isPill && this.pillPageIndex > 0) this.previousPillPage()
+    else if (diffX > 30) pageMotion.back(this, router)
+  }
+}
+</script>
+
+<style>
+.select-page {
+  flex-direction: column;
+  align-items: center;
+  background-color: #000000;
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+}
+
+.top-row {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 132px;
+  height: 30px;
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.back-text {
+  font-size: 10px;
+  color: #8E8E93;
+}
+
+.face-card {
+  flex-direction: row;
+  align-items: center;
+  width: 164px;
+  height: 112px;
+  background-color: #111317;
+  border-width: 2px;
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.preview-panel {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 58px;
+  height: 92px;
+  border-radius: 22px;
+  margin-right: 8px;
+}
+
+.sport-preview {
+  background-color: #050505;
+}
+
+.simple-preview {
+  background-color: #040810;
+}
+
+.dash-preview {
+  background-color: #071007;
+}
+
+.alpine-preview {
+  background-color: #020713;
+}
+
+.alpine-preview-background {
+  width: 58px;
+  height: 92px;
+  border-radius: 22px;
+  object-fit: cover;
+}
+
+.alpine-preview-veil {
+  width: 58px;
+  height: 92px;
+  border-radius: 22px;
+  background-color: #020713;
+  opacity: 0.18;
+}
+
+.alpine-preview-hour {
+  left: 5px;
+  top: 17px;
+  width: 38px;
+  height: 35px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.alpine-preview-minute {
+  left: 31px;
+  top: 47px;
+  width: 24px;
+  height: 21px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #FFD2A1;
+}
+
+.alpine-preview-label {
+  left: 6px;
+  top: 73px;
+  width: 46px;
+  height: 9px;
+  font-size: 5px;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.preview-date {
+  font-size: 9px;
+  color: #8E8E93;
+}
+
+.preview-big {
+  font-weight: bold;
+  color: #FFFFFF;
+}
+
+.sport-time {
+  font-size: 32px;
+  color: #0A84FF;
+}
+
+.preview-small {
+  font-size: 8px;
+  color: #FFD60A;
+  margin-top: 4px;
+}
+
+.simple-preview-time {
+  font-size: 15px;
+  color: #FFFFFF;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.mini-ring {
+  width: 38px;
+  height: 38px;
+}
+
+.mini-arc {
+  width: 38px;
+  height: 38px;
+  color: #00E5FF;
+  stroke-width: 3px;
+  layer-color: #2C2C2E;
+  start-angle: 0deg;
+  total-angle: 360deg;
+  center-x: 19px;
+  center-y: 19px;
+  radius: 17px;
+}
+
+.mini-ring-center {
+  justify-content: center;
+  align-items: center;
+  width: 38px;
+  height: 38px;
+}
+
+.mini-ring-text {
+  font-size: 10px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.dash-preview-time {
+  font-size: 13px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.mini-bars {
+  flex-direction: row;
+  align-items: flex-end;
+  width: 42px;
+  height: 30px;
+  margin-top: 6px;
+}
+
+.mini-bar {
+  width: 8px;
+  border-radius: 3px;
+  background-color: #32D74B;
+  margin-right: 5px;
+}
+
+.bar-one {
+  height: 14px;
+}
+
+.bar-two {
+  height: 24px;
+}
+
+.bar-three {
+  height: 18px;
+}
+
+.face-copy {
+  flex-direction: column;
+  width: 82px;
+}
+
+.face-name-row {
+  flex-direction: row;
+  align-items: center;
+  width: 82px;
+  height: 20px;
+}
+
+.face-name {
+  font-size: 14px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.face-badge {
+  width: 28px;
+  height: 16px;
+  font-size: 9px;
+  color: #000000;
+  text-align: center;
+  background-color: #0A84FF;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+.cyan-badge {
+  background-color: #00E5FF;
+}
+
+.green-badge {
+  background-color: #32D74B;
+}
+
+.orange-badge {
+  background-color: #FF9F4A;
+}
+
+.face-desc {
+  width: 82px;
+  font-size: 10px;
+  color: #C7C7CC;
+  margin-top: 6px;
+  line-height: 14px;
+}
+
+.face-tag {
+  width: 58px;
+  height: 18px;
+  font-size: 9px;
+  color: #8E8E93;
+  text-align: center;
+  background-color: #1C1C1E;
+  border-radius: 9px;
+  margin-top: 8px;
+}
+
+.page-hint {
+  width: 164px;
+  font-size: 10px;
+  color: #666666;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.pill-face-pager {
+  width: 112px;
+  height: 28px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.pill-page-button {
+  width: 32px;
+  height: 26px;
+  font-size: 22px;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.pill-page-number {
+  width: 48px;
+  font-size: 9px;
+  color: #8E8E93;
+  text-align: center;
+}
+.circle-select-header {
+  width: 128px;
+  height: 24px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 9px;
+}
+
+.circle-select-title {
+  font-size: 12px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.circle-back {
+  font-size: 7px;
+  color: #8E8E93;
+}
+
+.circle-face-swiper {
+  width: 152px;
+  height: 136px;
+  indicator-color: #3A3A3C;
+  indicator-selected-color: #FFFFFF;
+  indicator-size: 4px;
+}
+
+.circle-preview-slide {
+  width: 152px;
+  height: 132px;
+  justify-content: center;
+  align-items: center;
+}
+
+.circle-preview {
+  width: 116px;
+  height: 116px;
+  border-radius: 58px;
+  justify-content: center;
+  align-items: center;
+}
+
+.sport-preview-circle {
+  background-color: #050505;
+}
+
+.simple-preview-circle {
+  background-color: #040810;
+}
+
+.dash-preview-circle {
+  flex-direction: column;
+  background-color: #071007;
+}
+
+.mechanical-preview-circle {
+  background-color: #060708;
+}
+
+.mechanical-preview-ring {
+  left: 3px;
+  top: 3px;
+  width: 110px;
+  height: 110px;
+  border-radius: 55px;
+  border-width: 2px;
+  border-color: #B89A61;
+}
+
+.mechanical-preview-twelve,
+.mechanical-preview-six {
+  left: 47px;
+  width: 22px;
+  height: 12px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #E7D6AF;
+  text-align: center;
+}
+
+.mechanical-preview-twelve { top: 10px; }
+.mechanical-preview-six { top: 94px; }
+
+.mechanical-preview-brand {
+  left: 39px;
+  top: 31px;
+  width: 38px;
+  height: 10px;
+  font-size: 7px;
+  font-weight: bold;
+  color: #D6B878;
+  text-align: center;
+}
+
+.mechanical-preview-hour {
+  left: 56px;
+  top: 38px;
+  width: 3px;
+  height: 22px;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  transform-origin: 1px 20px;
+  background-color: #E7D6AF;
+}
+
+.mechanical-preview-minute {
+  left: 57px;
+  top: 27px;
+  width: 2px;
+  height: 34px;
+  border-radius: 1px;
+  transform: rotate(140deg);
+  transform-origin: 1px 31px;
+  background-color: #D6B878;
+}
+
+.mechanical-preview-second {
+  left: 58px;
+  top: 24px;
+  width: 1px;
+  height: 39px;
+  transform: rotate(235deg);
+  transform-origin: 0px 34px;
+  background-color: #B64232;
+}
+
+.mechanical-preview-pin {
+  left: 54px;
+  top: 54px;
+  width: 9px;
+  height: 9px;
+  border-radius: 5px;
+  background-color: #D6B878;
+}
+
+.circle-preview-arc {
+  width: 116px;
+  height: 116px;
+  stroke-width: 5px;
+  layer-color: #2C2C2E;
+  start-angle: -132deg;
+  total-angle: 264deg;
+  center-x: 58px;
+  center-y: 58px;
+  radius: 51px;
+}
+
+.sport-circle-arc {
+  color: #0A84FF;
+}
+
+.simple-circle-arc {
+  color: #00E5FF;
+}
+
+.circle-preview-center {
+  width: 116px;
+  height: 116px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.circle-preview-time {
+  font-size: 22px;
+  color: #FFFFFF;
+  font-weight: bold;
+}
+
+.circle-preview-vital {
+  width: 92px;
+  height: 48px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.circle-preview-hour {
+  width: 92px;
+  height: 32px;
+  font-size: 27px;
+  color: #FF9F0A;
+  font-weight: bold;
+  text-align: center;
+  margin-top: -1px;
+  margin-right: 18px;
+}
+
+.circle-preview-minute {
+  width: 92px;
+  height: 32px;
+  font-size: 27px;
+  color: #0A84FF;
+  font-weight: bold;
+  text-align: center;
+  margin-left: 18px;
+  margin-bottom: -15px;
+  opacity: 0.92;
+}
+
+.circle-preview-sub {
+  font-size: 7px;
+  color: #8E8E93;
+  margin-top: 5px;
+}
+
+.circle-preview-metrics {
+  width: 84px;
+  height: 29px;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 7px;
+}
+
+.circle-preview-chip {
+  width: 39px;
+  height: 25px;
+  border-radius: 8px;
+  background-color: #14181F;
+  color: #32D74B;
+  font-size: 7px;
+  text-align: center;
+}
+
+.circle-preview-name {
+  width: 122px;
+  height: 14px;
+  font-size: 7px;
+  color: #C7C7CC;
+  text-align: center;
+  margin-bottom: 7px;
+}
+
+.rect-select-page {
+  padding: 0px;
+}
+
+@media (shape: circle) {
+  .select-page {
+    padding: 0px;
+  }
+}
+</style>

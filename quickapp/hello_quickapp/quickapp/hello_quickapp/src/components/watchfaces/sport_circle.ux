@@ -1,0 +1,170 @@
+<template>
+  <div class="circle-sport-face">
+    <stack class="activity-ring">
+      <progress class="activity-arc" type="arc" percent="{{ goalPercent }}" style="color: {{ faceAccent }};"></progress>
+      <div class="circle-time-block">
+        <div class="vital-time">
+          <text class="vital-minute" style="color: {{ faceAccent }}">{{ displayMinutes }}</text>
+          <text class="vital-hour">{{ displayHours }}</text>
+        </div>
+        <text class="circle-date" style="color: {{ faceAccent }}">{{ displayMonth }} {{ displayDate }}</text>
+        <text class="circle-goal">目标 {{ goalPercent }}%</text>
+      </div>
+    </stack>
+    <div class="circle-metric-row">
+      <div class="circle-metric" @click="goToSteps">
+        <image class="circle-metric-icon" src="/common/shoes.png"></image>
+        <text class="circle-metric-value step-color">{{ stepsText }}</text>
+      </div>
+      <div class="circle-metric" @click="goToHeartRate">
+        <image class="circle-metric-icon" src="/common/heart.png"></image>
+        <text class="circle-metric-value heart-color">{{ currentHeartRate }}</text>
+      </div>
+      <div class="circle-metric">
+        <image class="circle-metric-icon" src="/common/lightning.png"></image>
+        <text class="circle-metric-value" style="color: {{ batteryColor }}">{{ batteryPercent }}%</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  props: [
+    'displayMonth',
+    'displayDate',
+    'displayHours',
+    'displayMinutes',
+    'faceAccent',
+    'goalPercent',
+    'currentHeartRate',
+    'stepsText',
+    'batteryPercent',
+    'batteryColor'
+  ],
+
+  goToHeartRate() {
+    router.push({ uri: '/pages/heartrate', params: {} })
+  },
+
+  goToSteps() {
+    router.push({ uri: '/pages/steps', params: {} })
+  }
+}
+</script>
+
+<style>
+.circle-sport-face {
+  width: 192px;
+  height: 192px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background-color: #000000;
+}
+
+.circle-date {
+  font-size: 8px;
+  font-weight: bold;
+  margin-top: -2px;
+}
+
+.activity-ring {
+  width: 122px;
+  height: 122px;
+  margin-top: 12px;
+}
+
+.activity-arc {
+  width: 122px;
+  height: 122px;
+  stroke-width: 5px;
+  layer-color: #20242B;
+  start-angle: -132deg;
+  total-angle: 264deg;
+  center-x: 61px;
+  center-y: 61px;
+  radius: 55px;
+}
+
+.circle-time-block {
+  width: 122px;
+  height: 122px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.vital-time {
+  width: 104px;
+  height: 66px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vital-hour {
+  width: 104px;
+  height: 46px;
+  font-size: 36px;
+  font-weight: bold;
+  color: #FF9F0A;
+  text-align: center;
+  margin-top: -4px;
+  margin-right: 22px;
+}
+
+.vital-minute {
+  width: 104px;
+  height: 46px;
+  font-size: 36px;
+  font-weight: bold;
+  text-align: center;
+  margin-left: 22px;
+  margin-bottom: -22px;
+  opacity: 0.92;
+}
+
+.circle-goal {
+  font-size: 8px;
+  color: #8E8E93;
+  margin-top: 2px;
+}
+
+.circle-metric-row {
+  width: 108px;
+  height: 29px;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 3px;
+}
+
+.circle-metric {
+  width: 34px;
+  height: 29px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.circle-metric-icon {
+  width: 10px;
+  height: 10px;
+}
+
+.circle-metric-value {
+  width: 34px;
+  font-size: 7px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.heart-color {
+  color: #FF375F;
+}
+
+.step-color {
+  color: #FFD60A;
+}
+</style>

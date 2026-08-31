@@ -1,0 +1,254 @@
+<template>
+  <div class="diagnostics-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
+    <div class="top-row">
+      <text class="page-title">设备自检</text>
+      <text class="page-number">{{ pageText }}</text>
+    </div>
+
+    <div class="device-card" if="{{ pageIndex === 0 }}">
+      <div class="device-head">
+        <div class="device-dot"></div>
+        <text class="device-title">运行时屏幕档案</text>
+      </div>
+      <div class="info-row"><text class="info-label">设备族</text><text class="info-value">{{ deviceFamily }}</text></div>
+      <div class="info-row"><text class="info-label">视口</text><text class="info-value">{{ screenSize }}</text></div>
+      <div class="info-row"><text class="info-label">形态</text><text class="info-value">{{ formFactor }}</text></div>
+      <div class="info-row"><text class="info-label">平台</text><text class="info-value">{{ platformText }}</text></div>
+      <div class="info-row"><text class="info-label">适配</text><text class="info-value accent">{{ viewportMode }}</text></div>
+      <text class="device-tip">尺寸优先读取页面真实视口，身份字段来自 system.device。</text>
+    </div>
+
+    <div class="capability-list" if="{{ pageIndex > 0 }}">
+      <div class="capability-item" for="{{ capabilityPage }}" tid="id">
+        <div class="capability-copy">
+          <text class="capability-name">{{ $item.name }}</text>
+          <text class="capability-api">{{ $item.api }}</text>
+        </div>
+        <div class="status-pill" style="background-color: {{ $item.background }}">
+          <text class="status-text" style="color: {{ $item.color }}">{{ $item.status }}</text>
+        </div>
+      </div>
+      <text class="capability-tip">“接口存在”表示可调用；传感器是否出数请到“动作与加速度”验证。</text>
+    </div>
+
+    <div class="pager-row">
+      <text class="pager-button" style="color: {{ previousColor }}" @click="previousPage">‹</text>
+      <div class="pager-track"><div class="pager-fill" style="width: {{ pageProgress }}"></div></div>
+      <text class="pager-button" style="color: {{ nextColor }}" @click="nextPage">›</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import battery from '@system.battery'
+import brightness from '@system.brightness'
+import systemEvent from '@system.event'
+import interconnect from '@system.interconnect'
+import sensor from '@system.sensor'
+import storage from '@system.storage'
+import vibrator from '@system.vibrator'
+import health from '@service.health'
+import pageMotion from '../../../common/page_motion'
+import pageViewport from '../../../common/page_viewport'
+
+function capability(id, name, api, available) {
+  return {
+    id: id,
+    name: name,
+    api: api,
+    status: available ? '接口存在' : '不可用',
+    color: available ? '#30D158' : '#FF453A',
+    background: available ? '#123422' : '#3A1517'
+  }
+}
+
+export default {
+  private: {
+    deviceFamily: '检测中',
+    screenSize: '--',
+    formFactor: '--',
+    platformText: '--',
+    viewportMode: '--',
+    capabilities: [],
+    capabilityPage: [],
+    pageIndex: 0,
+    pageCount: 3,
+    pageText: '1 / 3',
+    pageProgress: '33%',
+    previousColor: '#3A3A3C',
+    nextColor: '#0A84FF',
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    this.buildCapabilities()
+    var self = this
+    pageViewport.bind(this, function (profile) {
+      self.deviceFamily = profile.deviceFamily
+      self.screenSize = profile.screenWidth + ' × ' + profile.screenHeight
+      self.formFactor = profile.formFactor
+      self.platformText = profile.model + ' / ' + (profile.platformVersionCode || '--')
+      self.viewportMode = profile.isBetaPillViewport ? 'beta 胶囊修正' : '标准视口'
+      self.refreshPage()
+    })
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+    this.buildCapabilities()
+    this.refreshPage()
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    pageMotion.clear(this)
+  },
+
+  buildCapabilities() {
+    this.capabilities = [
+      capability('sensor', '加速度计', 'subscribeAccelerometer', !!(sensor && sensor.subscribeAccelerometer)),
+      capability('health', '健康服务', 'getRecentSamples', !!(health && health.getRecentSamples)),
+      capability('haptic', '自定义震动', 'vibrator.start / stop', !!(vibrator && vibrator.start && vibrator.stop)),
+      capability('battery', '电池状态', 'battery.getStatus', !!(battery && battery.getStatus)),
+      capability('brightness', '屏幕亮度', 'brightness.setValue', !!(brightness && brightness.setValue)),
+      capability('event', '公共事件', 'event.subscribe', !!(systemEvent && systemEvent.subscribe)),
+      capability('interconnect', '设备互联', 'interconnect.instance', !!(interconnect && interconnect.instance)),
+      capability('storage', '本地存储', 'storage.get / set', !!(storage && storage.get && storage.set))
+    ]
+  },
+
+  refreshPage() {
+    if (this.pageIndex < 0) this.pageIndex = 0
+    if (this.pageIndex >= this.pageCount) this.pageIndex = this.pageCount - 1
+    var start = (this.pageIndex - 1) * 4
+    this.capabilityPage = this.pageIndex > 0 ? this.capabilities.slice(start, start + 4) : []
+    this.pageText = this.pageIndex + 1 + ' / ' + this.pageCount
+    this.pageProgress = Math.round(((this.pageIndex + 1) / this.pageCount) * 100) + '%'
+    this.previousColor = this.pageIndex > 0 ? '#0A84FF' : '#3A3A3C'
+    this.nextColor = this.pageIndex < this.pageCount - 1 ? '#0A84FF' : '#3A3A3C'
+  },
+
+  previousPage() {
+    if (this.pageIndex <= 0) return
+    this.pageIndex--
+    this.refreshPage()
+  },
+
+  nextPage() {
+    if (this.pageIndex >= this.pageCount - 1) return
+    this.pageIndex++
+    this.refreshPage()
+  },
+
+  handleSwipe(event) {
+    if (!event) return
+    if (event.direction === 'left') this.nextPage()
+    else if (event.direction === 'right') {
+      if (this.pageIndex > 0) this.previousPage()
+      else pageMotion.back(this, router)
+    }
+  }
+}
+</script>
+
+<style>
+.diagnostics-page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  padding: 17px 12px;
+  background-color: #000000;
+}
+
+.top-row {
+  width: 166px;
+  height: 38px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.page-title { font-size: 22px; font-weight: bold; color: #64D2FF; }
+.page-number { font-size: 11px; color: #8E8E93; }
+
+.device-card {
+  width: 166px;
+  height: 275px;
+  flex-direction: column;
+  padding: 13px;
+  border-radius: 13px;
+  background-color: #111820;
+}
+
+.device-head { width: 140px; height: 30px; flex-direction: row; align-items: center; }
+.device-dot { width: 10px; height: 10px; border-radius: 5px; background-color: #64D2FF; margin-right: 7px; }
+.device-title { font-size: 14px; font-weight: bold; color: #FFFFFF; }
+.info-row { width: 140px; height: 34px; flex-direction: row; justify-content: space-between; align-items: center; }
+.info-label { width: 45px; font-size: 11px; color: #8E8E93; }
+.info-value { width: 94px; font-size: 11px; color: #FFFFFF; text-align: right; lines: 1; text-overflow: ellipsis; }
+.accent { color: #64D2FF; }
+.device-tip { width: 140px; font-size: 9px; line-height: 13px; color: #6E7681; margin-top: 7px; }
+
+.capability-list { width: 166px; height: 275px; flex-direction: column; }
+.capability-item { width: 166px; height: 56px; flex-direction: row; align-items: center; justify-content: space-between; padding: 8px 9px; margin-bottom: 7px; border-radius: 10px; background-color: #11151B; }
+.capability-copy { width: 102px; flex-direction: column; }
+.capability-name { font-size: 13px; font-weight: bold; color: #FFFFFF; }
+.capability-api { width: 102px; font-size: 8px; color: #777D87; margin-top: 3px; lines: 1; text-overflow: ellipsis; }
+.status-pill { width: 46px; height: 23px; border-radius: 12px; justify-content: center; align-items: center; }
+.status-text { width: 42px; font-size: 8px; text-align: center; }
+.capability-tip { width: 160px; font-size: 8px; line-height: 11px; color: #6E7681; }
+
+.pager-row { width: 152px; height: 34px; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 8px; }
+.pager-button { width: 34px; height: 30px; font-size: 25px; font-weight: bold; text-align: center; }
+.pager-track { width: 70px; height: 4px; border-radius: 2px; background-color: #24262B; }
+.pager-fill { height: 4px; border-radius: 2px; background-color: #64D2FF; }
+
+/*
+ * 圆屏三段式安全栈，与 settings.ux 保持同一套节奏：
+ *   padding-top 26 → 标题 120×20 → 间距 4 → 内容 148×106 → 间距 3 → 分页 110×14
+ * 148px 宽的卡片在内切圆里只有 y=35..157 可用，原布局排到 y=43..165 且分页行
+ * 落在 y=190，上下都被圆弧切掉。
+ */
+@media (shape: circle) {
+  .diagnostics-page { padding: 26px 22px 0px 22px; }
+  .top-row { width: 120px; height: 20px; margin-top: 0px; margin-bottom: 0px; }
+  .page-title { font-size: 12px; }
+  .page-number { font-size: 7px; }
+  .device-card, .capability-list { width: 148px; height: 106px; margin-top: 4px; }
+  .device-card { padding: 7px 12px; border-radius: 22px; }
+  .device-head, .info-row { width: 124px; }
+  .device-head { height: 15px; }
+  .device-title { font-size: 9px; }
+  .device-dot { width: 6px; height: 6px; border-radius: 3px; }
+  .info-row { height: 14px; }
+  .info-label, .info-value { font-size: 7px; }
+  .info-label { width: 30px; }
+  .info-value { width: 92px; }
+  .device-tip { width: 124px; font-size: 5px; line-height: 7px; margin-top: 2px; }
+  /* 四条 22px 卡片 + 4px 间距 = 104px，落在 106px 内容区内。 */
+  .capability-item { width: 148px; height: 22px; padding: 3px 8px; margin-bottom: 4px; border-radius: 11px; }
+  .capability-copy { width: 94px; }
+  .capability-name { font-size: 8px; }
+  .capability-api { width: 94px; font-size: 5px; margin-top: 1px; }
+  .status-pill { width: 38px; height: 14px; }
+  .status-text { width: 36px; font-size: 6px; }
+  /* 圆屏隐藏说明文案：此前压到 5px 已无法阅读，方屏/胶囊屏仍完整保留。 */
+  .capability-tip { display: none; }
+  .pager-row { width: 110px; height: 14px; margin-top: 3px; }
+  .pager-button { width: 26px; height: 14px; font-size: 14px; }
+  .pager-track { width: 46px; }
+}
+</style>

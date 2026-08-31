@@ -1,0 +1,160 @@
+<template>
+  <div class="simple-face">
+    <div class="simple-heading">
+      <text class="simple-week" style="color: {{ faceAccent }}">{{ displayWeek }}</text>
+      <text class="simple-date">{{ displayMonth }} {{ displayDate }}</text>
+    </div>
+    <stack class="simple-neon-dial">
+      <progress class="simple-neon-arc" type="arc" percent="{{ goalPercent }}" style="color: {{ faceAccent }};"></progress>
+      <div class="simple-dial-center">
+        <text class="simple-time">{{ displayHours }}:{{ displayMinutes }}</text>
+        <text class="simple-goal" style="color: {{ faceAccent }}">目标 {{ goalPercent }}%</text>
+      </div>
+    </stack>
+    <div class="simple-metrics">
+      <div class="simple-metric" @click="goToSteps">
+        <text class="simple-metric-value" style="color: #FFD60A">{{ stepsText }}</text>
+        <text class="simple-metric-label">步数</text>
+      </div>
+      <div class="simple-metric" @click="goToHeartRate">
+        <text class="simple-metric-value" style="color: #FF375F">{{ currentHeartRate }}</text>
+        <text class="simple-metric-label">心率</text>
+      </div>
+      <div class="simple-metric">
+        <text class="simple-metric-value" style="color: {{ batteryColor }}">{{ batteryPercent }}%</text>
+        <text class="simple-metric-label">电量</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  // The clock page owns data refresh; this component only renders one face.
+  props: [
+    'displayWeek',
+    'displayMonth',
+    'displayDate',
+    'displayHours',
+    'displayMinutes',
+    'faceAccent',
+    'goalPercent',
+    'stepsText',
+    'currentHeartRate',
+    'batteryPercent',
+    'batteryColor'
+  ],
+
+  goToHeartRate() {
+    router.push({
+      uri: '/pages/heartrate',
+      params: {}
+    })
+  },
+
+  goToSteps() {
+    router.push({
+      uri: '/pages/steps',
+      params: {}
+    })
+  }
+}
+</script>
+
+<style>
+.simple-face {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.simple-heading {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 148px;
+  height: 26px;
+}
+
+.simple-week {
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.simple-date {
+  font-size: 12px;
+  color: #8E8E93;
+}
+
+.simple-neon-dial {
+  width: 150px;
+  height: 150px;
+  margin-top: 24px;
+}
+
+.simple-neon-arc {
+  width: 150px;
+  height: 150px;
+  stroke-width: 7px;
+  layer-color: #20242B;
+  start-angle: 0deg;
+  total-angle: 360deg;
+  center-x: 75px;
+  center-y: 75px;
+  radius: 68px;
+}
+
+.simple-dial-center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+}
+
+.simple-time {
+  font-size: 37px;
+  font-weight: bold;
+  color: #FFFFFF;
+  text-align: center;
+}
+
+.simple-goal {
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: 7px;
+}
+
+.simple-metrics {
+  flex-direction: row;
+  justify-content: space-between;
+  width: 168px;
+  margin-top: 30px;
+}
+
+.simple-metric {
+  flex-direction: column;
+  align-items: center;
+  width: 52px;
+  height: 58px;
+  background-color: #12161D;
+  border-radius: 12px;
+  padding-top: 9px;
+}
+
+.simple-metric-value {
+  font-size: 17px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.simple-metric-label {
+  font-size: 11px;
+  color: #8E8E93;
+  margin-top: 4px;
+}
+</style>

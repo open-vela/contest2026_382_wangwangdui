@@ -1,0 +1,66 @@
+{
+  "name": "vela_band",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Xiaomi Vela Quick App demo for smart bands and watches.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlink.org.cn/temlike/vela_band_rep.git"
+  },
+  "homepage": "https://gitlink.org.cn/temlike/vela_band_rep",
+  "keywords": [
+    "openvela",
+    "vela",
+    "quick-app",
+    "smart-band",
+    "smart-watch"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "aiot start --watch",
+    "build": "aiot build --enable-jsc",
+    "release": "aiot release --enable-jsc",
+    "lint": "node scripts/lint.js",
+    "docs:check": "node scripts/check-docs.js",
+    "multiscreen:check": "node scripts/check-multiscreen.js",
+    "safearea:check": "node scripts/check-safe-area.js",
+    "honeycomb:logic": "node test/honeycomb_layout.test.js",
+    "safearea:logic": "node test/safe_area.test.js",
+    "health:check": "node scripts/check-health-ui.js",
+    "health:logic": "node test/health_metrics.test.js",
+    "pager:logic": "node test/fixed_pager.test.js",
+    "motion:logic": "node test/motion_metrics.test.js",
+    "calendar:logic": "node test/calendar_utils.test.js",
+    "analog:logic": "node test/analog_face.test.js",
+    "face:logic": "node test/face_scope.test.js",
+    "navigation:logic": "node test/navigation_guard.test.js",
+    "viewport:logic": "node test/viewport_math.test.js",
+    "haptic:logic": "node test/haptic_patterns.test.js",
+    "haptic:check": "node scripts/check-haptic-ui.js",
+    "health:visual": "node scripts/check-health-visual.js",
+    "icons:render": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/render-icons.ps1 && python scripts/render-soft-icons.py",
+    "backgrounds:render": "python scripts/fade-watchface-background.py --input assets/watchfaces/alpine_night_source.jpg --output src/common/watchfaces/alpine_night.jpg",
+    "check": "npm run lint && npm run multiscreen:check && npm run safearea:check && npm run health:check && npm run haptic:check && npm run health:logic && npm run pager:logic && npm run motion:logic && npm run calendar:logic && npm run analog:logic && npm run face:logic && npm run navigation:logic && npm run viewport:logic && npm run safearea:logic && npm run honeycomb:logic && npm run haptic:logic && npm run docs:check"
+  },
+  "lint-staged": {
+    "*.{ux,js}": [
+      "prettier --write",
+      "node scripts/lint.js",
+      "git add"
+    ],
+    "*.{less,css}": [
+      "prettier --write",
+      "stylelint --fix --custom-syntax postcss-less",
+      "git add"
+    ]
+  },
+  "devDependencies": {
+    "@aiot-toolkit/jsc": "^1.0.3",
+    "aiot-toolkit": "^2.0.5",
+    "eslint": "^8.57.1",
+    "eslint-formatter-codeframe": "^7.32.2"
+  }
+}

@@ -1,0 +1,28 @@
+vela_band
+Copyright (c) 2026 vela_band contributors
+
+This repository uses the following direct development dependencies:
+
+- aiot-toolkit 2.0.5 (ISC License)
+- @aiot-toolkit/jsc 1.0.8 (ISC License)
+- ESLint 8.57.1 (MIT License)
+- eslint-formatter-codeframe 7.32.2 (MIT License)
+
+Their complete license texts are distributed with their respective npm
+packages. Transitive dependency notices are available from package-lock.json
+and the installed packages.
+
+Xiaomi Vela, AIoT-IDE, and related SDK components are external development
+prerequisites and are not redistributed by this repository. Product names and
+trademarks belong to their respective owners.
+
+The source code in this repository is released under the MIT License. See
+LICENSE for the full terms.
+
+The capsule watch-face background `src/common/watchfaces/alpine_night.jpg`
+uses Unsplash image `photo-1519681393784-d120267933ba`, downloaded from
+images.unsplash.com and used under the Unsplash License:
+https://unsplash.com/license
+
+The photograph remains copyright its original creator and is not covered by
+this repository's MIT License.

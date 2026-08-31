@@ -1,0 +1,346 @@
+<template>
+  <div class="motion-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
+    <div class="top-row">
+      <text class="page-title">动作与加速度</text>
+      <div class="sensor-badge" style="background-color: {{ sensorBackground }}"><text class="sensor-badge-text" style="color: {{ sensorColor }}">{{ sensorStatus }}</text></div>
+    </div>
+
+    <div class="live-panel" if="{{ pageIndex === 0 }}">
+      <div class="axis-card">
+        <text class="axis-title">实时三轴 · m/s²</text>
+        <div class="axis-row"><text class="axis-name x">X</text><text class="axis-value">{{ xText }}</text></div>
+        <div class="axis-row"><text class="axis-name y">Y</text><text class="axis-value">{{ yText }}</text></div>
+        <div class="axis-row"><text class="axis-name z">Z</text><text class="axis-value">{{ zText }}</text></div>
+      </div>
+      <div class="motion-card">
+        <div class="motion-copy"><text class="motion-label">合加速度</text><text class="motion-value">{{ magnitudeText }}</text></div>
+        <div class="motion-copy right-copy"><text class="motion-label">动作变化</text><text class="motion-value" style="color: {{ intensityColor }}">{{ scoreText }}</text></div>
+      </div>
+      <div class="action-row">
+        <text class="action-button" @click="toggleSensor">{{ sensorButtonText }}</text>
+        <text class="action-button secondary" @click="resetCalibration">校准</text>
+      </div>
+      <text class="sample-tip">{{ sampleText }}</text>
+    </div>
+
+    <div class="action-panel" if="{{ pageIndex === 1 }}">
+      <div class="strength-orb" style="border-color: {{ actionColor }}">
+        <text class="orb-label">动作强度</text>
+        <text class="orb-value" style="color: {{ actionColor }}">{{ actionResult }}</text>
+        <text class="orb-score">峰值 {{ actionPeakText }}</text>
+      </div>
+      <div class="countdown-card">
+        <text class="countdown-value">{{ countdownText }}</text>
+        <div class="countdown-copy">
+          <text class="countdown-title">3 秒动作测量</text>
+          <text class="countdown-tip">挥腕或抬腕，记录最大变化量</text>
+        </div>
+      </div>
+      <text class="measure-button" style="background-color: {{ measureBackground }}" @click="startActionMeasure">{{ measureButtonText }}</text>
+      <text class="measure-note">结果用于传感器演示，不代表医疗或专业运动测量。</text>
+    </div>
+
+    <div class="pager-row">
+      <text class="pager-button" style="color: {{ previousColor }}" @click="previousPage">‹</text>
+      <text class="page-label">{{ pageIndex === 0 ? '实时诊断' : '动作测量' }}</text>
+      <text class="pager-button" style="color: {{ nextColor }}" @click="nextPage">›</text>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import sensor from '@system.sensor'
+import hapticFeedback from '../../../common/haptic_feedback'
+import motionMetrics from '../../../common/motion_metrics'
+import pageMotion from '../../../common/page_motion'
+import pageViewport from '../../../common/page_viewport'
+
+function format(value) {
+  return Number(value || 0).toFixed(2)
+}
+
+export default {
+  private: {
+    pageIndex: 0,
+    sensorActive: false,
+    sensorStatus: '未启动',
+    sensorColor: '#8E8E93',
+    sensorBackground: '#242426',
+    sensorButtonText: '开始诊断',
+    xText: '0.00',
+    yText: '0.00',
+    zText: '0.00',
+    magnitudeText: '0.00',
+    scoreText: '0.00',
+    intensityColor: '#30D158',
+    sampleText: '启动后显示真实样本与采样数量',
+    actionActive: false,
+    actionPeak: 0,
+    actionPeakText: '0.00',
+    actionResult: '待测量',
+    actionColor: '#8E8E93',
+    countdownText: '3.0',
+    measureButtonText: '开始测量',
+    measureBackground: '#0A84FF',
+    previousColor: '#3A3A3C',
+    nextColor: '#0A84FF',
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    this.metricState = motionMetrics.createState()
+    pageViewport.bind(this)
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+  },
+
+  onHide() {
+    this.stopSensor()
+    this.stopActionMeasure()
+    hapticFeedback.stop()
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    this.stopSensor()
+    this.stopActionMeasure()
+    hapticFeedback.stop()
+    pageMotion.clear(this)
+  },
+
+  toggleSensor() {
+    if (this.sensorActive) this.stopSensor()
+    else this.startSensor()
+  },
+
+  startSensor() {
+    if (this.sensorActive) return true
+    if (!sensor || !sensor.subscribeAccelerometer) {
+      this.setSensorError('接口不可用')
+      return false
+    }
+    var self = this
+    try {
+      sensor.subscribeAccelerometer({
+        interval: 'game',
+        callback: function (sample) {
+          self.handleSample(sample)
+        },
+        fail: function (data, code) {
+          self.sensorActive = false
+          self.setSensorError('失败 ' + code)
+        }
+      })
+      this.sensorActive = true
+      this.sensorStatus = '等待样本'
+      this.sensorColor = '#64D2FF'
+      this.sensorBackground = '#12303A'
+      this.sensorButtonText = '停止诊断'
+      return true
+    } catch (error) {
+      this.setSensorError('订阅异常')
+      return false
+    }
+  },
+
+  setSensorError(text) {
+    this.sensorStatus = text
+    this.sensorColor = '#FF453A'
+    this.sensorBackground = '#3A1517'
+    this.sensorButtonText = '重新尝试'
+  },
+
+  stopSensor() {
+    if (this.sensorActive) {
+      try {
+        if (sensor && sensor.unsubscribeAccelerometer) sensor.unsubscribeAccelerometer()
+      } catch (error) {
+        console.log('accelerometer unsubscribe unavailable')
+      }
+    }
+    this.sensorActive = false
+    this.sensorStatus = '已停止'
+    this.sensorColor = '#8E8E93'
+    this.sensorBackground = '#242426'
+    this.sensorButtonText = '开始诊断'
+  },
+
+  handleSample(sample) {
+    this.metricState = motionMetrics.applySample(this.metricState, sample)
+    var state = this.metricState
+    this.xText = format(state.x)
+    this.yText = format(state.y)
+    this.zText = format(state.z)
+    this.magnitudeText = format(state.magnitude)
+    this.scoreText = format(state.score)
+    this.intensityColor = state.intensity.color
+    this.sensorStatus = '正在出数'
+    this.sensorColor = '#30D158'
+    this.sensorBackground = '#123422'
+    this.sampleText = '已收到 ' + state.sampleCount + ' 个样本 · 当前' + state.intensity.label
+    if (this.actionActive && state.score > this.actionPeak) {
+      this.actionPeak = state.score
+      this.actionPeakText = format(this.actionPeak)
+      var intensity = motionMetrics.classify(this.actionPeak)
+      this.actionResult = intensity.label
+      this.actionColor = intensity.color
+    }
+  },
+
+  resetCalibration() {
+    this.metricState = motionMetrics.createState()
+    this.sampleText = '已重置，前 12 个样本将用于基线校准'
+    this.scoreText = '0.00'
+    this.intensityColor = '#30D158'
+  },
+
+  startActionMeasure() {
+    if (this.actionActive) return
+    if (!this.startSensor()) return
+    this.actionActive = true
+    this.actionPeak = 0
+    this.actionPeakText = '0.00'
+    this.actionResult = '测量中'
+    this.actionColor = '#64D2FF'
+    this.measureButtonText = '请完成动作'
+    this.measureBackground = '#2C2C2E'
+    this.actionSampleStart = this.metricState ? this.metricState.sampleCount : 0
+    this.actionEndsAt = Date.now() + 3000
+    hapticFeedback.play('tap')
+    var self = this
+    clearInterval(this.actionTimer)
+    this.actionTimer = setInterval(function () {
+      var remaining = Math.max(0, self.actionEndsAt - Date.now())
+      self.countdownText = (remaining / 1000).toFixed(1)
+      if (remaining <= 0) self.finishActionMeasure()
+    }, 100)
+  },
+
+  finishActionMeasure() {
+    if (!this.actionActive) return
+    clearInterval(this.actionTimer)
+    this.actionTimer = null
+    this.actionActive = false
+    this.countdownText = '完成'
+    var receivedSamples = this.metricState && this.metricState.sampleCount > this.actionSampleStart
+    var intensity = motionMetrics.classify(this.actionPeak)
+    this.actionResult = receivedSamples ? intensity.label : '无样本'
+    this.actionColor = receivedSamples ? intensity.color : '#FF453A'
+    this.measureButtonText = '再次测量'
+    this.measureBackground = '#0A84FF'
+    hapticFeedback.play(receivedSamples ? 'goal' : 'alert')
+  },
+
+  stopActionMeasure() {
+    clearInterval(this.actionTimer)
+    this.actionTimer = null
+    this.actionActive = false
+  },
+
+  previousPage() {
+    if (this.pageIndex === 0) return
+    this.pageIndex = 0
+    this.previousColor = '#3A3A3C'
+    this.nextColor = '#0A84FF'
+  },
+
+  nextPage() {
+    if (this.pageIndex === 1) return
+    this.pageIndex = 1
+    this.previousColor = '#0A84FF'
+    this.nextColor = '#3A3A3C'
+  },
+
+  handleSwipe(event) {
+    if (!event) return
+    if (event.direction === 'left') this.nextPage()
+    else if (event.direction === 'right') {
+      if (this.pageIndex > 0) this.previousPage()
+      else pageMotion.back(this, router)
+    }
+  }
+}
+</script>
+
+<style>
+.motion-page { width: 100%; height: 100%; flex-direction: column; align-items: center; padding: 16px 12px; background-color: #000000; }
+.top-row { width: 166px; height: 38px; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+.page-title { font-size: 19px; font-weight: bold; color: #BF5AF2; }
+.sensor-badge { width: 53px; height: 23px; border-radius: 12px; justify-content: center; align-items: center; }
+.sensor-badge-text { width: 49px; font-size: 8px; text-align: center; }
+.live-panel, .action-panel { width: 166px; height: 280px; flex-direction: column; align-items: center; }
+.axis-card { width: 166px; height: 142px; flex-direction: column; padding: 11px 13px; border-radius: 13px; background-color: #15131A; }
+.axis-title { width: 140px; height: 24px; font-size: 11px; color: #8E8E93; }
+.axis-row { width: 140px; height: 32px; flex-direction: row; justify-content: space-between; align-items: center; }
+.axis-name { width: 24px; font-size: 15px; font-weight: bold; }
+.x { color: #FF453A; } .y { color: #30D158; } .z { color: #0A84FF; }
+.axis-value { width: 104px; font-size: 18px; color: #FFFFFF; text-align: right; }
+.motion-card { width: 166px; height: 62px; flex-direction: row; justify-content: space-between; padding: 10px 12px; margin-top: 9px; border-radius: 11px; background-color: #11151B; }
+.motion-copy { width: 66px; flex-direction: column; }
+.right-copy { align-items: flex-end; }
+.motion-label { font-size: 9px; color: #8E8E93; }
+.motion-value { font-size: 20px; font-weight: bold; color: #FFFFFF; margin-top: 3px; }
+.action-row { width: 166px; height: 38px; flex-direction: row; justify-content: space-between; margin-top: 9px; }
+.action-button { width: 101px; height: 36px; border-radius: 10px; background-color: #BF5AF2; color: #FFFFFF; font-size: 12px; font-weight: bold; text-align: center; }
+.secondary { width: 57px; background-color: #252128; color: #D1D1D6; }
+.sample-tip { width: 162px; font-size: 8px; color: #6E7681; margin-top: 7px; text-align: center; }
+.strength-orb { width: 142px; height: 142px; border-width: 5px; border-radius: 71px; flex-direction: column; justify-content: center; align-items: center; background-color: #111116; }
+.orb-label { font-size: 10px; color: #8E8E93; }
+.orb-value { font-size: 28px; font-weight: bold; margin-top: 4px; }
+.orb-score { font-size: 9px; color: #D1D1D6; margin-top: 5px; }
+.countdown-card { width: 166px; height: 58px; flex-direction: row; align-items: center; padding: 8px 10px; margin-top: 10px; border-radius: 11px; background-color: #15131A; }
+.countdown-value { width: 45px; font-size: 24px; font-weight: bold; color: #BF5AF2; text-align: center; }
+.countdown-copy { width: 98px; flex-direction: column; margin-left: 7px; }
+.countdown-title { font-size: 12px; font-weight: bold; color: #FFFFFF; }
+.countdown-tip { font-size: 7px; color: #8E8E93; margin-top: 3px; }
+.measure-button { width: 166px; height: 38px; border-radius: 10px; color: #FFFFFF; font-size: 13px; font-weight: bold; text-align: center; margin-top: 10px; }
+.measure-note { width: 156px; font-size: 7px; color: #5E626A; line-height: 10px; text-align: center; margin-top: 6px; }
+.pager-row { width: 152px; height: 32px; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 7px; }
+.pager-button { width: 34px; height: 29px; font-size: 24px; font-weight: bold; text-align: center; }
+.page-label { width: 72px; font-size: 9px; color: #8E8E93; text-align: center; }
+
+@media (shape: circle) {
+  .motion-page { padding: 8px 22px; }
+  .top-row { width: 128px; height: 23px; margin-top: 8px; margin-bottom: 4px; }
+  .page-title { font-size: 11px; }
+  .sensor-badge { width: 45px; height: 16px; }
+  .sensor-badge-text { font-size: 6px; }
+  .live-panel, .action-panel { width: 148px; height: 124px; }
+  .axis-card { width: 148px; height: 65px; padding: 5px 11px; border-radius: 22px; }
+  .axis-title { width: 126px; height: 11px; font-size: 6px; }
+  .axis-row { width: 126px; height: 16px; }
+  .axis-name { font-size: 8px; }
+  .axis-value { font-size: 10px; }
+  .motion-card { width: 148px; height: 29px; margin-top: 4px; padding: 4px 10px; border-radius: 15px; }
+  .motion-label { font-size: 5px; }
+  .motion-value { font-size: 10px; margin-top: 1px; }
+  .action-row { width: 148px; height: 24px; margin-top: 4px; }
+  .action-button { width: 90px; height: 22px; border-radius: 11px; font-size: 7px; }
+  .secondary { width: 52px; }
+  .sample-tip { display: none; }
+  .strength-orb { width: 74px; height: 74px; border-width: 3px; border-radius: 37px; }
+  .orb-label { font-size: 6px; }
+  .orb-value { font-size: 15px; margin-top: 2px; }
+  .orb-score { font-size: 5px; margin-top: 2px; }
+  .countdown-card { width: 148px; height: 25px; padding: 3px 8px; margin-top: 4px; border-radius: 13px; }
+  .countdown-value { width: 38px; font-size: 12px; }
+  .countdown-copy { width: 90px; }
+  .countdown-title { font-size: 7px; }
+  .countdown-tip { font-size: 5px; margin-top: 1px; }
+  .measure-button { width: 148px; height: 22px; border-radius: 11px; font-size: 7px; margin-top: 4px; }
+  .measure-note { display: none; }
+  .pager-row { width: 132px; height: 21px; margin-top: 3px; }
+  .pager-button { width: 30px; height: 20px; font-size: 17px; }
+  .page-label { font-size: 6px; }
+}
+</style>

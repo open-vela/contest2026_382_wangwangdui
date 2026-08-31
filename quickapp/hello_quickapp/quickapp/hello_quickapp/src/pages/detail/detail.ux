@@ -1,0 +1,53 @@
+<template>
+  <div class="demo-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;">
+    <text class="title">{{ text }}</text>
+  </div>
+</template>
+
+<script>
+import pageMotion from "../../common/page_motion"
+import pageViewport from '../../common/page_viewport'
+
+export default {
+  private: {
+    text: "欢迎打开详情页",
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    pageViewport.bind(this)
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    pageMotion.clear(this)
+  }
+}
+</script>
+
+<style>
+.demo-page {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-size: 20px;
+  text-align: center;
+}
+</style>

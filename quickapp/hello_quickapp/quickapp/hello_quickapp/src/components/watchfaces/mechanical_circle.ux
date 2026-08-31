@@ -1,0 +1,283 @@
+<template>
+  <div class="mechanical-circle-face">
+    <stack class="mechanical-dial">
+      <div class="mechanical-bezel"></div>
+      <div class="mechanical-inner-ring"></div>
+      <div class="{{ $item.className }}" for="{{ analogTicks }}" tid="index" style="transform: {{ $item.transform }};"></div>
+
+      <text class="mechanical-roman roman-twelve">XII</text>
+      <text class="mechanical-roman roman-three">III</text>
+      <text class="mechanical-roman roman-six">VI</text>
+      <text class="mechanical-roman roman-nine">IX</text>
+
+      <text class="mechanical-brand">VELA</text>
+      <text class="mechanical-caption">AUTOMATIC</text>
+      <text class="mechanical-power">POWER {{ batteryPercent }}%</text>
+
+      <div class="mechanical-date-window" @click="goToToday">
+        <text class="mechanical-date-label">{{ displayMonth }}</text>
+        <text class="mechanical-date-value">{{ displayDate }}</text>
+      </div>
+
+      <stack class="mechanical-subdial" @click="goToHeartRate">
+        <div class="mechanical-subdial-ring"></div>
+        <div class="mechanical-subdial-copy">
+          <text class="mechanical-subdial-label">HEART</text>
+          <text class="mechanical-subdial-value">{{ currentHeartRate }}</text>
+        </div>
+      </stack>
+
+      <div class="mechanical-hour-hand" style="transform: {{ hourHandTransform }};"></div>
+      <div class="mechanical-minute-hand" style="transform: {{ minuteHandTransform }};"></div>
+      <div class="mechanical-second-hand" style="transform: {{ secondHandTransform }};"></div>
+      <div class="mechanical-center-pin"></div>
+      <div class="mechanical-center-cap"></div>
+    </stack>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  props: [
+    'displayMonth',
+    'displayDate',
+    'batteryPercent',
+    'currentHeartRate',
+    'analogTicks',
+    'hourHandTransform',
+    'minuteHandTransform',
+    'secondHandTransform'
+  ],
+
+  goToHeartRate() {
+    router.push({ uri: '/pages/heartrate', params: {} })
+  },
+
+  goToToday() {
+    router.push({ uri: '/pages/today', params: {} })
+  }
+}
+</script>
+
+<style>
+.mechanical-circle-face {
+  width: 192px;
+  height: 192px;
+  justify-content: center;
+  align-items: center;
+  background-color: #050607;
+}
+
+.mechanical-dial {
+  width: 176px;
+  height: 176px;
+}
+
+.mechanical-bezel {
+  left: 0px;
+  top: 0px;
+  width: 176px;
+  height: 176px;
+  border-radius: 88px;
+  border-width: 3px;
+  border-color: #B89A61;
+  background-color: #07090B;
+}
+
+.mechanical-inner-ring {
+  left: 6px;
+  top: 6px;
+  width: 164px;
+  height: 164px;
+  border-radius: 82px;
+  border-width: 1px;
+  border-color: #55482F;
+}
+
+.mechanical-minute-tick {
+  left: 88px;
+  top: 9px;
+  width: 1px;
+  height: 4px;
+  transform-origin: 0px 79px;
+  background-color: #6E6658;
+}
+
+.mechanical-major-tick {
+  left: 87px;
+  top: 7px;
+  width: 2px;
+  height: 9px;
+  transform-origin: 1px 81px;
+  background-color: #D6B878;
+}
+
+.mechanical-roman {
+  width: 22px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: bold;
+  color: #E7D6AF;
+  text-align: center;
+}
+
+.roman-twelve { left: 77px; top: 16px; }
+.roman-three { left: 145px; top: 81px; }
+.roman-six { left: 77px; top: 148px; }
+.roman-nine { left: 9px; top: 81px; }
+
+.mechanical-brand {
+  left: 61px;
+  top: 41px;
+  width: 54px;
+  height: 15px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #E7D6AF;
+  text-align: center;
+}
+
+.mechanical-caption {
+  left: 57px;
+  top: 54px;
+  width: 62px;
+  height: 8px;
+  font-size: 5px;
+  color: #81745D;
+  text-align: center;
+}
+
+.mechanical-power {
+  left: 60px;
+  top: 64px;
+  width: 56px;
+  height: 8px;
+  font-size: 5px;
+  color: #A6977A;
+  text-align: center;
+}
+
+.mechanical-date-window {
+  left: 121px;
+  top: 82px;
+  width: 25px;
+  height: 20px;
+  border-radius: 3px;
+  border-width: 1px;
+  border-color: #66583D;
+  background-color: #111317;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.mechanical-date-label {
+  width: 23px;
+  height: 7px;
+  font-size: 4px;
+  color: #8E8065;
+  text-align: center;
+}
+
+.mechanical-date-value {
+  width: 23px;
+  height: 10px;
+  font-size: 8px;
+  font-weight: bold;
+  color: #F2E7CC;
+  text-align: center;
+}
+
+.mechanical-subdial {
+  left: 70px;
+  top: 116px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+}
+
+.mechanical-subdial-ring {
+  left: 0px;
+  top: 0px;
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border-width: 1px;
+  border-color: #5A4D35;
+  background-color: #090B0E;
+}
+
+.mechanical-subdial-copy {
+  width: 36px;
+  height: 36px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.mechanical-subdial-label {
+  width: 34px;
+  height: 8px;
+  font-size: 5px;
+  color: #9A8B6E;
+  text-align: center;
+}
+
+.mechanical-subdial-value {
+  width: 34px;
+  height: 13px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #D9C18C;
+  text-align: center;
+}
+
+.mechanical-hour-hand {
+  left: 86px;
+  top: 48px;
+  width: 4px;
+  height: 43px;
+  border-radius: 2px;
+  transform-origin: 2px 40px;
+  background-color: #E7D6AF;
+}
+
+.mechanical-minute-hand {
+  left: 87px;
+  top: 31px;
+  width: 2px;
+  height: 60px;
+  border-radius: 1px;
+  transform-origin: 1px 57px;
+  background-color: #D6B878;
+}
+
+.mechanical-second-hand {
+  left: 88px;
+  top: 25px;
+  width: 1px;
+  height: 68px;
+  transform-origin: 0px 63px;
+  background-color: #B64232;
+}
+
+.mechanical-center-pin {
+  left: 83px;
+  top: 83px;
+  width: 11px;
+  height: 11px;
+  border-radius: 6px;
+  background-color: #D6B878;
+}
+
+.mechanical-center-cap {
+  left: 86px;
+  top: 86px;
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background-color: #3A2E1D;
+}
+</style>

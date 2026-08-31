@@ -1,0 +1,225 @@
+<template>
+  <div class="sport-face">
+    <div class="date-display">
+      <text class="display-month" style="color: {{ faceAccent }}">{{ displayMonth }}</text>
+      <text class="date-separator">/</text>
+      <text class="display-date">{{ displayDate }}</text>
+    </div>
+    <div class="time-container">
+      <text class="time-minutes" style="color: {{ faceAccent }}">{{ displayMinutes }}</text>
+      <text class="time-hours">{{ displayHours }}</text>
+    </div>
+    <div class="battery-container">
+      <image class="battery-icon" src="/common/lightning.png"></image>
+      <div class="battery-bar-bg">
+        <div class="battery-bar-fill" style="width: {{ batteryWidth }}; background-color: {{ batteryColor }}"></div>
+      </div>
+      <text class="battery-text" style="color: {{ batteryColor }}">{{ batteryPercent }}%</text>
+    </div>
+    <div class="heart-container" @click="goToHeartRate">
+      <image class="heart-icon" src="/common/heart.png"></image>
+      <div class="heart-chart-wrapper">
+        <div class="heart-chart">
+          <div class="heart-bar" for="{{ heartRateData }}" style="height: {{ $item.barHeight }}px;"></div>
+        </div>
+        <text class="heart-rate-text">{{ currentHeartRate }} bpm</text>
+      </div>
+    </div>
+    <div class="step-container" @click="goToSteps">
+      <image class="step-icon" src="/common/shoes.png"></image>
+      <div class="step-info">
+        <text class="step-current">{{ stepsText }}</text>
+        <text class="step-goal">/ {{ stepsGoalText }}</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+
+export default {
+  // Props are passed in by clock.ux so the face has no timer of its own.
+  props: [
+    'displayMonth',
+    'displayDate',
+    'displayMinutes',
+    'displayHours',
+    'faceAccent',
+    'batteryPercent',
+    'batteryWidth',
+    'batteryColor',
+    'heartRateData',
+    'currentHeartRate',
+    'stepsText',
+    'stepsGoalText'
+  ],
+
+  goToHeartRate() {
+    router.push({
+      uri: '/pages/heartrate',
+      params: {}
+    })
+  },
+
+  goToSteps() {
+    router.push({
+      uri: '/pages/steps',
+      params: {}
+    })
+  }
+}
+</script>
+
+<style>
+.sport-face {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.date-display {
+  flex-direction: row;
+  align-items: center;
+}
+
+.display-month {
+  font-size: 22px;
+  font-weight: bold;
+  margin-right: -4px;
+  margin-top: -4px;
+}
+
+.date-separator {
+  font-size: 30px;
+  color: #FFFFFF;
+  margin: 0 4px;
+}
+
+.display-date {
+  font-size: 20px;
+  font-weight: bold;
+  color: #FF9F0A;
+  margin-left: -4px;
+  margin-top: 10px;
+}
+
+.time-container {
+  flex-direction: column;
+  align-items: center;
+}
+
+.time-minutes {
+  font-size: 72px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: -40px;
+  margin-left: 22px;
+  opacity: 0.9;
+}
+
+.time-hours {
+  font-size: 72px;
+  font-weight: bold;
+  color: #FF9F0A;
+  text-align: center;
+  margin-right: 38px;
+  margin-top: -14px;
+}
+
+.battery-container {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.battery-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+}
+
+.battery-bar-bg {
+  width: 108px;
+  height: 6px;
+  background-color: #333333;
+  border-radius: 3px;
+}
+
+.battery-bar-fill {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.battery-text {
+  font-size: 12px;
+  margin-left: 6px;
+}
+
+.heart-container {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.heart-icon {
+  width: 30px;
+  height: 30px;
+  margin-right: 8px;
+}
+
+.heart-chart-wrapper {
+  flex-direction: column;
+  align-items: center;
+}
+
+.heart-chart {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 96px;
+  height: 32px;
+}
+
+.heart-bar {
+  width: 8px;
+  border-radius: 2px;
+  background-color: #FF375F;
+}
+
+.heart-rate-text {
+  font-size: 12px;
+  color: #FF375F;
+  margin-top: 4px;
+  font-weight: bold;
+}
+
+.step-container {
+  flex-direction: row;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.step-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.step-info {
+  flex-direction: column;
+  margin-left: 10px;
+}
+
+.step-current {
+  font-size: 23px;
+  color: #FFD60A;
+  font-weight: bold;
+}
+
+.step-goal {
+  font-size: 13px;
+  color: #8E8E93;
+}
+</style>

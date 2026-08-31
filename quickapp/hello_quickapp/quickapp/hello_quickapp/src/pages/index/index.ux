@@ -1,0 +1,72 @@
+<template>
+  <div class="demo-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;">
+    <text class="title">{{ $t("a.b") }},欢迎打开{{ title }}</text>
+    <!-- 点击跳转详情页 -->
+    <input class="btn" type="button" value="跳转到详情页" @click="routeDetail" />
+  </div>
+</template>
+
+<script>
+import router from "@system.router"
+import pageMotion from "../../common/page_motion"
+import pageViewport from '../../common/page_viewport'
+
+export default {
+  // 页面级组件的数据模型，影响传入数据的覆盖机制：private内定义的属性不允许被覆盖
+  private: {
+    title: "示例页面",
+    pageOpacity: 1,
+    pageOffset: 0,
+    viewportClass: '',
+    viewportPosition: 'relative',
+    viewportLeft: '0px',
+    viewportWidth: '100%',
+    viewportHeight: '100%',
+    viewportTop: '0px'
+  },
+
+  onInit() {
+    pageViewport.bind(this)
+  },
+
+  onShow() {
+    pageMotion.enter(this)
+  },
+
+  onHide() {
+    pageMotion.clear(this)
+  },
+
+  onDestroy() {
+    pageMotion.clear(this)
+  },
+
+  routeDetail() {
+    // 跳转到应用内的某个页面，router用法详见：文档->接口->页面路由
+    pageMotion.push(this, router, "/pages/detail")
+  }
+}
+</script>
+
+<style>
+.demo-page {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-size: 20px;
+  text-align: center;
+}
+
+.btn {
+  width: 200px;
+  height: 40px;
+  margin-top: 20px;
+  border-radius: 5px;
+  background-color: #09ba07;
+  font-size: 20px;
+  color: #ffffff;
+}
+</style>
