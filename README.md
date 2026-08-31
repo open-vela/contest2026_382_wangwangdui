@@ -1,148 +1,147 @@
-# contest2026_382_wangwangdui
-
-👋 欢迎参加 **2026 首届 openvela AI 硬件开发者大赛**！
-
-这是组委会为你的队伍创建的**专属参赛仓库**（本仓为样例/模板，队伍编号 `382`；你看到的将是你自己的 `contest2026_<编号>_<队伍名>`）。比赛期间，你的全部参赛代码、打包产物与 AI Coding 日志都提交到这里。
-
-> 本仓既是「代码仓」，又内置了一键拉取整套 openvela 工程的 `repo` 清单（manifest）。你只需跟它打交道，**自始至终只动一个文件夹**。
-
----
-
-## 一、先读这些官方文档
-
-**通用（所有赛道必读）：**
-
-| 文档                                                                                                                                     | 用途                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| [《大赛总览》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/contest_overview.md)                        | 赛道、流程、评分、资源，建议先通读             |
-| [《参赛代码提交指南》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/code_submission_guide.md)           | 仓库获取、提交流程、时间与权限（**以此为准**） |
-| [《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md) | 如何导出 AI 对话日志并提交到 `logs/`           |
-
-**按你的赛道选读（三选一）：**
-
-| 赛道                  | 教程导航                                                                                                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 快应用 / 手表应用创新 | [快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)                         |
-| AI 硬件产品创新       | [AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)              |
-| 新硬件适配            | [新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md) |
-
----
-
-## 二、第一步：拉取完整工程
-
-用组委会提供的命令一键拉取「openvela 全量源码 + 你的专属仓」：
-
-```bash
-repo init -u https://github.com/open-vela/contest2026_382_wangwangdui \
-  -b dev-ai-contest-2026 -m contest2026_382_wangwangdui.xml
-repo sync -c -j8
-```
-
-同步后，你的整个仓库位于工作区的 `contest2026_382_wangwangdui/`，openvela 全量源码在外层（`nuttx/`、`apps/`、`packages/`、`vendor/` 等）。
-
----
-
-## 三、第二步：在哪里写代码
-
-**只在自己的仓目录 `contest2026_382_wangwangdui/` 里开发。** 不同作品形态放在对应子目录，manifest 会通过 `<linkfile>` 把它们**软链**到 openvela 编译树该在的位置——你不用手动 copy：
-
-| 作品形态 | 你的代码放这里             | 系统自动映射到                                 |
-| -------- | -------------------------- | ---------------------------------------------- |
-| 应用     | `app/hello_app/`           | `packages/demos/contest2026_382_hello_app`     |
-| 快应用   | `quickapp/hello_quickapp/` | `packages/apps/contest2026_382_hello_quickapp` |
-| 板级适配 | `board/contest_board/`     | `vendor/openvela/boards/contest2026_382_board` |
-
-> 用不到的形态目录可以删掉；新增作品时按同样规则加子目录，并在 `contest2026_382_wangwangdui.xml` 里补一条 `<linkfile>` 映射即可。**生产仓库（packages/nuttx/vendor 等）零改动。**
-
-建议仓库目录约定（便于评委定位）：
-
-```text
-app/ | quickapp/ | board/   # 你的作品代码
-logs/                       # AI Coding 日志（主动导出后提交，格式见 logs/README.md）
-README.md                   # 作品说明（提交前请改成你自己的，见第六节）
-```
-
-> 仓内附带了一个 `.gitignore.example`，给出了**编译产物**等不需要进仓的文件示例。如需启用，`cp .gitignore.example .gitignore` 后按需增删即可。**注意 `logs/` 下最终导出的 AI Coding 日志必须提交，不要忽略。**
->
-> `logs/` 的目录结构与提交格式见 [logs/README.md](logs/README.md)。
-
----
-
-## 四、第三步：编译与运行
-
-编译/运行步骤随作品形态不同而不同，请参考你所在赛道的教程导航：
-
-- 快应用 / 手表应用：[快应用教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/quickapp/quickapp_guide_index.md)（含模拟器与开发板部署）。
-- AI 硬件产品创新：[AI 硬件赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_hardware/ai_hardware_guide_index.md)（环境搭建、编译烧录、Skill 开发）。
-- 新硬件适配：[新硬件适配赛道教程导航](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/hardware_porting/hardware_porting_guide_index.md)（BSP 移植、最小 NSH 基线）。
-
-子目录已通过 manifest 中的 `<linkfile>` 软链进 openvela 编译树，因此构建在 openvela 工作区**根目录**（即你这个仓的上一级）进行。openvela 使用 `build.sh` 作为统一入口，接收一个 **board config 路径**作为参数：
-
-```bash
-# 进入 openvela 工作区根目录（你的仓的上一级）
-cd ..
-
-# 通用语法：第一个参数是 board config 路径，第二个参数可以是 menuconfig / distclean 等
-./build.sh <board-config-path> [menuconfig|distclean] [-j8]
-```
-
-> 具体的 board config 路径、目标产物、模拟器/真机部署方式请以你所在赛道的教程导航为准。本仓 `app/` `quickapp/` `board/` 三个示例骨架对应的 Kconfig 选项可通过 `menuconfig` 启用。
-
----
-
-## 五、第四步：提交作品
-
-1. **fork** 你的专属仓 → 开发 → `git commit` 并推送 → 向专属仓发起 **Pull Request**，可**自行 review 并合入**（无需等组委会）。
-2. **AI Coding 日志**：与 AI 工具的对话会自动记录到本机 staging（不会自动上传），需你**主动导出/打包**选定会话到仓内 `logs/` 目录后一并提交。详见[《AI Coding 日志归集与提交手册》](https://github.com/open-vela/docs/blob/dev-ai-contest-2026/zh-cn/contest_2026/ai_coding_log_guide.md)。
-3. 若需改动 **nuttx 等公共仓库**，不在本仓改，而是 fork 对应公共仓、以 PR 提交到 `dev-ai-contest-2026` 分支，由组委会 review 后合入。
-
-> ⏰ **提交作品截止：9 月 20 日**。截止后统一收回 push 权限，仍可查看 / clone。
->
-> 获奖后再按要求将作品 PR 至 openvela 上游对应仓库（走标准 PR + CI 流程）。
-
-### 关于 PR 与 CLA
-
-- 本仓所有改动通过 **Pull Request** 合入（分支保护强制，可自行合入自己的 PR）。
-- 首次贡献需在[**官网签署 CLA**](https://openvela.com/#/community/cla)；PR 上会自动跑 `cla/signature` 检查，在官网签署成功后，在 PR 评论 `/check-cla` 复检即可通过。
-
----
-
-## 六、提交前：把本 README 改成你的作品说明
-
-本文件目前是组委会给的**使用说明书**。**作品提交前，请把它替换成你自己作品的说明**，方便评委快速了解你做了什么、怎么跑起来。建议至少包含以下内容：
-
-```markdown
-# <你的作品名>
+# vela_band — openvela 2026 参赛作品
 
 ## 一、作品简介
-<一句话/一段话说明这个作品是什么、解决什么问题、亮点在哪>
+
+`vela_band` 是一个面向 Xiaomi Vela Quick App 的智能手环 / 手表交互项目，当前覆盖多表盘、多屏适配、健康趋势、运动记录、通知演示、设置、自检、震动反馈、低功耗状态管理与今日历等能力。
+
+项目重点不是简单堆叠页面，而是围绕可穿戴设备的真实约束做工程化处理：同一 RPK 适配胶囊、矩形、圆形屏幕；对健康与传感器能力采用“系统接口可用则读取、不可用则明确降级”的策略；对滑动、表盘切换、蜂窝启动器、安全区和低功耗状态做了独立逻辑与回归测试。
+
+> 当前 Git 分支名为 `feat/velaclaw-aiot`，但本次已提交代码中尚未包含 `system.velaclaw` API 集成。README 仅描述仓库中已经存在并可核验的功能，不把分支名称作为功能完成度证明。
 
 ## 二、选题方向
-<快应用 / 手表应用创新 ｜ AI 硬件产品创新 ｜ 新硬件适配 ｜ 自定方向，并简述理由>
+
+**快应用 / 手表应用创新**。
+
+作品基于 Vela Quick App 开发，重点展示可穿戴终端在多形态屏幕、健康能力、运动交互、表盘系统、震动反馈与低功耗场景下的完整应用体验。
 
 ## 三、目录结构
-<列出你这个仓里各目录/文件的作用，例如：>
-- `app/xxx/`        — <说明>
-- `board/xxx/`      — <说明>
-- `quickapp/xxx/`   — <说明>
-- `logs/`           — AI Coding 日志
-- `docs/` 或其他    — <说明>
 
-## 四、运行方式
-<拉取工程后，如何编译、烧录/部署、运行的完整步骤；最好能让评委照着一步步复现>
-
-## 五、AI Coding 使用说明
-<说明本作品如何借助 AI 辅助开发：
-- 在需求拆解 / 方案设计 / 编码 / 调试 / 文档等环节如何与 AI 协作；
-- AI 对开发效率或质量带来的实际帮助。
-完整对话日志见 logs/ 目录>
+```text
+contest2026_382_wangwangdui/
+├── quickapp/
+│   └── velaclaw-aiot/          # 完整 Vela Quick App 工程
+│       ├── src/                # 页面、组件、业务逻辑、资源和 manifest
+│       ├── assets/             # 原始图标与表盘素材
+│       ├── scripts/            # 静态检查、资源生成、模拟器辅助脚本
+│       ├── test/               # 纯逻辑回归测试
+│       ├── docs/               # 技术、兼容性与维护文档
+│       ├── package.json
+│       └── package-lock.json
+├── logs/                       # 大赛 AI Coding 日志目录
+├── contest2026_382_wangwangdui.xml
+└── README.md
 ```
 
-> 提示：将会根据「作品本身 + 你的 README 说明 + `logs/` 里的 AI Coding 日志」来理解和评估你的作品，README 写清楚很重要。
+manifest 将本作品映射到：
 
----
+```text
+packages/apps/contest2026_382_velaclaw_aiot
+```
 
-## 附：仓库命名规范
+## 四、主要实现
 
-`contest2026_<编号>_<队伍名>` — 编号三位零填充；队名 slug（全小写、英文/拼音、连字符）。例：`contest2026_382_wangwangdui`。
-（仓库由组委会统一创建，**每队仅一个仓**，无需自行命名。）
+- 多表盘：胶囊、矩形与圆形屏幕使用不同紧凑表盘组件，并共享表盘注册和持久化逻辑。
+- 多屏适配：通过 `$device`、`system.device`、宽高比与安全区逻辑识别不同 wearable 形态。
+- 应用启动器：胶囊屏采用固定分页；圆屏采用可拖动蜂窝布局与焦点吸附。
+- 健康数据：使用 `service.health` 读取心率、血氧、压力等能力；不可用时明确显示演示降级状态。
+- 运动记录：支持步行 / 跑步、暂停继续、历史记录，并在 GPS 可用时参与距离计算。
+- 通知演示：支持来电、短信、应用通知覆盖层的本地演示与公共事件入口。
+- 震动反馈：提供轻 / 中 / 强以及多种震动节奏，并在系统能力有限时使用兼容降级策略。
+- 低功耗状态：实现 ACTIVE、DIM、SLEEP 状态和简化抬腕唤醒逻辑。
+- 工程质量：包含 lint、文档检查、多屏检查、安全区检查以及多项纯逻辑测试。
+
+更详细的设计与兼容性说明见 `quickapp/velaclaw-aiot/docs/` 和工程自身的 `README.md`。
+
+## 五、运行方式
+
+### 1. 安装依赖
+
+需要 Node.js 18 或更高版本、npm，以及 Xiaomi AIoT-IDE / Vela Quick App 开发环境。
+
+进入工程：
+
+```bash
+cd quickapp/velaclaw-aiot
+npm ci
+```
+
+### 2. 运行质量检查
+
+```bash
+npm run check
+```
+
+### 3. 构建调试 RPK
+
+```bash
+npm run build
+```
+
+工程脚本当前记录的调试产物形式为：
+
+```text
+dist/com.application.watch.demo.debug.1.0.0.rpk
+```
+
+### 4. 生产包
+
+工程提供：
+
+```bash
+npm run release
+```
+
+比赛最终提交前还需要确认并提交 AIoT-IDE / 工具链生成的生产版 `release.rpk`。当前赛事分支中尚未包含可核验的 production `release.rpk`，因此本 README 不宣称生产包已经完成。
+
+## 六、测试与验证
+
+工程 `package.json` 中包含以下检查入口：
+
+```bash
+npm run lint
+npm run multiscreen:check
+npm run safearea:check
+npm run health:check
+npm run haptic:check
+npm run health:logic
+npm run pager:logic
+npm run motion:logic
+npm run calendar:logic
+npm run analog:logic
+npm run face:logic
+npm run navigation:logic
+npm run viewport:logic
+npm run safearea:logic
+npm run honeycomb:logic
+npm run haptic:logic
+npm run docs:check
+```
+
+本赛事仓内只对源码结构进行了提交检查；是否在评审环境成功构建，应以实际 AIoT-IDE / openvela 模拟器构建结果为准。
+
+## 七、AI Coding 使用说明
+
+项目开发过程中使用了 AI 辅助进行需求拆解、架构检查、代码审阅、兼容性分析和提交结构整理。
+
+大赛要求的正式 AI Coding 日志必须由官方支持的日志归集流程生成并放入 `logs/<github_login>/...`。当前仓库仍保留模板日志目录，尚未提交可作为本作品正式评分依据的 AI Coding 会话日志；后续应通过官方 collector 导出，不能手工伪造或编辑 JSONL。
+
+## 八、当前提交状态
+
+已提交：
+
+- 完整 Quick App 源码工程
+- 页面、组件、运行时资源
+- 工程脚本与纯逻辑测试
+- 技术与兼容性文档
+- 大赛 manifest 映射
+
+仍需在最终提交前补齐 / 验证：
+
+- 生产版 `release.rpk`
+- 官方 AI Coding 日志
+- 最终 Demo 视频与作品介绍材料
+- CLA 状态及 PR 检查
+
+## 九、免责声明
+
+本项目中的健康相关页面用于 Quick App 能力和交互演示，不构成医疗或健康判断。系统健康接口不可用时，界面会明确进入演示降级状态。
