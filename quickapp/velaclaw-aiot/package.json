@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "A Xiaomi Vela Quick App demo for smart bands and watches.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://gitlink.org.cn/temlike/vela_band_rep.git"

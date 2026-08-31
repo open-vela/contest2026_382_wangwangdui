@@ -2,7 +2,8 @@
 /coverage/
 /node_modules/
 /sign/
-/dist/
+/dist/*
+!/dist/*.release.rpk
 /build/
 /outputs/
 /.codebuddy/
@@ -11,4 +12,3 @@
 .DS_Store
 Thumbs.db
 *.log
-

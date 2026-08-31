@@ -17,7 +17,7 @@ npm ci
 ## 开发流程
 
 1. 从最新目标分支创建功能分支。
-2. 保持改动聚焦，不混入 IDE 配置、构建产物或模拟器日志。
+2. 保持改动聚焦，不混入 IDE 配置、普通构建产物或模拟器日志。
 3. 修改系统 API、路由、存储结构或用户行为时同步更新文档。
 4. 提交前运行完整检查。
 
@@ -69,12 +69,13 @@ chore: maintain tooling or dependencies
 ## 提交前检查清单
 
 - [ ] `npm run check` 通过
-- [ ] `npm run build` 生成 JSC RPK
+- [ ] `npm run build` 生成 JSC 调试 RPK
+- [ ] 参赛发布前使用生产模式生成并验证 `dist/*.release.rpk`
 - [ ] 相关模拟器场景已回归
 - [ ] 同一 RPK 可安装并启动于 `mi-band10` 与 `Vela_Watchs4`
-- [ ] 新增资源、页面和 feature 已在 manifest 中登记
+- [ ] 新增资源、页面和 feature 已在 `src/manifest.json` 中登记
 - [ ] 中英文 README 与兼容性说明保持一致
-- [ ] 未提交 `build/`、`dist/`、`outputs/`、IDE 私有文件或密钥
+- [ ] 未提交 `build/`、普通 `dist/` 产物、`outputs/`、IDE 私有文件或密钥；赛事要求的 `dist/*.release.rpk` 例外
 
 ## 问题反馈
 
