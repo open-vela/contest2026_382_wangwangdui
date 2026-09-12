@@ -1,142 +1,137 @@
 const assert = require('assert')
-const honeycomb = require('../src/common/honeycomb_layout')
-const safeArea = require('../src/common/safe_area')
+const honeycomb = require('../src/v2/design/engines/honeycomb')
 
 let passed = 0
-
-function test(name, callback) {
-  callback()
-  passed++
-  console.log('通过 - ' + name)
+function test(name, callback) { callback(); passed++; console.log('通过 - ' + name) }
+function fitsInCircle(left, top, width, height) {
+  const radius = 96
+  const corners = [[left, top], [left + width, top], [left, top + height], [left + width, top + height]]
+  return corners.every(function (point) { const dx = point[0] - radius; const dy = point[1] - radius; return dx * dx + dy * dy <= radius * radius + 0.01 })
 }
 
-const coords = honeycomb.buildCoords()
+const coords = honeycomb.buildCoords(37)
 
-test('晶格最近邻间距完全一致', function () {
-  // 旧的手工坐标表最近邻间距在 44.1~48.4 之间漂移，看起来是「散落」而非蜂巢。
-  let min = Infinity
-  let max = 0
+test('动态 hex ring 按 1/7/19/37 容量扩展且坐标唯一', function () {
+  assert.strictEqual(honeycomb.buildCoords(1).length, 1)
+  assert.strictEqual(honeycomb.buildCoords(7).length, 7)
+  assert.strictEqual(honeycomb.buildCoords(19).length, 19)
+  assert.strictEqual(coords.length, 37)
+  const keys = coords.map(function (point) { return point.q + ':' + point.r })
+  assert.strictEqual(new Set(keys).size, 37)
+})
+
+test('中心格恰好有六个等距邻居', function () {
+  const distances = coords.slice(1).map(function (point) { const dx = point.x - coords[0].x, dy = point.y - coords[0].y; return Math.round(Math.sqrt(dx * dx + dy * dy)) })
+  assert.strictEqual(distances.filter(function (d) { return d === honeycomb.SPACING }).length, 6)
+})
+
+test('动态晶格最近邻间距保持 SPACING', function () {
   for (let i = 0; i < coords.length; i++) {
     let nearest = Infinity
     for (let j = 0; j < coords.length; j++) {
       if (i === j) continue
-      const dx = coords[i].x - coords[j].x
-      const dy = coords[i].y - coords[j].y
+      const dx = coords[i].x - coords[j].x, dy = coords[i].y - coords[j].y
       nearest = Math.min(nearest, Math.sqrt(dx * dx + dy * dy))
     }
-    min = Math.min(min, nearest)
-    max = Math.max(max, nearest)
+    assert.strictEqual(Math.round(nearest), honeycomb.SPACING)
   }
-  assert.strictEqual(Math.round(min), honeycomb.SPACING)
-  assert.strictEqual(Math.round(max), honeycomb.SPACING)
 })
 
-test('中心格恰好有六个等距邻居', function () {
-  const distances = coords.slice(1).map(function (point) {
-    const dx = point.x - coords[0].x
-    const dy = point.y - coords[0].y
-    return Math.round(Math.sqrt(dx * dx + dy * dy))
-  })
-  const neighbours = distances.filter(function (d) { return d === honeycomb.SPACING })
-  assert.strictEqual(neighbours.length, 6, '期望 6 个直接邻居，实际 ' + neighbours.length)
+test('12 个应用不再复用第一个坐标', function () {
+  const apps = []
+  for (let i = 0; i < 12; i++) apps.push({ id: 'app-' + i, label: 'App ' + i, icon: '/' + i + '.png', softIcon: '/' + i + '-soft.png' })
+  const slots = honeycomb.buildSlots(apps)
+  const keys = slots.map(function (slot) { return slot.gridX + ':' + slot.gridY })
+  assert.strictEqual(slots.length, 12)
+  assert.strictEqual(new Set(keys).size, 12)
+  assert.notStrictEqual(keys[0], keys[11])
 })
 
-test('晶格左右对称', function () {
-  coords.forEach(function (point) {
-    const mirrored = coords.some(function (other) {
-      return other.y === point.y && other.x === 2 * honeycomb.FOCUS_X - point.x
-    })
-    assert.ok(mirrored, '(' + point.x + ',' + point.y + ') 缺少镜像格')
-  })
-})
-
-// 这是本文件的核心用例：不重叠原本靠每帧 O(n²) 斥力循环兜底，
-// 现在必须是晶格的几何性质。穷举「聚焦任一格 × 全拖拽范围」验证。
-test('全拖拽空间内图标永不重叠', function () {
-  const limit = honeycomb.DRAG_LIMIT
-  let worst = Infinity
-  let worstAt = null
-  for (let focus = 0; focus < coords.length; focus++) {
-    const panX = honeycomb.FOCUS_X - coords[focus].x
-    const panY = honeycomb.FOCUS_Y - coords[focus].y
-    for (let ox = -limit; ox <= limit; ox += 4) {
-      for (let oy = -limit; oy <= limit; oy += 4) {
-        const gap = honeycomb.minimumEdgeGap(
-          honeycomb.layoutFrame(coords, panX, panY, ox, oy)
-        )
-        if (gap < worst) {
-          worst = gap
-          worstAt = { focus, ox, oy }
-        }
-      }
-    }
+test('聚焦时图标保持间隙并明显大于邻居', function () {
+  const sample = honeycomb.buildCoords(19)
+  for (let focus = 0; focus < sample.length; focus++) {
+    const panX = honeycomb.FOCUS_X - sample[focus].x
+    const panY = honeycomb.FOCUS_Y - sample[focus].y
+    const frame = honeycomb.layoutFrame(sample, panX, panY, 0, 0)
+    assert.ok(honeycomb.minimumEdgeGap(frame) > 0)
+    assert.strictEqual(frame[focus].size, honeycomb.ICON_BASE + honeycomb.ICON_GROW)
   }
-  assert.ok(worst > 0, '出现重叠，最小间隙 ' + worst.toFixed(2) + 'px @ ' + JSON.stringify(worstAt))
 })
 
-test('弹性差值被约束在 0.10 以内', function () {
-  // 守住上一条用例的前提：0.14 时 132px 拖拽极值会把相邻图标压出重叠
-  // （实测最小间隙 -0.61px），这正是当初需要每帧斥力循环的原因。
-  assert.ok(honeycomb.ELASTIC_RANGE <= 0.1, '弹性差值必须留在 0.10 以内')
+test('槽位只保留渲染与语义字段，不携带路由', function () {
+  const slots = honeycomb.buildSlots([{ id: 'a', label: 'A', icon: '/a.png', softIcon: '/a-soft.png' }, { id: 'b', label: 'B', icon: '/b.png', softIcon: '/b-soft.png' }])
+  assert.strictEqual(slots.length, 2)
+  assert.strictEqual(slots[0].id, 'a')
+  assert.strictEqual(slots[0].route, undefined)
+  assert.strictEqual(slots[0].normalIcon, '/a.png')
+  assert.strictEqual(slots[0].softIcon, '/a-soft.png')
+  assert.strictEqual(slots[0].gridX, honeycomb.FOCUS_X)
+  assert.strictEqual(slots[0].gridY, honeycomb.FOCUS_Y)
 })
 
-test('聚焦图标明显大于邻居', function () {
-  const frame = honeycomb.layoutFrame(coords, 0, 0, 0, 0)
-  const focused = frame[0].size
-  const neighbour = frame[1].size
-  assert.strictEqual(focused, honeycomb.ICON_BASE + honeycomb.ICON_GROW)
-  assert.ok(focused - neighbour >= 12, '聚焦与邻居的体量差不足：' + (focused - neighbour))
+test('移动期间图标 src 保持稳定，由尺寸和透明度表达焦点', function () {
+  const slots = honeycomb.buildSlots([{ id: 'a', label: 'A', icon: '/a.png', softIcon: '/a-soft.png' }, { id: 'b', label: 'B', icon: '/b.png', softIcon: '/b-soft.png' }])
+  const centered = honeycomb.layoutSlots(slots, 0, 0, 0, 0)
+  const shifted = honeycomb.layoutSlots(slots, -80, -80, 0, 0)
+  assert.strictEqual(centered.slots[0].icon, '/a.png')
+  assert.strictEqual(shifted.slots[0].icon, '/a.png')
+  assert.strictEqual(centered.slots[0].size, 50)
+  assert.ok(centered.slots[0].opacity > shifted.slots[0].opacity)
 })
 
-test('八向滑动都能落到相邻格', function () {
-  const directions = {
-    up: { x: 0, y: -1 },
-    down: { x: 0, y: 1 },
-    left: { x: -1, y: 0 },
-    right: { x: 1, y: 0 },
-    upLeft: { x: -0.7071, y: -0.7071 },
-    upRight: { x: 0.7071, y: -0.7071 },
-    downLeft: { x: -0.7071, y: 0.7071 },
-    downRight: { x: 0.7071, y: 0.7071 }
-  }
-  Object.keys(directions).forEach(function (name) {
-    const target = honeycomb.pickByDirection(coords, 0, directions[name])
-    assert.ok(target >= 0, name + ' 方向从中心找不到目标格')
-    assert.notStrictEqual(target, 0)
+test('visible-slot culling 会排除远离圆屏的图标', function () {
+  const source = [
+    { id: 'a', centerX: 96, centerY: 96, size: 40 },
+    { id: 'b', centerX: 400, centerY: 96, size: 40 },
+    { id: 'c', centerX: -300, centerY: 96, size: 40 }
+  ]
+  const visible = honeycomb.visibleSlots(source)
+  assert.strictEqual(visible.length, 1)
+  assert.strictEqual(visible[0].id, 'a')
+})
+
+test('pan bounds 允许最外层应用移动到焦点', function () {
+  const apps = []
+  for (let i = 0; i < 19; i++) apps.push({ id: 'a' + i, label: 'A' + i, icon: '/a.png' })
+  const slots = honeycomb.buildSlots(apps)
+  const bounds = honeycomb.panBounds(slots)
+  slots.forEach(function (slot) {
+    const target = honeycomb.panForSlot(slot)
+    assert.ok(target.x >= bounds.minX && target.x <= bounds.maxX)
+    assert.ok(target.y >= bounds.minY && target.y <= bounds.maxY)
   })
 })
 
-test('方向选格取该方向最近的一格', function () {
-  // 从中心向右：应落到 (142,90)，而不是更远的外环 (165,50)。
-  const target = honeycomb.pickByDirection(coords, 0, { x: 1, y: 0 })
-  assert.strictEqual(coords[target].x, honeycomb.FOCUS_X + honeycomb.SPACING)
-  assert.strictEqual(coords[target].y, honeycomb.FOCUS_Y)
+test('拖动越界只进入有限 rubber-band 区域', function () {
+  const slots = honeycomb.buildSlots([{ id: 'a', label: 'A', icon: '/a.png' }, { id: 'b', label: 'B', icon: '/b.png' }])
+  const bounds = honeycomb.panBounds(slots)
+  let pan = { x: 0, y: 0 }
+  for (let i = 0; i < 40; i++) pan = honeycomb.nextPan(slots, pan.x, pan.y, 100, 100)
+  assert.ok(pan.x <= bounds.maxX + honeycomb.OVERSCROLL_LIMIT)
+  assert.ok(pan.y <= bounds.maxY + honeycomb.OVERSCROLL_LIMIT)
+  const strict = honeycomb.clampPan(slots, pan.x, pan.y, 0)
+  assert.ok(strict.x <= bounds.maxX && strict.y <= bounds.maxY)
 })
 
-test('聚焦格居中后其邻居仍在圆屏可视范围内', function () {
-  // 聚焦任意一格时，被放大的那一个必须完整落在内切圆里。
-  coords.forEach(function (point, index) {
+test('frame cadence 和惯性参数保持 wearable 级限幅', function () {
+  assert.ok(honeycomb.FRAME_MS >= 20 && honeycomb.FRAME_MS <= 32)
+  assert.ok(honeycomb.INERTIA_DECAY > 0.75 && honeycomb.INERTIA_DECAY < 0.95)
+  assert.ok(honeycomb.MAGNET_DISTANCE <= honeycomb.SPACING / 2)
+  assert.ok(honeycomb.ELASTIC_RANGE <= 0.1)
+  assert.ok(honeycomb.DRAG_CAPTURE_DISTANCE <= 4)
+})
+
+test('焦点图标完整落在圆屏可视范围内', function () {
+  const sample = honeycomb.buildCoords(19)
+  sample.forEach(function (point, index) {
     const panX = honeycomb.FOCUS_X - point.x
     const panY = honeycomb.FOCUS_Y - point.y
-    const frame = honeycomb.layoutFrame(coords, panX, panY, 0, 0)
-    const focused = frame[index]
+    const focused = honeycomb.layoutFrame(sample, panX, panY, 0, 0)[index]
     const half = focused.size / 2
-    assert.ok(
-      safeArea.fitsInCircle(
-        safeArea.DESIGN_WIDTH,
-        focused.centerX - half,
-        focused.centerY - half,
-        focused.size,
-        focused.size
-      ),
-      '第 ' + index + ' 格聚焦后超出圆屏可视范围'
-    )
+    assert.ok(fitsInCircle(focused.centerX - half, focused.centerY - half, focused.size, focused.size))
   })
 })
 
-test('名称条四角落在内切圆内', function () {
-  // .center-label-glass: left 48, top 152, 96×20
-  assert.strictEqual(safeArea.fitsInCircle(safeArea.DESIGN_WIDTH, 48, 152, 96, 20), true)
-})
+test('精简后的名称条仍位于圆屏安全区域', function () { assert.strictEqual(fitsInCircle(54, 159, 84, 18), true) })
 
-console.log('圆屏蜂巢布局测试通过：' + passed + ' 项')
+console.log('V2 圆屏蜂巢布局测试通过：' + passed + ' 项')

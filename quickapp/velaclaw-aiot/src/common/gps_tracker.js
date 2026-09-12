@@ -1,38 +1,16 @@
-import geolocation from '@system.geolocation'
+import location from '../capabilities/location'
 
 var fallbackTimer = null
 var tracking = false
-var subscriptionActive = false
 var locationHandler = null
 var statusHandler = null
 var lastPoint = null
 var totalDistanceMeters = 0
 
-function toNumber(value) {
-  var result = Number(value)
-  return isNaN(result) ? null : result
-}
-
-function normalizeLocation(data) {
-  if (!data) return null
-  var latitude = toNumber(data.latitude)
-  var longitude = toNumber(data.longitude)
-  if (latitude === null || longitude === null) return null
-  return {
-    latitude: latitude,
-    longitude: longitude,
-    altitude: toNumber(data.altitude),
-    accuracy: toNumber(data.accuracy),
-    speed: toNumber(data.speed),
-    timestamp: Date.now()
-  }
-}
-
 function radians(value) {
   return value * Math.PI / 180
 }
 
-// Haversine distance is sufficient for adjacent GPS points in a workout.
 function distanceBetween(first, second) {
   var earthRadius = 6371000
   var latDelta = radians(second.latitude - first.latitude)
@@ -49,20 +27,13 @@ function reportStatus(status, text) {
   if (statusHandler) statusHandler(status, text)
 }
 
-function handleLocation(data) {
-  if (!tracking) return
-  var point = normalizeLocation(data)
-  if (!point) {
-    reportStatus('searching', '等待定位')
-    return
-  }
+function handleLocation(point) {
+  if (!tracking || !point) return
   clearTimeout(fallbackTimer)
   fallbackTimer = null
   if (lastPoint) {
     var segment = distanceBetween(lastPoint, point)
-    if (segment >= 2 && segment <= 200) {
-      totalDistanceMeters += segment
-    }
+    if (segment >= 2 && segment <= 200) totalDistanceMeters += segment
   }
   lastPoint = point
   reportStatus('active', 'GPS 已定位')
@@ -75,36 +46,19 @@ function handleLocation(data) {
 }
 
 function handleFailure() {
-  if (tracking) {
-    reportStatus('unavailable', 'GPS 不可用 · 步幅估算')
-  }
+  if (tracking) reportStatus('unavailable', 'GPS 不可用 · 步幅估算')
 }
 
 function subscribeLocation() {
-  if (!geolocation || !geolocation.subscribe) {
-    handleFailure()
-    return
-  }
-  try {
-    subscriptionActive = true
-    geolocation.subscribe({
-      interval: 'normal',
-      callback: handleLocation,
-      fail: handleFailure
-    })
-    fallbackTimer = setTimeout(function () {
-      if (tracking && !lastPoint) {
-        reportStatus('unavailable', 'GPS 不可用 · 步幅估算')
-      }
-    }, 6000)
-  } catch (error) {
-    subscriptionActive = false
-    handleFailure()
-  }
+  var active = location.subscribe(handleLocation)
+  if (!active) handleFailure()
+  fallbackTimer = setTimeout(function () {
+    if (tracking && !lastPoint) handleFailure()
+  }, 6000)
 }
 
 export default {
-  start(options) {
+  start: function (options) {
     this.stop()
     tracking = true
     locationHandler = options && options.location
@@ -115,18 +69,11 @@ export default {
     subscribeLocation()
   },
 
-  stop() {
+  stop: function () {
     tracking = false
     clearTimeout(fallbackTimer)
     fallbackTimer = null
-    if (subscriptionActive) {
-      try {
-        if (geolocation && geolocation.unsubscribe) {
-          geolocation.unsubscribe()
-        }
-      } catch (error) {}
-    }
-    subscriptionActive = false
+    location.unsubscribe(handleLocation)
     locationHandler = null
     statusHandler = null
     lastPoint = null

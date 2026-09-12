@@ -1,322 +1,86 @@
 <template>
-  <div class="settings-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
-    <div class="top-row">
-      <text class="page-title">设置</text>
-      <text class="page-number">{{ pageText }}</text>
-    </div>
-
-    <div class="settings-list">
-      <div class="settings-item" for="{{ pageItems }}" tid="id" @click="openSetting($item)">
-        <image class="item-icon" src="{{ $item.icon }}"></image>
-        <div class="item-copy">
-          <text class="item-name">{{ $item.name }}</text>
-          <text class="item-sub">{{ $item.description }}</text>
-        </div>
-        <text class="item-arrow">›</text>
+  <stack class="settings-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="settings-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" @swipe="handleSwipe">
+      <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">设置</text><text class="page-text">{{ pageText }}</text></div>
+      <div class="settings-list" style="left: {{ listLeft }}px; top: {{ listTop }}px; width: {{ listWidth }}px; height: {{ listHeight }}px;">
+        <div class="setting-card" for="{{ pageItems }}" tid="id" @click="openSetting($item)" style="width: {{ listWidth }}px; height: {{ itemHeight }}px; margin-bottom: {{ $item.marginBottom }}px; border-radius: {{ itemRadius }}px; padding: {{ itemPadding }}px;"><image class="item-icon" src="{{ $item.icon }}" style="width: {{ iconSize }}px; height: {{ iconSize }}px; border-radius: {{ iconRadius }}px;"></image><div class="item-copy"><text class="item-name" style="font-size: {{ itemNameSize }}px;">{{ $item.name }}</text><text class="item-desc" style="font-size: {{ itemDescSize }}px; line-height: {{ itemDescLineHeight }}px;">{{ $item.description }}</text></div><text class="item-arrow" style="font-size: {{ arrowSize }}px;">›</text></div>
       </div>
+      <div class="pager" style="left: {{ footerLeft }}px; top: {{ footerTop }}px; width: {{ footerWidth }}px; height: {{ footerHeight }}px;"><text class="pager-button" @click="previousPage">‹</text><div class="dots"><div class="dot" for="{{ dots }}" style="background-color: {{ $item.color }};"></div></div><text class="pager-button" @click="nextPage">›</text></div>
     </div>
-
-    <div class="pager-row">
-      <text class="pager-button" style="color: {{ previousColor }}" @click="previousPage">‹</text>
-      <div class="pager-center">
-        <div class="page-dot" for="{{ pageDots }}" style="background-color: {{ $item.color }}"></div>
-      </div>
-      <text class="pager-button" style="color: {{ nextColor }}" @click="nextPage">›</text>
-    </div>
-  </div>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import fixedPager from '../../../common/fixed_pager'
-import pageMotion from '../../../common/page_motion'
-import pageViewport from '../../../common/page_viewport'
+import pageRuntime from '../../../v2/app/page_runtime'
+import navigation from '../../../v2/app/navigation'
+import appRoutes from '../../../v2/app/app_routes'
+import settingsMenuDesign from '../../../v2/design/specs/settings_menu'
+import settingsMenuView from '../../../v2/design/views/settings_menu'
+
+function consumeSwipe(event) {
+  if (!event) return
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
+}
 
 export default {
   private: {
-    settings: [
-      { id: 'sync', name: '蓝牙同步', description: '连接手机并模拟数据上传', icon: '/common/icons/sync.jpg', route: '/pages/settings/bluetooth' },
-      { id: 'vibration', name: '震动反馈', description: '提醒开关、强度与反馈模式', icon: '/common/icons/vibration.jpg', route: '/pages/settings/vibration' },
-      { id: 'brightness', name: '亮度与省电', description: '亮度、抬腕亮屏、低功耗', icon: '/common/icons/brightness.jpg', route: '/pages/settings/brightness' },
-      { id: 'motion', name: '动作与加速度', description: '三轴诊断与动作强度测量', icon: '/common/icons/motion.jpg', route: '/pages/settings/motion' },
-      { id: 'diagnostics', name: '设备自检', description: '屏幕档案与系统能力状态', icon: '/common/icons/diagnostics.jpg', route: '/pages/settings/diagnostics' }
-    ],
-    pageItems: [],
-    pageDots: [],
-    pageIndex: 0,
-    pageSize: 3,
-    pageText: '1 / 1',
-    previousColor: '#3A3A3C',
-    nextColor: '#3A3A3C',
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    pageItems: [], dots: [], pageIndex: 0, pageText: '1 / 1',
+    headerLeft: 40, headerTop: 22, headerWidth: 112, headerHeight: 18, listLeft: 22, listTop: 45, listWidth: 148, listHeight: 111, footerLeft: 46, footerTop: 157, footerWidth: 100, footerHeight: 16,
+    itemHeight: 52, itemGap: 7, itemRadius: 18, itemPadding: 7, iconSize: 30, iconRadius: 15, titleSize: 12, itemNameSize: 10, itemDescSize: 6, itemDescLineHeight: 8, arrowSize: 13,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
     var self = this
-    pageViewport.bind(this, function (profile) {
-      self.pageSize = profile.isCircle ? 2 : 3
+    pageRuntime.bind(this, { contentWidth: function (profile) { return settingsMenuDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      self.designPlan = settingsMenuDesign.resolve(profile, scene, safe)
       self.refreshPage()
     })
   },
-
-  onShow() {
-    pageMotion.enter(this)
-    this.refreshPage()
-  },
-
-  onHide() {
-    pageMotion.clear(this)
-  },
-
-  onDestroy() {
-    pageMotion.clear(this)
-  },
-
+  onShow() { this.refreshPage() },
+  onBackPress() { navigation.back(); return true },
   refreshPage() {
-    var state = fixedPager.build(this.settings, this.pageIndex, this.pageSize)
-    this.pageIndex = state.pageIndex
-    this.pageItems = state.items
-    this.pageText = state.pageText
-    this.previousColor = state.hasPrevious ? '#0A84FF' : '#3A3A3C'
-    this.nextColor = state.hasNext ? '#0A84FF' : '#3A3A3C'
-    var dots = []
-    for (var index = 0; index < state.pageCount; index++) {
-      dots.push({ color: index === state.pageIndex ? '#0A84FF' : '#3A3A3C' })
-    }
-    this.pageDots = dots
+    if (!this.designPlan) return
+    var view = settingsMenuView.project(this.designPlan, this.pageIndex)
+    this.pageIndex = view.pageIndex; this.pageText = view.pageText; this.pageItems = view.pageItems; this.dots = view.dots
+    this.applyPlan(view.plan)
+    this.itemRadius = view.itemRadius; this.itemPadding = view.itemPadding; this.iconSize = view.iconSize; this.iconRadius = view.iconRadius
+    this.titleSize = view.titleSize; this.itemNameSize = view.itemNameSize; this.itemDescSize = view.itemDescSize; this.itemDescLineHeight = view.itemDescSize + 2; this.arrowSize = view.arrowSize
   },
-
-  previousPage() {
-    var state = fixedPager.move(this.settings, this.pageIndex, this.pageSize, -1)
-    if (state.pageIndex === this.pageIndex) return
-    this.pageIndex = state.pageIndex
-    this.refreshPage()
+  applyPlan(plan) {
+    this.headerLeft = plan.header.left; this.headerTop = plan.header.top; this.headerWidth = plan.header.width; this.headerHeight = plan.header.height
+    this.listLeft = plan.list.left; this.listTop = plan.list.top; this.listWidth = plan.list.width; this.listHeight = plan.list.height
+    this.footerLeft = plan.footer.left; this.footerTop = plan.footer.top; this.footerWidth = plan.footer.width; this.footerHeight = plan.footer.height
+    this.itemHeight = plan.itemHeight; this.itemGap = plan.itemGap
   },
-
-  nextPage() {
-    var state = fixedPager.move(this.settings, this.pageIndex, this.pageSize, 1)
-    if (state.pageIndex === this.pageIndex) return
-    this.pageIndex = state.pageIndex
-    this.refreshPage()
-  },
-
-  openSetting(item) {
-    if (item && item.route) pageMotion.push(this, router, item.route)
-  },
-
+  previousPage() { this.pageIndex--; this.refreshPage() },
+  nextPage() { this.pageIndex++; this.refreshPage() },
   handleSwipe(event) {
-    if (!event) return
-    if (event.direction === 'left') {
-      this.nextPage()
-    } else if (event.direction === 'right') {
-      if (this.pageIndex > 0) this.previousPage()
-      else pageMotion.back(this, router)
-    }
+    if (!event || !event.direction) return
+    if (event.direction === 'left') { consumeSwipe(event); this.nextPage() }
+    else if (event.direction === 'right' && this.pageIndex > 0) { consumeSwipe(event); this.previousPage() }
+  },
+  openSetting(item) {
+    if (!item) return
+    var route = appRoutes.routeFor(item.id)
+    if (route) navigation.push(route)
   }
 }
 </script>
 
 <style>
-.settings-page {
-  flex-direction: column;
-  align-items: center;
-  background-color: #000000;
-  width: 100%;
-  height: 100%;
-  padding: 18px 12px;
-}
-
-.top-row {
-  width: 168px;
-  height: 38px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 4px;
-  margin-bottom: 10px;
-}
-
-.page-title {
-  font-size: 23px;
-  font-weight: bold;
-  color: #FFFFFF;
-}
-
-.page-number {
-  font-size: 11px;
-  color: #8E8E93;
-}
-
-.settings-list {
-  width: 168px;
-  height: 252px;
-  flex-direction: column;
-}
-
-.settings-item {
-  flex-direction: row;
-  align-items: center;
-  width: 168px;
-  height: 74px;
-  margin-bottom: 10px;
-  padding: 10px 9px;
-  background-color: #12171C;
-  border-radius: 11px;
-}
-
-.item-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
-  margin-right: 9px;
-}
-
-.item-copy {
-  flex-direction: column;
-  width: 101px;
-}
-
-.item-name {
-  font-size: 15px;
-  font-weight: bold;
-  color: #FFFFFF;
-}
-
-.item-sub {
-  font-size: 9px;
-  color: #9AA0A6;
-  margin-top: 5px;
-  line-height: 12px;
-  lines: 2;
-}
-
-.item-arrow {
-  width: 12px;
-  font-size: 20px;
-  color: #636366;
-  text-align: right;
-}
-
-.pager-row {
-  width: 154px;
-  height: 34px;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-}
-
-.pager-button {
-  width: 36px;
-  height: 30px;
-  font-size: 26px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.pager-center {
-  width: 60px;
-  height: 12px;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
-.page-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 3px;
-  margin-left: 3px;
-  margin-right: 3px;
-}
-
-/*
- * 圆屏三段式安全栈（全项目统一，见 scripts/check-safe-area.js）
- *
- *   padding-top 26 → 标题 120×20 → 间距 4 → 列表 148×106 → 间距 3 → 分页 110×14
- *
- * 依据：内切圆里“宽度越大、可用纵向区间越短”。窄的标题行与分页行放在上下两端
- * （120px 宽可用 y=22..170），最宽的列表放在中段（148px 宽只有 y=35..157）。
- * 原布局把 148px 列表排到 y=47..159 并让分页行落到 y=187，两端都被圆弧切掉。
- */
-@media (shape: circle) {
-  .settings-page {
-    padding: 26px 22px 0px 22px;
-  }
-
-  /* 归零基础样式的 4/10px 外边距，纵向节奏完全由本区块的安全栈决定。 */
-  .top-row {
-    width: 120px;
-    height: 20px;
-    margin-top: 0px;
-    margin-bottom: 0px;
-  }
-
-  .page-title {
-    font-size: 12px;
-  }
-
-  .page-number {
-    font-size: 7px;
-  }
-
-  .settings-list {
-    width: 148px;
-    height: 106px;
-    margin-top: 4px;
-  }
-
-  /* 两条 50px 卡片 + 6px 间距 = 106px，正好占满列表高度。 */
-  .settings-item {
-    width: 148px;
-    height: 50px;
-    padding: 7px;
-    border-radius: 18px;
-    margin-bottom: 6px;
-  }
-
-  .item-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 15px;
-    margin-right: 7px;
-  }
-
-  .item-copy {
-    width: 91px;
-  }
-
-  .item-name {
-    font-size: 10px;
-  }
-
-  .item-sub {
-    font-size: 6px;
-    line-height: 8px;
-    margin-top: 2px;
-  }
-
-  .item-arrow {
-    font-size: 12px;
-  }
-
-  .pager-row {
-    width: 110px;
-    height: 14px;
-    margin-top: 3px;
-  }
-
-  .pager-button {
-    width: 26px;
-    height: 14px;
-    font-size: 14px;
-  }
-}
+.settings-root, .settings-scene { background-color: #000000; }
+.settings-scene { position: absolute; left: 0px; top: 0px; }
+.header, .settings-list, .pager { position: absolute; }
+.header, .pager, .setting-card { flex-direction: row; align-items: center; }
+.header, .pager { justify-content: space-between; }
+.title { color: #FFFFFF; font-weight: bold; } .page-text { color: #8E8E93; font-size: 7px; }
+.settings-list { flex-direction: column; }
+.setting-card { background-color: #12171C; }
+.item-icon { object-fit: cover; } .item-copy { flex: 1; flex-direction: column; margin-left: 8px; }
+.item-name { color: #FFFFFF; font-weight: bold; } .item-desc { color: #8E8E93; lines: 2; margin-top: 2px; }
+.item-arrow { width: 14px; color: #636366; text-align: right; }
+.pager-button { width: 24px; height: 18px; color: #0A84FF; font-size: 16px; text-align: center; }
+.dots { width: 54px; flex-direction: row; justify-content: center; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 3px; margin-left: 3px; margin-right: 3px; }
 </style>

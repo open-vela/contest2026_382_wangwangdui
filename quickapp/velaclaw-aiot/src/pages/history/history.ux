@@ -1,505 +1,122 @@
 <template>
-  <scroll class="history-page {{ viewportClass }}" scroll-y="true" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @swipe="handleSwipe">
-    <div class="top-row">
-      <text class="page-title" static>7日趋势</text>
-      <text class="back-text" @click="goBack">返回</text>
-    </div>
-
-    <text if="{{ loading }}" class="loading-text">加载中...</text>
-
-    <div class="summary-row" if="{{!loading}}">
-      <div class="summary-item">
-        <text class="summary-value step-color">{{ todayStepsText }}</text>
-        <text class="summary-label" static>今日步数</text>
-      </div>
-      <div class="summary-item">
-        <text class="summary-value blue-color">{{ avgStepsText }}</text>
-        <text class="summary-label" static>日均步数</text>
-      </div>
-    </div>
-
-    <div class="chart-card" if="{{!loading}}">
-      <text class="section-title" static>步数趋势</text>
-      <div class="chart-row">
-        <div class="bar-cell" for="{{ stepBars }}" tid="label">
-          <div class="bar-space">
-            <div class="step-bar" style="height: {{ $item.height }}px; background-color: {{ $item.color }};"></div>
+  <stack class="history-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <stack class="history-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <scroll class="history-stream" if="{{ ready }}" scroll-y="true" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;">
+        <div class="history-head" style="width: {{ headerWidth }}px; height: {{ headerHeight }}px;">
+          <div class="history-title-row" style="width: {{ headerWidth }}px; height: {{ titleLineHeight }}px;">
+            <text class="history-title" style="width: {{ titleWidth }}px; height: {{ titleLineHeight }}px; line-height: {{ titleLineHeight }}px; font-size: {{ titleSize }}px;">7日趋势</text>
+            <text class="goal" style="width: {{ goalWidth }}px; height: {{ goalLineHeight }}px; line-height: {{ goalLineHeight }}px; font-size: {{ goalSize }}px;">{{ goalText }}</text>
           </div>
-          <text class="bar-steps">{{ $item.shortSteps }}</text>
-          <text class="bar-label">{{ $item.label }}</text>
+          <text class="history-subtitle" style="width: {{ headerWidth }}px; height: {{ subtitleLineHeight }}px; line-height: {{ subtitleLineHeight }}px; font-size: {{ subtitleSize }}px;">活动与健康摘要</text>
         </div>
-      </div>
-    </div>
 
-    <div class="insight-row" if="{{!loading}}">
-      <div class="insight-item">
-        <text class="insight-label" static>最佳</text>
-        <text class="insight-value">{{ bestStepsText }}</text>
-        <text class="insight-small">{{ bestDayText }}</text>
-      </div>
-      <div class="insight-item">
-        <text class="insight-label" static>心率</text>
-        <text class="insight-value heart-color">{{ avgHeartText }}</text>
-        <text class="insight-small" static>7日平均</text>
-      </div>
-      <div class="insight-item">
-        <text class="insight-label" static>达成</text>
-        <text class="insight-value step-color">{{ goalText }}</text>
-        <text class="insight-small" static>今日目标</text>
-      </div>
-    </div>
-
-    <div class="record-scroll" if="{{!loading}}">
-      <div class="record-item" for="{{ records }}" tid="date">
-        <text class="record-date">{{ $item.date }}</text>
-        <div class="record-values">
-          <text class="record-main">{{ $item.stepsText }} 步</text>
-          <text class="record-sub">{{ $item.caloriesText }} kcal  {{ $item.heartText }}</text>
+        <div class="summary-row" style="width: {{ streamWidth }}px; height: {{ summaryRowHeight }}px; margin-top: {{ cardGap }}px;">
+          <div class="summary-card" style="width: {{ summaryWidth }}px; height: {{ summaryHeight }}px; padding: {{ summaryPaddingY }}px {{ summaryPaddingX }}px; border-radius: {{ cardRadius }}px;"><text class="summary-label" style="font-size: {{ summaryLabelSize }}px;">今日步数</text><text class="summary-value yellow" style="font-size: {{ summaryValueSize }}px;">{{ todayStepsText }}</text></div>
+          <div class="summary-card" style="width: {{ summaryWidth }}px; height: {{ summaryHeight }}px; padding: {{ summaryPaddingY }}px {{ summaryPaddingX }}px; margin-left: {{ summaryGap }}px; border-radius: {{ cardRadius }}px;"><text class="summary-label" style="font-size: {{ summaryLabelSize }}px;">日均步数</text><text class="summary-value blue" style="font-size: {{ summaryValueSize }}px;">{{ avgStepsText }}</text></div>
         </div>
-        <text class="record-goal">{{ $item.goalText }}</text>
-      </div>
-    </div>
-  </scroll>
+
+        <div class="trend-card {{ trendMode }}" style="width: {{ trendWidth }}px; height: {{ trendHeight }}px; padding: {{ trendPaddingY }}px {{ trendPaddingX }}px; margin-top: {{ cardGap }}px; border-radius: {{ cardRadius }}px;">
+          <div class="trend-head" style="height: {{ trendHeadHeight }}px;"><text class="trend-title" style="font-size: {{ trendTitleSize }}px;">步数趋势</text><text class="trend-caption" style="font-size: {{ trendCaptionSize }}px;">近7日</text></div>
+          <div class="column-trend" if="{{ trendMode === 'compact-column' }}">
+            <div class="column-cell" for="{{ bars }}" tid="date" style="width: {{ columnCellWidth }}px;">
+              <div class="column-chart-area" style="height: {{ columnTrackHeight }}px;"><div class="column-fill" style="width: {{ columnBarWidth }}px; height: {{ $item.height }}px; background-color: {{ $item.color }};"></div></div>
+              <text class="column-label {{ $item.isToday ? 'today-text' : '' }}" style="height: {{ columnLabelLineHeight }}px; line-height: {{ columnLabelLineHeight }}px; font-size: {{ columnLabelSize }}px;">{{ $item.displayLabel }}</text>
+            </div>
+          </div>
+          <div class="row-trend" if="{{ trendMode === 'comparative-row' }}">
+            <div class="row-item" for="{{ bars }}" tid="date">
+              <text class="row-label {{ $item.isToday ? 'today-text' : '' }}">{{ $item.displayLabel }}</text>
+              <div class="row-track"><div class="row-fill" style="width: {{ $item.rowWidth }}px; background-color: {{ $item.color }};"></div></div>
+              <text class="row-value {{ $item.isToday ? 'today-text' : '' }}">{{ $item.stepsText }}</text>
+            </div>
+          </div>
+        </div>
+
+        <div class="insight-row" style="width: {{ streamWidth }}px; height: {{ insightRowHeight }}px; margin-top: {{ cardGap }}px;">
+          <div class="insight-card" style="width: {{ insightWidth }}px; height: {{ insightHeight }}px; padding: {{ insightPadding }}px; border-radius: {{ cardRadius }}px;"><text class="insight-label" style="font-size: {{ insightLabelSize }}px;">最佳</text><text class="insight-value" style="font-size: {{ insightValueSize }}px;">{{ bestStepsText }}</text><text class="insight-detail">{{ bestDayText }}</text></div>
+          <div class="insight-card" style="width: {{ insightWidth }}px; height: {{ insightHeight }}px; padding: {{ insightPadding }}px; margin-left: {{ insightGap }}px; border-radius: {{ cardRadius }}px;"><text class="insight-label" style="font-size: {{ insightLabelSize }}px;">平均心率</text><text class="insight-value heart" style="font-size: {{ insightValueSize }}px;">{{ avgHeartText }}</text><text class="insight-detail">7日</text></div>
+          <div class="insight-card" style="width: {{ insightWidth }}px; height: {{ insightHeight }}px; padding: {{ insightPadding }}px; margin-left: {{ insightGap }}px; border-radius: {{ cardRadius }}px;"><text class="insight-label" style="font-size: {{ insightLabelSize }}px;">今日达成</text><text class="insight-value yellow" style="font-size: {{ insightValueSize }}px;">{{ goalText }}</text><text class="insight-detail">目标</text></div>
+        </div>
+      </scroll>
+    </stack>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import watchData from '../../common/watch_data'
-import pageMotion from '../../common/page_motion'
-import pageViewport from '../../common/page_viewport'
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createHistoryController } from '../../v2/features/history/controller'
+import historyDesign from '../../v2/design/apps/history'
+import historyView from '../../v2/design/apps/history/view'
 
 export default {
   private: {
-    loading: true,
-    todayStepsText: '0',
-    avgStepsText: '0',
-    bestStepsText: '0',
-    bestDayText: '--',
-    avgHeartText: '--',
-    totalCaloriesText: '0',
-    goalText: '0%',
-    stepBars: [],
-    records: [],
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    ready: false, designPlan: null, historyModel: null, trendMode: 'compact-column',
+    streamLeft: 28, streamTop: 24, streamWidth: 136, streamHeight: 158, headerWidth: 128, headerHeight: 26,
+    titleWidth: 78, goalWidth: 42, titleSize: 13, subtitleSize: 6, goalSize: 13, titleLineHeight: 17, subtitleLineHeight: 9, goalLineHeight: 17,
+    cardGap: 4, cardRadius: 15,
+    summaryRowHeight: 38, summaryGap: 4, summaryWidth: 51, summaryHeight: 26, summaryPaddingX: 7, summaryPaddingY: 6, summaryLabelSize: 6, summaryValueSize: 13,
+    trendWidth: 110, trendHeight: 56, trendPaddingX: 7, trendPaddingY: 6, trendHeadHeight: 12, trendTitleSize: 8, trendCaptionSize: 5,
+    columnTrackHeight: 30, columnCellWidth: 15, columnBarWidth: 7, columnLabelSize: 5, columnLabelLineHeight: 8,
+    insightRowHeight: 36, insightGap: 4, insightWidth: 32, insightHeight: 26, insightPadding: 5, insightLabelSize: 5, insightValueSize: 8,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%',
+    todayStepsText: '0', avgStepsText: '0', bestStepsText: '0', bestDayText: '--', avgHeartText: '--', goalText: '0%', bars: []
   },
-
   onInit() {
-    pageViewport.bind(this)
-  },
-
-  onShow() {
-    this.pageVisible = true
-    this.loading = true
-    pageMotion.enter(this)
-    this.loadHistory()
-  },
-
-  onHide() {
-    this.pageVisible = false
-    pageMotion.clear(this)
-    this.releaseHistoryData()
-  },
-
-  onDestroy() {
-    this.pageVisible = false
-    pageMotion.clear(this)
-    this.releaseHistoryData()
-  },
-
-  loadHistory() {
-    // Data is refreshed in onShow so the page always reflects the latest saved day.
-    watchData.getHistorySummary((summary) => {
-      if (!this.pageVisible) {
-        return
-      }
-      this.todayStepsText = summary.todayStepsText
-      this.avgStepsText = summary.avgStepsText
-      this.bestStepsText = summary.bestStepsText
-      this.bestDayText = summary.bestDayText
-      this.avgHeartText = summary.avgHeartText
-      this.totalCaloriesText = summary.totalCaloriesText
-      this.goalText = summary.goalText
-      this.stepBars = summary.stepBars
-      this.records = summary.records
-      this.loading = false
+    var self = this
+    this.controller = createHistoryController(function (model) { self.acceptModel(model) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return historyDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = historyDesign.resolve(profile, scene, safe)
+      self.designPlan = plan; self.trendMode = plan.trendMode
+      self.streamLeft = plan.stream.left; self.streamTop = plan.stream.top; self.streamWidth = plan.stream.width; self.streamHeight = plan.stream.height
+      self.headerWidth = plan.headerWidth; self.headerHeight = plan.headerHeight; self.titleWidth = plan.titleWidth; self.goalWidth = plan.goalWidth
+      self.titleSize = plan.titleSize; self.subtitleSize = plan.subtitleSize; self.goalSize = plan.goalSize; self.titleLineHeight = plan.titleLineHeight; self.subtitleLineHeight = plan.subtitleLineHeight; self.goalLineHeight = plan.goalLineHeight
+      self.cardGap = plan.cardGap; self.cardRadius = plan.cardRadius
+      self.summaryRowHeight = plan.summaryRowHeight; self.summaryGap = plan.summaryGap; self.summaryWidth = plan.summaryWidth; self.summaryHeight = plan.summaryHeight; self.summaryPaddingX = plan.summaryPaddingX; self.summaryPaddingY = plan.summaryPaddingY; self.summaryLabelSize = plan.summaryLabelSize; self.summaryValueSize = plan.summaryValueSize
+      self.trendWidth = plan.trendWidth; self.trendHeight = plan.trendHeight; self.trendPaddingX = plan.trendPaddingX; self.trendPaddingY = plan.trendPaddingY; self.trendHeadHeight = plan.trendHeadHeight; self.trendTitleSize = plan.trendTitleSize; self.trendCaptionSize = plan.trendCaptionSize
+      self.columnTrackHeight = plan.chartHeight; self.columnCellWidth = plan.columnCellWidth; self.columnBarWidth = plan.columnBarWidth; self.columnLabelSize = plan.columnLabelSize; self.columnLabelLineHeight = plan.columnLabelLineHeight
+      self.insightRowHeight = plan.insightRowHeight; self.insightGap = plan.insightGap; self.insightWidth = plan.insightWidth; self.insightHeight = plan.insightHeight; self.insightPadding = plan.insightPadding; self.insightLabelSize = plan.insightLabelSize; self.insightValueSize = plan.insightValueSize
+      self.ready = true; self.controller.load()
     })
   },
-
-  releaseHistoryData() {
-    // Free chart/list references while the page is cached in the navigation stack.
-    this.stepBars = []
-    this.records = []
-  },
-
-  goBack() {
-    pageMotion.back(this, router)
-  },
-
-  handleSwipe(e) {
-    if (e.direction === 'down' || e.direction === 'right') {
-      pageMotion.back(this, router)
-    }
-  }
+  onShow() { if (this.ready && this.controller) this.controller.load() },
+  onHide() { this.bars = [] },
+  onDestroy() { this.historyModel = null; this.bars = [] },
+  onBackPress() { navigation.back(); return true },
+  acceptModel(model) { this.historyModel = model; if (this.designPlan) this.applyModel(historyView.project(model, this.designPlan)) },
+  applyModel(model) { this.todayStepsText = model.todayStepsText; this.avgStepsText = model.avgStepsText; this.bestStepsText = model.bestStepsText; this.bestDayText = model.bestDayText; this.avgHeartText = model.avgHeartText; this.goalText = model.goalText; this.bars = model.bars }
 }
 </script>
 
 <style>
-.history-page {
-  flex-direction: column;
-  align-items: center;
-  background-color: #000000;
-  width: 100%;
-  height: 100%;
-  padding-top: 30px;
-}
-
-.top-row {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 128px;
-  height: 28px;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #FFFFFF;
-}
-
-.back-text {
-  font-size: 10px;
-  color: #8E8E93;
-}
-
-.summary-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 156px;
-  height: 54px;
-  margin-top: 6px;
-}
-
-.summary-item {
-  flex-direction: column;
-  justify-content: center;
-  width: 74px;
-  height: 52px;
-  background-color: #14181F;
-  border-radius: 8px;
-  padding-left: 7px;
-}
-
-.summary-value {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.summary-label {
-  font-size: 11px;
-  color: #8E8E93;
-  margin-top: 3px;
-}
-
-.chart-card {
-  flex-direction: column;
-  width: 156px;
-  height: 146px;
-  background-color: #111317;
-  border-radius: 8px;
-  padding: 8px;
-  margin-top: 6px;
-}
-
-.section-title {
-  font-size: 13px;
-  color: #D1D1D6;
-  font-weight: bold;
-}
-
-.chart-row {
-  flex-direction: row;
-  align-items: flex-end;
-  width: 140px;
-  height: 112px;
-  margin-top: 4px;
-}
-
-.bar-cell {
-  flex-direction: column;
-  align-items: center;
-  width: 20px;
-}
-
-.bar-space {
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: center;
-  width: 20px;
-  height: 84px;
-}
-
-.step-bar {
-  width: 12px;
-  border-radius: 4px;
-}
-
-.bar-steps {
-  width: 20px;
-  font-size: 9px;
-  color: #8E8E93;
-  text-align: center;
-  margin-top: 2px;
-}
-
-.chart-label-row {
-  flex-direction: row;
-  width: 140px;
-  height: 16px;
-}
-
-.bar-label {
-  width: 20px;
-  font-size: 8px;
-  color: #6E6E73;
-  text-align: center;
-  margin-top: 2px;
-}
-
-.insight-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 156px;
-  height: 56px;
-  margin-top: 8px;
-}
-
-.insight-item {
-  flex-direction: column;
-  align-items: center;
-  width: 48px;
-  height: 54px;
-  background-color: #14181F;
-  border-radius: 8px;
-  padding-top: 5px;
-}
-
-.insight-label {
-  font-size: 10px;
-  color: #8E8E93;
-}
-
-.insight-value {
-  font-size: 13px;
-  color: #FFFFFF;
-  font-weight: bold;
-  margin-top: 3px;
-}
-
-.insight-small {
-  font-size: 8px;
-  color: #6E6E73;
-  margin-top: 2px;
-}
-
-.record-scroll {
-  width: 156px;
-  height: 144px;
-  margin-top: 8px;
-}
-
-.record-item {
-  flex-direction: row;
-  align-items: center;
-  width: 156px;
-  height: 44px;
-  background-color: #101214;
-  border-radius: 8px;
-  padding-left: 8px;
-  padding-right: 8px;
-  margin-bottom: 6px;
-}
-
-.record-date {
-  width: 34px;
-  font-size: 10px;
-  color: #8E8E93;
-}
-
-.record-values {
-  flex-direction: column;
-  width: 82px;
-}
-
-.record-main {
-  font-size: 13px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.record-sub {
-  font-size: 9px;
-  color: #8E8E93;
-  margin-top: 2px;
-}
-
-.record-goal {
-  width: 24px;
-  font-size: 12px;
-  color: #FFD60A;
-  text-align: right;
-  font-weight: bold;
-}
-
-.step-color {
-  color: #FFD60A;
-}
-
-.blue-color {
-  color: #3A7DFF;
-}
-
-.heart-color {
-  color: #FF375F;
-}
-
-.loading-text {
-  text-align: center;
-  color: #8E8E93;
-  font-size: 14px;
-  margin-top: 40px;
-}
-
-@media (shape: circle) {
-  .history-page {
-    padding-top: 18px;
-    padding-bottom: 28px;
-  }
-
-  .top-row {
-    width: 118px;
-    height: 22px;
-    margin-top: 8px;
-  }
-
-  .page-title {
-    font-size: 13px;
-  }
-
-  .back-text {
-    font-size: 7px;
-  }
-
-  .summary-row,
-  .insight-row,
-  .chart-card,
-  .record-scroll,
-  .record-item {
-    width: 148px;
-  }
-
-  .summary-row {
-    height: 46px;
-    margin-top: 5px;
-  }
-
-  .summary-item {
-    width: 71px;
-    height: 44px;
-    border-radius: 12px;
-  }
-
-  .summary-value {
-    font-size: 14px;
-  }
-
-  .summary-label {
-    font-size: 7px;
-  }
-
-  .chart-card {
-    height: 116px;
-    border-radius: 13px;
-  }
-
-  .section-title {
-    font-size: 9px;
-  }
-
-  .chart-row {
-    width: 132px;
-    height: 86px;
-  }
-
-  .bar-cell,
-  .bar-space,
-  .bar-steps,
-  .bar-label {
-    width: 18px;
-  }
-
-  .bar-space {
-    height: 61px;
-  }
-
-  .step-bar {
-    width: 9px;
-  }
-
-  .bar-steps,
-  .bar-label {
-    font-size: 6px;
-  }
-
-  .insight-row {
-    height: 47px;
-    margin-top: 6px;
-  }
-
-  .insight-item {
-    width: 46px;
-    height: 45px;
-    border-radius: 12px;
-  }
-
-  .insight-label,
-  .insight-small {
-    font-size: 6px;
-  }
-
-  .insight-value {
-    font-size: 10px;
-  }
-
-  .record-scroll {
-    height: 350px;
-    margin-top: 6px;
-  }
-
-  .record-item {
-    height: 42px;
-    border-radius: 12px;
-  }
-
-  .record-values {
-    width: 75px;
-  }
-
-  .record-main {
-    font-size: 10px;
-  }
-
-  .record-date,
-  .record-sub,
-  .record-goal {
-    font-size: 7px;
-  }
-}
+.history-root, .history-scene, .history-stream { background-color: #000000; }
+.history-scene, .history-stream { position: absolute; }
+.history-stream { flex-direction: column; align-items: center; padding-bottom: 18px; }
+.history-head { flex-direction: column; }
+.history-title-row, .trend-head, .row-item { flex-direction: row; justify-content: space-between; align-items: center; }
+.summary-row, .insight-row { flex-direction: row; justify-content: center; align-items: center; }
+.history-title { color: #FFFFFF; font-weight: bold; lines: 1; }
+.history-subtitle, .trend-caption, .summary-label, .insight-label, .insight-detail { color: #8E8E93; }
+.history-subtitle { lines: 1; }
+.goal { color: #30D158; font-weight: bold; text-align: right; lines: 1; }
+.summary-card, .trend-card, .insight-card { background-color: #111317; }
+.summary-card, .insight-card { flex-direction: column; justify-content: center; }
+.summary-value, .insight-value { font-weight: bold; margin-top: 3px; }
+.yellow { color: #FFD60A; } .blue { color: #64D2FF; } .heart { color: #FF375F; }
+.trend-card { flex-direction: column; }
+.trend-head { width: 100%; }
+.trend-title { color: #FFFFFF; font-weight: bold; }
+.column-trend { width: 100%; flex: 1; flex-direction: row; align-items: flex-end; justify-content: space-between; margin-top: 3px; }
+.column-cell { flex-direction: column; align-items: center; justify-content: flex-end; }
+.column-chart-area { width: 100%; flex-direction: column; justify-content: flex-end; align-items: center; }
+.column-fill { border-radius: 4px; }
+.column-label { width: 100%; margin-top: 2px; color: #8E8E93; text-align: center; lines: 1; }
+.row-trend { width: 100%; flex: 1; flex-direction: column; justify-content: space-between; margin-top: 4px; }
+.row-item { width: 100%; height: 20px; }
+.row-label { width: 28px; font-size: 7px; color: #8E8E93; }
+.row-track { flex: 1; height: 10px; margin-left: 4px; margin-right: 4px; border-radius: 5px; background-color: #24262C; overflow: hidden; }
+.row-fill { height: 10px; border-radius: 5px; }
+.row-value { width: 44px; font-size: 8px; color: #FFFFFF; font-weight: bold; text-align: right; }
+.today-text { color: #FFD60A; font-weight: bold; }
+.insight-detail { font-size: 5px; margin-top: 2px; }
 </style>

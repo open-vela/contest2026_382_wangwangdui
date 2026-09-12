@@ -1,521 +1,108 @@
 <template>
-  <div class="workout-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;">
-    <div class="workout-header">
-      <text class="mode-name" style="color: {{ accentColor }}">{{ modeName }}</text>
-      <text class="status-text">{{ statusText }}</text>
-    </div>
-
-    <text class="duration">{{ durationText }}</text>
-    <text class="duration-label" static>运动时长</text>
-    <text class="gps-status" style="color: {{ gpsColor }}">{{ gpsText }}</text>
-
-    <div class="metric-grid">
-      <div class="metric-row">
-        <div class="metric-item">
-          <text class="metric-value step-color">{{ stepsText }}</text>
-          <text class="metric-label" static>步数</text>
-        </div>
-        <div class="metric-item">
-          <text class="metric-value calorie-color">{{ caloriesText }}</text>
-          <text class="metric-label" static>千卡</text>
-        </div>
+  <stack class="workout-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="workout-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="workout-header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;">
+        <text class="mode-name" style="font-size: {{ titleSize }}px; color: {{ accentColor }}; height: {{ headerHeight }}px; line-height: {{ headerHeight }}px;">{{ modeName }}</text>
+        <div class="status-chip" style="background-color: {{ statusSurface }};"><div class="status-dot" style="background-color: {{ statusColor }};"></div><text class="status-text" style="font-size: {{ statusSize }}px; color: {{ statusColor }};">{{ statusText }}</text></div>
       </div>
-      <div class="metric-row">
-        <div class="metric-item">
-          <text class="metric-value distance-color">{{ distanceText }}</text>
-          <text class="metric-label" static>距离</text>
-        </div>
-        <div class="metric-item">
-          <text class="metric-value heart-color">{{ heartRateText }}</text>
-          <text class="metric-label" static>心率 bpm</text>
-        </div>
+      <div class="hero" style="left: {{ heroLeft }}px; top: {{ heroTop }}px; width: {{ heroWidth }}px; height: {{ heroHeight }}px; border-radius: {{ radius }}px; background-color: {{ heroBackground }};">
+        <text class="duration" style="font-size: {{ durationSize }}px; height: {{ durationLineHeight }}px; line-height: {{ durationLineHeight }}px;">{{ durationText }}</text>
+        <text class="duration-label" style="font-size: {{ durationLabelSize }}px;">{{ durationLabelText }}</text>
+        <text class="gps-status" style="font-size: {{ gpsSize }}px; color: {{ gpsColor }};">{{ gpsText }}</text>
+      </div>
+      <div class="metric-grid" style="left: {{ metricsLeft }}px; top: {{ metricsTop }}px; width: {{ metricsWidth }}px; height: {{ metricsHeight }}px; opacity: {{ metricOpacity }};">
+        <div class="metric-card metric-right metric-bottom" style="width: {{ metricItemWidth }}px; height: {{ metricHeight }}px; margin-right: {{ metricGap }}px; margin-bottom: {{ metricGap }}px; border-radius: {{ radius }}px;"><text class="metric-value steps-color" style="font-size: {{ metricValueSize }}px;">{{ stepsText }}</text><text class="metric-label" style="font-size: {{ metricLabelSize }}px;">步数</text></div>
+        <div class="metric-card metric-bottom" style="width: {{ metricItemWidth }}px; height: {{ metricHeight }}px; margin-bottom: {{ metricGap }}px; border-radius: {{ radius }}px;"><text class="metric-value calorie-color" style="font-size: {{ metricValueSize }}px;">{{ caloriesText }}</text><text class="metric-label" style="font-size: {{ metricLabelSize }}px;">千卡</text></div>
+        <div class="metric-card metric-right" style="width: {{ metricItemWidth }}px; height: {{ metricHeight }}px; margin-right: {{ metricGap }}px; border-radius: {{ radius }}px;"><text class="metric-value distance-color" style="font-size: {{ metricValueSize }}px;">{{ distanceText }}</text><text class="metric-label" style="font-size: {{ metricLabelSize }}px;">距离</text></div>
+        <div class="metric-card" style="width: {{ metricItemWidth }}px; height: {{ metricHeight }}px; border-radius: {{ radius }}px;"><text class="metric-value heart-color" style="font-size: {{ metricValueSize }}px;">{{ heartRateText }}</text><text class="metric-label" style="font-size: {{ metricLabelSize }}px;">{{ heartRateLabel }}</text></div>
+      </div>
+      <div class="actions" style="left: {{ actionsLeft }}px; top: {{ actionsTop }}px; width: {{ actionsWidth }}px; height: {{ actionsHeight }}px;">
+        <text class="action pause-action" @click="togglePause" style="width: {{ actionWidth }}px; height: {{ actionsHeight }}px; margin-right: {{ actionGap }}px; border-radius: {{ radius }}px; font-size: {{ actionSize }}px; background-color: {{ pauseButtonBackground }}; color: {{ pauseButtonColor }};">{{ pauseButtonText }}</text>
+        <text class="action finish-action" @click="requestFinish" style="width: {{ actionWidth }}px; height: {{ actionsHeight }}px; border-radius: {{ radius }}px; font-size: {{ actionSize }}px;">结束</text>
+      </div>
+      <div class="confirm-cover" if="{{ confirmVisible }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+        <div class="confirm-box"><text class="confirm-title">结束本次运动？</text><text class="confirm-copy">记录会保存并计入今日活动和 7 日趋势。</text><div class="confirm-actions"><text class="confirm-button" @click="cancelFinish">继续</text><text class="confirm-button confirm-finish" @click="confirmFinish">保存</text></div></div>
       </div>
     </div>
-
-    <div class="action-row">
-      <text class="action-button pause-button" @click="togglePause">{{ pauseButtonText }}</text>
-      <text class="action-button finish-button" @click="finishWorkout">结束</text>
-    </div>
-
-    <div class="confirm-cover" if="{{ confirmVisible }}">
-      <div class="confirm-box">
-        <text class="confirm-title" static>结束本次运动？</text>
-        <text class="confirm-sub" static>记录会保存并计入今日健康数据</text>
-        <div class="confirm-actions">
-          <text class="confirm-button" @click="cancelFinish">继续</text>
-          <text class="confirm-button confirm-finish" @click="confirmFinish">保存</text>
-        </div>
-      </div>
-    </div>
-  </div>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import workoutManager from '../../common/workout_manager'
-import gpsTracker from '../../common/gps_tracker'
-import pageMotion from '../../common/page_motion'
-import pageViewport from '../../common/page_viewport'
-import { createContext } from '../../common/lifecycle_manager'
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createWorkoutController } from '../../v2/features/workout/controller'
+import workoutDesign from '../../v2/design/specs/workout'
+import workoutView from '../../v2/design/views/workout'
+
+function applyRegion(page, prefix, value) {
+  page[prefix + 'Left'] = value.left
+  page[prefix + 'Top'] = value.top
+  page[prefix + 'Width'] = value.width
+  page[prefix + 'Height'] = value.height
+}
 
 export default {
   private: {
-    modeName: '运动',
-    accentColor: '#30D158',
-    statusText: '准备中',
-    durationText: '00:00',
-    stepsText: '0',
-    caloriesText: '0',
-    distanceText: '0 m',
-    heartRateText: '--',
-    gpsText: '正在定位',
-    gpsColor: '#8E8E93',
-    pauseButtonText: '暂停',
-    confirmVisible: false,
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    sessionStatus: '', modeName: '运动', accentColor: '#30D158', statusText: '准备中', statusColor: '#8E8E93', statusSurface: '#15171B', durationText: '00:00', durationLabelText: '运动时长', stepsText: '0', caloriesText: '0', distanceText: '0 m', heartRateText: '--', heartRateLabel: '等待心率', gpsText: '正在定位', gpsColor: '#8E8E93', pauseButtonText: '暂停', pauseButtonBackground: '#2C2C2E', pauseButtonColor: '#FFFFFF', heroBackground: '#10151A', metricOpacity: 1, confirmVisible: false,
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 22, heroLeft: 22, heroTop: 52, heroWidth: 148, heroHeight: 70, metricsLeft: 22, metricsTop: 130, metricsWidth: 148, metricsHeight: 60, actionsLeft: 30, actionsTop: 160, actionsWidth: 132, actionsHeight: 24,
+    metricItemWidth: 70, metricHeight: 28, metricGap: 4, actionWidth: 62, actionGap: 8, titleSize: 12, statusSize: 7, durationSize: 30, durationLineHeight: 38, durationLabelSize: 7, gpsSize: 7, metricValueSize: 12, metricLabelSize: 6, actionSize: 9, radius: 14,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
-    pageViewport.bind(this)
-    this.lifecycle = createContext()
-    // Non-UI runtime flag; kept off the reactive viewModel (derived from session status).
-    this.running = true
-  },
-
-  onShow() {
-    pageMotion.enter(this)
-    this.lifecycle.reactivate()
-    this.loadSession()
-    this.startUiTimer()
-  },
-
-  onHide() {
-    pageMotion.clear(this)
-    this.stopUiTimer()
-    gpsTracker.stop()
-    workoutManager.persistActive()
-  },
-
-  onDestroy() {
-    pageMotion.clear(this)
-    this.stopUiTimer()
-    gpsTracker.stop()
-    this.lifecycle.cleanup()
-  },
-
-  loadSession() {
     var self = this
-    workoutManager.loadActive(function (session) {
-      if (!session) {
-        pageMotion.back(self, router)
-        return
-      }
-      self.applySession(session)
-      if (session.status === 'running') {
-        self.startGps()
-      } else {
-        self.gpsText = 'GPS 已暂停'
-      }
-    })
+    this.controller = createWorkoutController(function (session) { self.acceptSession(session) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return workoutDesign.contentWidth(profile) } }, function (profile, scene, safe) { self.applyPlan(workoutDesign.resolve(profile, scene, safe)) })
   },
-
-  startUiTimer() {
-    var self = this
-    this.stopUiTimer()
-    // The manager uses timestamps; this timer only refreshes the visible values.
-    this.uiTimer = this.lifecycle.addInterval('ui', setInterval(function () {
-      var session = workoutManager.tick()
-      if (session) self.applySession(session)
-    }, 1000))
+  onShow() { this.controller.loadActive(function (session) { if (!session) navigation.back() }) },
+  onHide() { if (this.controller) this.controller.stop() },
+  onDestroy() { if (this.controller) this.controller.stop() },
+  onBackPress() { return true },
+  applyPlan(plan) {
+    applyRegion(this, 'header', plan.header); applyRegion(this, 'hero', plan.hero); applyRegion(this, 'metrics', plan.metrics); applyRegion(this, 'actions', plan.actions)
+    this.metricItemWidth = plan.metricItemWidth; this.metricHeight = plan.metricHeight; this.metricGap = plan.metricGap; this.actionWidth = plan.actionWidth; this.actionGap = plan.actionGap
+    this.titleSize = plan.titleSize; this.statusSize = plan.statusSize; this.durationSize = plan.durationSize; this.durationLineHeight = plan.durationLineHeight; this.durationLabelSize = plan.durationLabelSize; this.gpsSize = plan.gpsSize; this.metricValueSize = plan.metricValueSize; this.metricLabelSize = plan.metricLabelSize; this.actionSize = plan.actionSize; this.radius = plan.radius
   },
-
-  stopUiTimer() {
-    this.lifecycle.clearInterval('ui')
-    this.uiTimer = null
+  acceptSession(session) {
+    if (!session) return
+    this.sessionStatus = session.status
+    this.applySession(workoutView.project(session))
   },
-
-  startGps() {
-    var self = this
-    var current = workoutManager.tick()
-    gpsTracker.start({
-      initialDistance: current ? current.gpsDistanceMeters : 0,
-      lastPoint: current ? current.gpsPoint : null,
-      status: function (status, text) {
-        self.gpsText = text
-        self.gpsColor = status === 'active' ? '#30D158' : status === 'fallback' ? '#FF9F0A' : '#8E8E93'
-        workoutManager.updateGps({ statusText: text })
-      },
-      location: function (data) {
-        var session = workoutManager.updateGps({
-          statusText: 'GPS 已定位',
-          point: data.point,
-          distanceMeters: data.distanceMeters
-        })
-        if (session) self.applySession(session)
-      }
-    })
-    this.lifecycle.addSubscription('gps', function () {
-      gpsTracker.stop()
-    })
+  applySession(view) {
+    if (!view) return
+    this.modeName = view.modeName; this.accentColor = view.accentColor; this.statusText = view.statusText; this.statusColor = view.statusColor; this.statusSurface = view.statusSurface
+    this.durationText = view.durationText; this.durationLabelText = view.durationLabelText; this.stepsText = view.stepsText; this.caloriesText = view.caloriesText; this.distanceText = view.distanceText
+    this.heartRateText = view.heartRateText; this.heartRateLabel = view.heartRateLabel; this.gpsText = view.gpsText; this.gpsColor = view.gpsColor; this.pauseButtonText = view.pauseButtonText
+    this.pauseButtonBackground = view.pauseButtonBackground; this.pauseButtonColor = view.pauseButtonColor; this.heroBackground = view.heroBackground; this.metricOpacity = view.metricOpacity
   },
-
-  applySession(session) {
-    this.modeName = session.typeName
-    this.accentColor = session.color
-    this.statusText = session.statusText
-    this.durationText = session.durationText
-    this.stepsText = session.stepsText
-    this.caloriesText = session.caloriesText
-    this.distanceText = session.distanceText
-    this.gpsText = session.distanceSource === 'gps' ? 'GPS 距离' : session.gpsStatus + ' · 步幅估算'
-    this.gpsColor = session.distanceSource === 'gps' ? '#30D158' : '#8E8E93'
-    this.heartRateText = session.currentHeartRate.toString()
-    this.running = session.status === 'running'
-    this.pauseButtonText = this.running ? '暂停' : '继续'
-  },
-
-  togglePause() {
-    var session = this.running ? workoutManager.pause() : workoutManager.resume()
-    if (session) {
-      this.applySession(session)
-      if (session.status === 'running') {
-        this.startGps()
-      } else {
-        gpsTracker.stop()
-        this.gpsText = 'GPS 已暂停'
-      }
-    }
-  },
-
-  finishWorkout() {
-    this.confirmVisible = true
-  },
-
-  cancelFinish() {
-    this.confirmVisible = false
-  },
-
-  confirmFinish() {
-    var self = this
-    this.confirmVisible = false
-    this.stopUiTimer()
-    gpsTracker.stop()
-    workoutManager.finish(function () {
-      pageMotion.replace(self, router, '/pages/workout_history')
-    })
-  }
+  togglePause() { if (!this.controller) return; if (this.sessionStatus === 'running') this.controller.pause(); else if (this.sessionStatus === 'paused') this.controller.resume() },
+  requestFinish() { this.confirmVisible = true },
+  cancelFinish() { this.confirmVisible = false },
+  confirmFinish() { this.confirmVisible = false; this.controller.finish(function () { navigation.replace('/pages/workout_history') }) }
 }
 </script>
 
 <style>
-.workout-page {
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 18px 14px;
-  background-color: #000000;
-  position: relative;
-}
-
-.workout-header {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 128px;
-  height: 28px;
-  margin-top: 8px;
-}
-
-.mode-name {
-  font-size: 18px;
-  font-weight: bold;
-  width: 54px;
-}
-
-.status-text {
-  font-size: 10px;
-  color: #8E8E93;
-  width: 54px;
-  text-align: right;
-}
-
-.duration {
-  font-size: 50px;
-  font-weight: bold;
-  color: #FFFFFF;
-  margin-top: 26px;
-}
-
-.duration-label {
-  font-size: 11px;
-  color: #8E8E93;
-  margin-top: 4px;
-}
-
-.gps-status {
-  font-size: 10px;
-  margin-top: 7px;
-}
-
-.metric-grid {
-  flex-direction: column;
-  justify-content: space-between;
-  width: 164px;
-  height: 154px;
-  margin-top: 20px;
-}
-
-.metric-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 164px;
-}
-
-.metric-item {
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 78px;
-  height: 70px;
-  background-color: #111317;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-
-.metric-value {
-  width: 72px;
-  font-size: 20px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.metric-label {
-  font-size: 10px;
-  color: #8E8E93;
-  margin-top: 5px;
-}
-
-.step-color {
-  color: #FFD60A;
-}
-
-.calorie-color {
-  color: #FF9F0A;
-}
-
-.distance-color {
-  color: #30D158;
-}
-
-.heart-color {
-  color: #FF375F;
-}
-
-.action-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 164px;
-  height: 46px;
-  margin-top: 34px;
-}
-
-.action-button {
-  width: 78px;
-  height: 42px;
-  font-size: 15px;
-  font-weight: bold;
-  text-align: center;
-  border-radius: 8px;
-}
-
-.pause-button {
-  color: #FFFFFF;
-  background-color: #2C2C2E;
-}
-
-.finish-button {
-  color: #FFFFFF;
-  background-color: #C83245;
-}
-
-.confirm-cover {
-  position: absolute;
-  left: 0px;
-  top: 0px;
-  width: 100%;
-  height: 100%;
-  justify-content: center;
-  align-items: center;
-  background-color: #000000;
-  opacity: 0.96;
-}
-
-.confirm-box {
-  flex-direction: column;
-  align-items: center;
-  width: 166px;
-  height: 154px;
-  padding: 16px 12px;
-  background-color: #17191D;
-  border-radius: 8px;
-}
-
-.confirm-title {
-  font-size: 17px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.confirm-sub {
-  width: 136px;
-  font-size: 11px;
-  color: #8E8E93;
-  text-align: center;
-  margin-top: 12px;
-}
-
-.confirm-actions {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 136px;
-  margin-top: 20px;
-}
-
-.confirm-button {
-  width: 64px;
-  height: 32px;
-  font-size: 12px;
-  color: #FFFFFF;
-  text-align: center;
-  background-color: #2C2C2E;
-  border-radius: 8px;
-}
-
-.confirm-finish {
-  background-color: #C83245;
-}
-
-/*
- * 圆屏安全栈（几何推导见 scripts/check-safe-area.js）：
- *   22 → 头部 118×16 → 时长 110×26 → 标签 110×9 → GPS 110×9
- *      → 指标网格 148×60(+3) → 操作行 120×22(+3)，结束于 y=170
- *
- * 窄元素（时长、GPS）放在上下两端，最宽的 148px 指标网格压在中段——
- * 148px 在内切圆里只有 y=35..157 可用。文字元素显式给出高度，避免行高在
- * 不同镜像上浮动，导致整摞下移被圆弧切掉。
- */
-@media (shape: circle) {
-  .workout-page {
-    padding: 22px 20px 0px 20px;
-  }
-
-  .workout-header {
-    width: 118px;
-    height: 16px;
-    margin-top: 0px;
-  }
-
-  .mode-name {
-    width: 54px;
-    font-size: 11px;
-  }
-
-  .status-text {
-    font-size: 7px;
-  }
-
-  .duration {
-    width: 110px;
-    height: 26px;
-    font-size: 26px;
-    text-align: center;
-    margin-top: 0px;
-  }
-
-  .duration-label,
-  .gps-status {
-    width: 110px;
-    height: 9px;
-    font-size: 7px;
-    text-align: center;
-    margin-top: 0px;
-  }
-
-  .metric-grid {
-    width: 148px;
-    height: 60px;
-    margin-top: 3px;
-  }
-
-  .metric-row {
-    width: 148px;
-  }
-
-  /* 两行 28px 卡片 + 4px 间距 = 60px，正好填满网格。 */
-  .metric-item {
-    width: 71px;
-    height: 28px;
-    border-radius: 14px;
-    margin-bottom: 4px;
-  }
-
-  .metric-value {
-    width: 66px;
-    font-size: 12px;
-  }
-
-  .metric-label {
-    font-size: 6px;
-    margin-top: 1px;
-  }
-
-  .action-row {
-    width: 120px;
-    height: 22px;
-    margin-top: 3px;
-  }
-
-  .action-button {
-    width: 56px;
-    height: 22px;
-    font-size: 9px;
-    border-radius: 11px;
-  }
-
-  .confirm-box {
-    width: 146px;
-    height: 112px;
-    border-radius: 24px;
-  }
-
-  .confirm-title {
-    font-size: 12px;
-  }
-
-  .confirm-sub {
-    width: 116px;
-    font-size: 8px;
-    margin-top: 7px;
-  }
-
-  .confirm-actions {
-    width: 116px;
-    margin-top: 12px;
-  }
-
-  .confirm-button {
-    width: 54px;
-    height: 27px;
-    font-size: 8px;
-    border-radius: 14px;
-  }
-}
+.workout-root, .workout-scene { background-color: #000000; }
+.workout-scene { position: absolute; left: 0px; top: 0px; }
+.workout-header, .hero, .metric-grid, .actions { position: absolute; }
+.workout-header { flex-direction: row; justify-content: space-between; align-items: center; }
+.mode-name { font-weight: bold; }
+.status-chip { height: 18px; min-width: 48px; border-radius: 9px; padding-left: 7px; padding-right: 7px; flex-direction: row; justify-content: center; align-items: center; }
+.status-dot { width: 5px; height: 5px; border-radius: 3px; margin-right: 5px; }
+.status-text { font-weight: bold; text-align: right; }
+.hero { flex-direction: column; justify-content: center; align-items: center; }
+.duration { width: 100%; color: #FFFFFF; font-weight: bold; text-align: center; }
+.duration-label { color: #8E8E93; margin-top: 0px; } .gps-status { margin-top: 2px; }
+.metric-grid { flex-direction: row; flex-wrap: wrap; align-content: flex-start; }
+.metric-card { background-color: #111317; flex-direction: column; justify-content: center; align-items: center; }
+.metric-value { width: 100%; font-weight: bold; text-align: center; lines: 1; } .metric-label { color: #8E8E93; margin-top: 1px; }
+.steps-color { color: #FFD60A; } .calorie-color { color: #FF9F0A; } .distance-color { color: #30D158; } .heart-color { color: #FF375F; }
+.actions { flex-direction: row; align-items: center; }
+.action { font-weight: bold; text-align: center; } .finish-action { background-color: #C83245; color: #FFFFFF; }
+.confirm-cover { position: absolute; left: 0px; top: 0px; background-color: #000000; opacity: 0.97; justify-content: center; align-items: center; }
+.confirm-box { width: 158px; min-height: 134px; border-radius: 24px; background-color: #17191D; padding: 16px 12px; flex-direction: column; align-items: center; }
+.confirm-title { font-size: 15px; color: #FFFFFF; font-weight: bold; }
+.confirm-copy { width: 132px; font-size: 9px; line-height: 14px; color: #8E8E93; text-align: center; margin-top: 10px; }
+.confirm-actions { width: 132px; flex-direction: row; justify-content: space-between; margin-top: 16px; }
+.confirm-button { width: 62px; height: 32px; border-radius: 16px; background-color: #2C2C2E; color: #FFFFFF; font-size: 10px; text-align: center; } .confirm-finish { background-color: #C83245; }
 </style>

@@ -1,332 +1,65 @@
 <template>
-  <scroll class="select-page {{ viewportClass }}" scroll-y="true" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @touchstart="onTouchStart" @touchend="onTouchEnd">
-    <div class="top-row">
-      <text class="page-title">运动模式</text>
-      <text class="history-link" @click="openHistory">记录</text>
+  <stack class="selector-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="selector-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <text class="selector-title" style="left: {{ sceneSafeLeft }}px; top: {{ sceneSafeTop }}px; width: {{ contentWidth }}px; font-size: {{ titleSize }}px;">开始运动</text>
+      <scroll class="selector-stream" scroll-y="true" style="left: {{ sceneSafeLeft }}px; top: {{ streamTop }}px; width: {{ contentWidth }}px; height: {{ streamHeight }}px;">
+        <div class="continue-card" if="{{ hasActive }}" @click="continueWorkout" style="width: {{ contentWidth }}px; height: {{ actionHeight }}px; border-radius: {{ actionRadius }}px;"><div><text class="continue-title">继续运动</text><text class="continue-sub">恢复未完成记录</text></div><text class="chevron">›</text></div>
+        <div class="mode-card" for="{{ modes }}" tid="type" @click="selectMode($item.type)" style="width: {{ contentWidth }}px; height: {{ cardHeight }}px; border-radius: {{ cardRadius }}px;">
+          <div class="mode-accent" style="background-color: {{ $item.color }};"></div><div class="mode-copy"><text class="mode-name" style="font-size: {{ modeNameSize }}px;">{{ $item.name }}</text><text class="mode-desc" style="font-size: {{ modeDescSize }}px;">{{ $item.desc }}</text></div><text class="chevron">›</text>
+        </div>
+        <div class="history-card" @click="openHistory" style="width: {{ contentWidth }}px; height: {{ actionHeight }}px; border-radius: {{ actionRadius }}px;"><div><text class="history-title">运动记录</text><text class="history-sub">查看已完成训练</text></div><text class="chevron">›</text></div>
+      </scroll>
     </div>
-
-    <div class="mode-card walk-card" @click="startWalk">
-      <div class="mode-icon walk-icon"><text class="mode-letter">W</text></div>
-      <div class="mode-copy">
-        <text class="mode-name">步行</text>
-        <text class="mode-desc">轻量有氧与日常健走</text>
-        <text class="mode-meta">约 90 步/分钟</text>
-      </div>
-      <text class="mode-arrow">></text>
-    </div>
-
-    <div class="mode-card run-card" @click="startRun">
-      <div class="mode-icon run-icon"><text class="mode-letter">R</text></div>
-      <div class="mode-copy">
-        <text class="mode-name">跑步</text>
-        <text class="mode-desc">更高步频与热量消耗</text>
-        <text class="mode-meta">约 150 步/分钟</text>
-      </div>
-      <text class="mode-arrow">></text>
-    </div>
-
-    <div class="active-card" if="{{ activeVisible }}" @click="continueWorkout">
-      <text class="active-title">继续上次运动</text>
-      <text class="active-value">{{ activeType }} · {{ activeDuration }}</text>
-    </div>
-
-    <text class="page-tip">模拟器使用运动模型估算数据</text>
-  </scroll>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import workoutManager from '../../common/workout_manager'
-import pageMotion from '../../common/page_motion'
-import swipeBack from '../../common/swipe_back'
-import pageViewport from '../../common/page_viewport'
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import workoutSelection from '../../v2/features/workout/selection'
+import selectionDesign from '../../v2/design/specs/workout_select'
+import selectionView from '../../v2/design/views/workout_selection'
 
 export default {
   private: {
-    activeVisible: false,
-    activeType: '',
-    activeDuration: '',
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    modes: [], hasActive: false, contentWidth: 148, titleSize: 14, streamTop: 58, streamHeight: 90, cardHeight: 58, cardRadius: 20, actionHeight: 42, actionRadius: 18, modeNameSize: 12, modeDescSize: 7,
+    sceneWidth: 192, sceneHeight: 192, sceneSafeLeft: 22, sceneSafeTop: 35, sceneSafeHeight: 120,
+    viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
-    pageViewport.bind(this)
-  },
-
-  onShow() {
-    pageMotion.enter(this)
-    // An unfinished session can be resumed instead of being silently replaced.
     var self = this
-    workoutManager.loadActive(function (session) {
-      self.activeVisible = !!session
-      if (session) {
-        self.activeType = session.typeName
-        self.activeDuration = session.durationText
-      }
+    this.modeTypes = workoutSelection.getModeTypes()
+    this.applySemanticView(false)
+    pageRuntime.bind(this, { contentWidth: function (profile) { return selectionDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      self.contentWidth = safe.width
+      self.applyPlan(selectionDesign.resolve(profile, scene, safe))
     })
   },
-
-  onHide() {
-    pageMotion.clear(this)
+  onShow() { var self = this; workoutSelection.hasActive(function (active) { self.applySemanticView(active) }) },
+  onBackPress() { navigation.back(); return true },
+  applySemanticView(active) { var view = selectionView.project({ modeTypes: this.modeTypes || [], hasActive: active }); this.modes = view.modes; this.hasActive = view.hasActive },
+  applyPlan(plan) {
+    this.titleSize = plan.titleSize
+    this.streamTop = plan.stream.top
+    this.streamHeight = plan.stream.height
+    this.cardHeight = plan.cardHeight
+    this.cardRadius = plan.cardRadius
+    this.actionHeight = plan.actionHeight
+    this.actionRadius = plan.actionRadius
+    this.modeNameSize = plan.modeNameSize
+    this.modeDescSize = plan.modeDescSize
   },
-
-  onDestroy() {
-    pageMotion.clear(this)
-  },
-
-  startWalk() {
-    this.startMode('walk')
-  },
-
-  startRun() {
-    this.startMode('run')
-  },
-
-  startMode(type) {
-    var self = this
-    workoutManager.start(type, function () {
-      pageMotion.push(self, router, '/pages/workout')
-    })
-  },
-
-  continueWorkout() {
-    pageMotion.push(this, router, '/pages/workout')
-  },
-
-  openHistory() {
-    pageMotion.push(this, router, '/pages/workout_history')
-  },
-
-  onTouchStart(e) {
-    swipeBack.start(this, e)
-  },
-
-  onTouchEnd(e) {
-    swipeBack.end(this, e, router)
-  }
+  selectMode(type) { workoutSelection.create(type, function () { navigation.push('/pages/workout') }) },
+  continueWorkout() { navigation.push('/pages/workout') },
+  openHistory() { navigation.push('/pages/workout_history') }
 }
 </script>
 
 <style>
-.select-page {
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 18px 14px;
-  background-color: #000000;
-}
-
-.top-row {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 132px;
-  height: 34px;
-  margin-top: 10px;
-  margin-bottom: 12px;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #FFFFFF;
-}
-
-.history-link {
-  font-size: 10px;
-  color: #0A84FF;
-}
-
-.mode-card {
-  flex-direction: row;
-  align-items: center;
-  width: 164px;
-  height: 112px;
-  border-width: 1px;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 14px;
-}
-
-.walk-card {
-  background-color: #0A1812;
-  border-color: #245C3C;
-}
-
-.run-card {
-  background-color: #1A1108;
-  border-color: #684114;
-}
-
-.mode-icon {
-  justify-content: center;
-  align-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 21px;
-  margin-right: 10px;
-}
-
-.walk-icon {
-  background-color: #30D158;
-}
-
-.run-icon {
-  background-color: #FF9F0A;
-}
-
-.mode-letter {
-  font-size: 18px;
-  font-weight: bold;
-  color: #000000;
-}
-
-.mode-copy {
-  flex-direction: column;
-  width: 88px;
-}
-
-.mode-name {
-  font-size: 19px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.mode-desc {
-  font-size: 10px;
-  color: #C7C7CC;
-  margin-top: 5px;
-}
-
-.mode-meta {
-  font-size: 9px;
-  color: #8E8E93;
-  margin-top: 7px;
-}
-
-.mode-arrow {
-  font-size: 18px;
-  color: #8E8E93;
-}
-
-.active-card {
-  flex-direction: column;
-  justify-content: center;
-  width: 164px;
-  height: 58px;
-  padding-left: 12px;
-  background-color: #111317;
-  border-radius: 8px;
-}
-
-.active-title {
-  font-size: 13px;
-  font-weight: bold;
-  color: #FFFFFF;
-}
-
-.active-value {
-  font-size: 11px;
-  color: #FFD60A;
-  margin-top: 5px;
-}
-
-.page-tip {
-  width: 164px;
-  font-size: 10px;
-  color: #666666;
-  text-align: center;
-  margin-top: 14px;
-}
-
-@media (shape: circle) {
-  .select-page {
-    padding-top: 18px;
-    padding-left: 22px;
-    padding-right: 22px;
-    padding-bottom: 28px;
-  }
-
-  .top-row {
-    width: 118px;
-    height: 24px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-  }
-
-  .page-title {
-    font-size: 13px;
-  }
-
-  .history-link {
-    font-size: 7px;
-  }
-
-  .mode-card,
-  .active-card,
-  .page-tip {
-    width: 148px;
-  }
-
-  .mode-card {
-    height: 78px;
-    padding: 9px;
-    border-radius: 20px;
-    margin-bottom: 9px;
-  }
-
-  .mode-icon {
-    width: 35px;
-    height: 35px;
-    border-radius: 18px;
-    margin-right: 8px;
-  }
-
-  .mode-letter {
-    font-size: 14px;
-  }
-
-  .mode-copy {
-    width: 82px;
-  }
-
-  .mode-name {
-    font-size: 13px;
-  }
-
-  .mode-desc,
-  .mode-meta,
-  .page-tip {
-    font-size: 7px;
-  }
-
-  .mode-arrow {
-    font-size: 12px;
-  }
-
-  .active-card {
-    height: 43px;
-    border-radius: 16px;
-  }
-
-  .active-title {
-    font-size: 9px;
-  }
-
-  .active-value {
-    font-size: 7px;
-  }
-
-  .page-tip {
-    margin-top: 9px;
-  }
-}
+.selector-root, .selector-scene { background-color: #000000; } .selector-scene { position: absolute; left: 0px; top: 0px; }
+.selector-title { position: absolute; height: 22px; color: #FFFFFF; font-weight: bold; text-align: center; }
+.selector-stream { position: absolute; flex-direction: column; }
+.mode-card, .continue-card, .history-card { background-color: #15171B; flex-direction: row; align-items: center; margin-bottom: 9px; padding: 10px 12px; }
+.mode-accent { width: 5px; height: 70%; border-radius: 3px; } .mode-copy { flex-direction: column; margin-left: 10px; flex: 1; } .mode-name { color: #FFFFFF; font-weight: bold; } .mode-desc { color: #8E8E93; margin-top: 4px; }
+.continue-title { font-size: 10px; color: #30D158; font-weight: bold; } .continue-sub, .history-sub { font-size: 7px; color: #8E8E93; margin-top: 3px; } .history-title { font-size: 10px; color: #FFFFFF; font-weight: bold; } .chevron { width: 18px; font-size: 18px; color: #636366; text-align: right; }
 </style>

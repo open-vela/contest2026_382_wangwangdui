@@ -1,290 +1,188 @@
 # 维护者指南
 
-本文面向负责维护、发布和评审 `vela_band` 的开发者。它关注工程约束和修改流程，不重复 Quick App 基础语法。架构细节见 [TECHNICAL.md](TECHNICAL.md)，运行环境见 [COMPATIBILITY.md](COMPATIBILITY.md)。
+本文面向 `vela_band` 的维护、评审和发布工作。当前规范以 [V2 Stable Architecture](REWRITE_V2_ARCHITECTURE.md)、[Design Engine](DESIGN_ENGINE.md) 和 [V2 稳定基线](STABLE_BASELINE_V2.md) 为准。
 
 ## 维护目标
 
-每次改动都应满足：
+每次改动都应尽量保持：
 
-1. 同一 RPK 可以在 `mi-band10` 与 `Vela_Watchs4` 模拟器构建、安装和启动。
-2. 页面离开后没有残留定时器、订阅或异步 UI 更新。
-3. 持久化修改不会覆盖同一键的并发更新。
-4. 文档明确区分真实系统能力、模拟数据和视觉降级。
-5. 生成文件、日志、私有 IDE 状态和签名材料不进入 Git。
+1. 同一 RPK 在 Pill / Circle / Rect 目标形态上保持可用。
+2. 页面首次进入、重复进入和返回结果一致，不出现 0 高 surface、黑屏或首次挂载偏移。
+3. 页面离开后不残留无意义 timer、location、health、motion、event 或异步 UI 更新。
+4. Domain/Feature 行为与 UI 构图分离；页面不重新承载业务状态机。
+5. 文档明确区分真实系统能力、模拟能力和产品降级。
+6. `npm run check` 始终是合并前的最低质量门槛。
 
-## 事实来源
+## 事实来源优先级
 
 发生文档与实现冲突时，按以下顺序核对：
 
 1. `src/manifest.json`：包名、feature、权限、路由。
-2. `package.json` 和 `package-lock.json`：命令与依赖版本。
-3. `src/common/*`：数据结构、存储键和公共行为。
-4. 页面 `script`：交互和生命周期。
-5. [COMPATIBILITY.md](COMPATIBILITY.md)：特定镜像的实测能力。
+2. `package.json` / `package-lock.json`：命令与依赖版本。
+3. `src/capabilities/*`：原生 Vela 能力边界。
+4. `src/domain/*`：业务模型、持久化和状态机。
+5. `src/v2/features/*`：应用级 orchestration 与资源生命周期。
+6. `src/v2/design/*`：Scene、Geometry、Design Spec/View 和 shape composition。
+7. `src/pages/*`：生命周期、事件与最终渲染绑定。
+8. [COMPATIBILITY.md](COMPATIBILITY.md)：特定镜像/设备差异。
 
-不要根据其他 AVD、旧日志或下载示例推断当前应用已经具备某项能力。
+`src/common`、旧 `src/presentation` 等目录可能仍保留历史实现、资源或参考代码，但它们不是新的 V2 扩展入口。V2 页面不得重新导入 legacy common 代码模块。
 
-## 模块所有权
+## V2 模块所有权
 
-| 关注点 | 主要文件 |
+| 关注点 | 当前入口 |
 | --- | --- |
-| 包配置、权限和路由 | `src/manifest.json` |
-| 屏幕形态识别 | `src/common/screen_profile.js` |
-| 主运行时和表盘切换 | `src/pages/clock/clock.ux` |
-| Beta 根路由返回保护 | `src/pages/clock_guard/clock_guard.ux`、`watch_data.js` 的右滑过渡标记 |
-| 表盘元数据与顺序 | `src/common/face_registry.js` |
-| 表盘 UI | `src/components/watchfaces/*.ux` |
-| 圆屏机械表盘角度与刻度 | `src/common/analog_face.js`、`src/components/watchfaces/mechanical_circle.ux` |
-| 胶囊背景图表盘与形态隔离 | `src/components/watchfaces/alpine.ux`、`src/common/face_scope.js`、`src/common/watchfaces/*` |
-| 应用目录、胶囊固定分页与 Watch S4 固定错列蜂巢 | `src/common/launcher_apps.js`、`fixed_pager.js`、`src/common/icons/*`、`src/pages/applist/applist.ux` |
-| 公历月历与农历换算 | `src/common/calendar_utils.js`、`src/pages/today/today.ux` |
-| 健康与通知演示数据 | `src/common/watch_data.js` |
-| 持久化与并发更新 | `src/common/storage_adapter.js` |
-| 页面资源清理 | `src/common/lifecycle_manager.js` |
-| 页面转场 | `src/common/page_motion.js` |
-| 功耗和抬腕 | `src/common/power_manager.js` |
-| 加速度诊断与动作强度 | `src/common/motion_metrics.js`、`src/pages/settings/motion/motion.ux` |
-| 震动反馈模式 | `src/common/haptic_feedback.js`、`src/pages/settings/vibration/vibration.ux` |
-| 通知接收与状态 | `src/common/notification_manager.js` |
-| 运动和 GPS | `src/common/workout_manager.js`、`gps_tracker.js` |
-| 同步协议和传输 | `src/common/sync_protocol.js`、`ble_sync.js` |
-| 用户设置 | `src/common/device_settings.js` |
+| 包配置、权限、路由 | `src/manifest.json` |
+| 设备/形态识别 | `src/v2/system/device_profile.js` |
+| Full-bleed Scene 与 Safe Geometry | `src/v2/design/scene.js`、`src/v2/design/geometry.js` |
+| 页面 Runtime | `src/v2/app/page_runtime.js` |
+| 路由 | `src/v2/app/navigation.js`、`src/v2/app/app_routes.js` |
+| 原生能力 | `src/capabilities/*` |
+| Domain | `src/domain/*` |
+| Feature Controller | `src/v2/features/*` |
+| Design Spec / View | `src/v2/design/specs/*`、`src/v2/design/views/*` |
+| 表盘 UI | `src/components/watchfaces/*`、`src/pages/clock/clock.ux` |
+| 表盘库 | `src/pages/watchface/index.ux` |
+| 应用启动器 | `src/pages/applist/applist.ux` |
+| 健康 | `src/pages/heartrate/heartrate.ux` 与对应 V2 feature/design |
+| 趋势 | `src/pages/history/history.ux` 与对应 V2 feature/design |
+| 设置 | `src/pages/settings/*` 与对应 V2 feature/design |
+| 运动 | `src/pages/workout/*` 与对应 Domain/Feature |
 
-页面目录必须与 manifest 路由保持一致。表盘选择页位于 `src/pages/watchface/index.ux`。
+如果需要新增路径，优先问“它属于 Capability、Domain、Feature、Design 还是 Page”，不要直接把公共逻辑堆回页面或 `common`。
 
 ## 关键不变量
 
+### Scene 与布局
+
+- Design Scene 从 `(0, 0)` 覆盖完整逻辑/物理投影，不以 beta host inset 作为产品画布高度。
+- 百分比字符串不能被当成像素高度解析。
+- 背景 full-bleed 与前景 safe geometry 分离。
+- Circle 使用 chord-aware placement，不把整页压成小内接矩形。
+- 只有绝对定位子节点的 full-page wrapper 必须显式设置 Scene width/height，否则 Vela 可能把父容器折叠成 0 高。
+- `overflow:hidden` 只能用于明确的视觉裁剪，不能拿来掩盖 Scene 或 safe-area 错误。
+- 小型 wearable 控件若百分比尺寸在运行时不稳定，应由 Design Spec 解析为明确 px 几何。
+
+### Design Freedom
+
+- L1：普通列表、设置、简单详情，尽量由 Design Spec 自动解决。
+- L2：共享语义、形态专用构图。Health / History / Workout 是主要参考。
+- L3：表盘、蜂巢等强视觉/交互 surface。
+- 如果 L1 只能靠不断缩字体才能塞下，优先升级为 L2，不要继续压缩。
+
 ### 生命周期
 
-- `onShow` 可以被多次调用，启动逻辑必须幂等。
-- `onHide` 和 `onDestroy` 都可以执行清理，清理函数必须可重复调用。
-- 命名定时器和订阅通过生命周期上下文登记。
+- `onShow` 可能重复调用，启动/加载逻辑必须可重复。
+- `onHide` / `onDestroy` 必须释放当前页面不再需要的 transient resources。
+- Workout pause 必须停止 1Hz tick 和 location。
+- Health/motion/event 等订阅必须存在明确停止路径。
 - 页面销毁后不得继续写入页面字段。
-- GPS、加速度计、通知事件和模拟传输必须有明确的停止入口。
 
-### 路由
+### 交互
 
-- 新页面先写入 manifest，再添加入口。
-- 页面 URI 使用绝对形式，例如 `/pages/history`。
-- 跳转通过 `pageMotion.push/replace/back`。
-- `router.push` 和 `router.replace` 始终传入 `params`，即使为空。
-- 页面隐藏时调用 `pageMotion.clear(this)`。
+- 一个导航手势域只有一个页面 owner。
+- Clock 可在同一 owner 内同时使用 native swipe 与 raw-touch fallback，但不能让嵌套表盘组件再拥有竞争性的页面导航。
+- Settings 等分页页的 swipe 与箭头必须更新同一 page state。
+- 涉及 raw touch 时，要明确是否需要 `preventDefault` / `stopPropagation`，防止手势退化成滚动。
 
-### 存储
+### 数据与持久化
 
-- 页面和业务模块不直接绕过 `storage_adapter.js`。
-- 对数组或对象的读改写使用 `updateJSON`。
-- 写入完成后的跨页面读取需要等待回调，必要时强制刷新缓存。
-- 存储失败的内存降级只在当前进程有效。
-- 新增字段应与旧数据合并，而不是假定完整 schema。
+- 页面不直接复制 Domain 计算。
+- 持久化 schema 应保留旧数据 fallback，并明确升级/缺字段行为。
+- 展示格式、标签和 shape-specific 视觉值优先由 Design View 输出。
+- 模拟数据必须保持可识别，不得伪装成系统实时数据。
 
 ### 系统 API
 
-- 新增 `@system.*` 导入时同步更新 manifest。
-- 声明 feature 不代表目标镜像实现了它。
-- 调用失败必须有可理解的 UI 或数据降级。
-- 不通过删除真实设备所需 feature 来隐藏模拟器平台日志。
-- 新的模拟器差异写入 `COMPATIBILITY.md`。
-
-### UI
-
-- manifest统一使用192设计宽度；Mi Band 10的212×520物理屏换算为192×471逻辑视口，Band 9保持192×490，Watch S4将192×192圆屏布局等比映射到466×466物理屏幕。
-- 页面根容器使用相对尺寸，圆屏视觉覆盖使用 `(shape: circle)` 媒体规则，结构差异通过 `screen_profile.js` 的结果切换。
-- 胶囊屏内容避开上下圆角，圆屏内容避开四角；新增页面必须分别检查两种安全区、分页边界和必要页面的滚动末端。
-- 胶囊beta根高度必须用“物理高度×192÷物理宽度”换算，禁止把Band 10的520物理像素直接写成逻辑高度。
-- 只使用 Vela 官方组件文档支持的属性、事件和样式。
-- 条件覆盖层继续采用已验证的页面内联结构。
-- 表盘页面禁止用原生 `swiper` 包裹胶囊表盘；上滑和左右滑使用根节点与表盘组件的双层手势监听，长按必须使用系统 `longpress`，禁止定时器长按误判上滑。
-- 不要把 manifest 入口直接改回 `pages/clock`。`pages/clock_guard` 是 Beta 胶囊宿主绕过 `onBackPress` 时的栈底保护；修改右滑逻辑必须同时回归中心右滑、最左边缘右滑、连续右滑和左滑，确认每次只切一款且应用保持前台。
-- 主表盘保持100%沉浸舞台，不恢复独立表盘标题、分页点、底部手势文字或固定360px高度；beta胶囊仅主表盘可将背景延伸到原安全顶距，其他页面继续使用共享安全视口。
-- 胶囊应用列表和设置禁止恢复纵向自由滚动；分页必须复用 `fixed_pager.js` 并保留显式前后按钮。
-- 圆屏应用列表保持固定错列蜂巢坐标和八向连续拖动；周围项只改变焦点，中心项才打开应用。
-- 圆屏拖动只更新同一张画布的轻量位置、尺寸和透明度，禁止恢复整页切换模拟或16ms惯性定时器；应用名背板保持低透明玻璃层，不使用厚重卡通胶囊。
-- 圆屏今日日历默认显示摘要，左滑进入月历；月历固定42格、相邻月份灰色补位，上下切月、右滑回摘要。健康订阅必须在隐藏和销毁时成对释放。
-- 文本和图标不能依赖模拟器可能缺失的 emoji 字体。
-- 新增应用图标先提交 `assets/icons/*.svg`，再运行 `npm run icons:render` 生成普通 JPG 和圆屏柔化 JPG。
+- 新增原生能力优先创建/扩展 `src/capabilities` gateway。
+- 必要的 manifest feature/permission 与能力修改同步提交。
+- “接口存在”不等于“设备真实提供有效数据”。
+- 调用失败必须有可理解的降级。
+- 新发现的镜像/设备差异记录到 [COMPATIBILITY.md](COMPATIBILITY.md)。
 
 ## 常见修改流程
 
-### 新增页面
+### 新增功能
 
-1. 创建 `src/pages/<name>/<component>.ux`。
-2. 在 manifest 中注册路由。
-3. 为 `private` 字段提供可渲染默认值。
-4. 接入 `pageMotion.enter` 和 `pageMotion.clear`。
-5. 在入口页面通过 `pageMotion.push` 跳转。
-6. 补充 README 导航和技术文档。
-7. 回归首次进入、返回、重复进入和销毁。
+1. 明确产品语义和数据所有权。
+2. 如涉及原生 API，先定义 Capability gateway。
+3. 在 Domain 中放业务状态/持久化。
+4. 在 `src/v2/features` 中组织页面需要的 application model/action。
+5. 选择 L1 / L2 / L3，并在 Design Spec/View 中解决 presentation。
+6. Page 只负责 lifecycle、事件和绑定。
+7. 补相应 unit/contract test。
+8. 运行 `npm run check`。
+9. 对 Pill / Circle / Rect 做必要 smoke test。
+10. 更新规范/兼容性/README 文档。
 
-### 新增设置
+### 新增或重做页面
 
-1. 在 `device_settings.js` 默认对象中增加字段。
-2. 在 `cloneSettings` 中完成类型归一化。
-3. 确保旧 JSON 缺少该字段时使用默认值。
-4. 页面从 `load` 回调更新 UI，通过 `update` 保存。
-5. 如果设置控制系统 API，同时保留不可用时的降级。
+在写 `.ux` 前先确定：
 
-### 新增持久化数据
+- 是否需要滚动；
+- full-bleed layer 与 safe content 的边界；
+- Circle/Pill/Rect 是否应共享 composition；
+- 是否有分页/返回/长按等手势冲突；
+- 绝对定位 wrapper 是否拥有明确尺寸；
+- 首次 mount 是否依赖不稳定测量。
 
-1. 使用带版本后缀的稳定键名。
-2. 定义空数据和解析失败的 fallback。
-3. 对集合设置明确的数量上限。
-4. 使用回调确认写入结果，不假定同步完成。
-5. 记录迁移策略和清理策略。
+对 L2/L3 页面，先写 shape strategy，再写 CSS。
 
 ### 修改表盘
 
-1. 表盘组件只接收显示属性。
-2. 时间、健康、电量和功耗刷新仍由 `clock.ux` 统一驱动。
-3. 表盘 ID、名称、颜色和顺序只在 `face_registry.js` 中定义；不要在页面脚本中新增第二份元数据映射。
-4. 同步增加胶囊屏与圆屏组件，并在 `clock.ux` 和表盘选择页注册对应渲染节点。
-5. 选择写入完成后再返回主表盘。
-6. 回归两种屏幕的滑动切换、长按进入、持久化和冷启动恢复。
-7. 圆屏专属表盘必须设置 `circleOnly`，并回归胶囊与矩形设备不会轮换到空白索引；机械指针角度修改同步运行 `npm run analog:logic`。
-8. 胶囊专属表盘必须设置 `pillOnly`；新增网络图片时把原图保存到 `assets/watchfaces`，运行 `npm run backgrounds:render` 生成设备资源，在 `NOTICE` 记录来源和许可，并回归固定表盘分页及系统手势栏衔接。
+- Clock 保持手势总 owner。
+- 表盘组件以显示与局部点击为主，不建立第二套路由手势状态机。
+- 精确表盘优先使用稳定、可预测的绝对几何。
+- full-face 背景覆盖 Scene，不通过父级裁剪制造安全区。
+- 修改后至少回归：冷启动、首次显示、左右切换、切回、长按表盘库、持久化恢复。
 
-### 修改通知
+### 修改趋势/健康
 
-1. 保持 `call`、`sms`、`app` 三种基础类型兼容。
-2. 新字段在 `watch_data.js` 的默认模型中提供 fallback。
-3. 外部输入先归一化，再交给 `notificationManager.show`。
-4. 确认振动失败不会阻止覆盖层显示。
-5. 确认自动关闭、忽略、挂断和页面销毁都会清理定时器。
+- 保持 Domain 数据语义共享。
+- shape-specific 表达放在 Design Spec/View。
+- Circle 检查上下圆弧和中部弦宽。
+- Pill 检查纵向节奏和数字完整性。
+- Rect 检查 dashboard 横向信息密度。
+- 删除信息层时同步删除 dead presentation state，不只用 CSS 隐藏。
 
-### 修改运动或同步
-
-运动状态、GPS 过滤、记录 schema 和同步协议集中记录在 [B_F_IMPLEMENTATION.md](B_F_IMPLEMENTATION.md)。协议不兼容修改必须提升版本，而不是静默改变现有字段语义。
-
-## 模拟器验证
-
-### 最小回归
-
-对两个 AVD 安装同一次构建产生的 RPK，再分别执行：
-
-Mi Band 10 冷启动后，先确认 AIoT-IDE 已打开本项目且项目 Broker 正在运行，再恢复调试配置并启动应用：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-emulator.ps1 -Avd mi-band10
-```
-
-**Mi Band 10**
-
-1. 启动表盘，等待 ACTIVE → DIM → SLEEP，再点击唤醒。
-2. 左右切换表盘，长按打开表盘库并验证选择持久化。
-3. 切换到星野远山表盘，检查背景裁切、日期玻璃栏、大时间、步数/心率玻璃层和电量条；依次点击三类入口并确认路由。
-4. 长按进入两页表盘库，检查左右翻页、第四款背景预览、选择持久化和右滑返回。
-5. 上滑打开固定分页应用列表，检查显式翻页、横向翻页、今日日历和设置入口。
-6. 触发 `call`、`sms`、`app` 三类本地通知，检查显示、关闭和定时器清理。
-
-**Watch S4**
-
-1. 左右切换三套圆屏表盘，长按打开表盘库并验证选择持久化。
-2. 在运动仪表表盘确认六根心率柱高度有明显差异，并在心率刷新后发生可见变化。
-3. 切换到曜金机械表盘，确认60格刻度、时分秒三针、日期窗和心率副盘完整显示，秒针逐秒转动，长按选择和冷启动恢复正常。
-4. 打开固定错列蜂巢，检查顶部无遮挡、八向连续拖动、松手吸附、中心放大、透明玻璃名称板、周围图标柔化、周围点按聚焦和中心点按路由。
-5. 进入今日日历，确认默认摘要心率持续更新；左滑进入月历，上下跨月、相邻月灰色补位且每行七天完整，再右滑返回摘要。
-6. 进入健康、运动和设置页面，检查圆屏安全区、固定分页和返回行为。
-7. 在动作诊断页确认状态从“等待样本”变为“正在出数”，完成一次 3 秒动作测量后离页，确认订阅和计时器释放。
-8. 确认应用内通知入口不显示，且日志中没有通知定时器或覆盖层残留。
-
-最后在两个 AVD 上各执行一次模拟同步，返回表盘并确认应用仍处于前台运行状态。
-
-### 日志检查
-
-优先定位应用级问题：
-
-- JavaScript 类型、引用和语法错误。
-- 未支持的模板属性或 CSS 样式。
-- 缺少路由参数和页面未注册。
-- 订阅失败后重复注册。
-- 页面销毁后的元素更新。
-- 缺失 JSC 文件或应用进程断言。
-
-平台镜像的已知日志见 [COMPATIBILITY.md](COMPATIBILITY.md)。不要仅按 `ERROR` 文本总数判断应用质量。
-
-## 排障
-
-### 页面无法跳转
-
-- manifest 是否注册了完全一致的路径。
-- URI 是否以 `/` 开头。
-- 是否经过 `pageMotion` 并传递空 `params`。
-- 转场定时器是否在路由调用前被提前清理。
-
-### 返回后刷新变快
-
-- `onShow` 是否重复创建 interval。
-- `onHide` 和 `onDestroy` 是否调用统一 cleanup。
-- `notificationManager.init/destroy` 是否成对。
-- GPS 和传感器是否取消订阅。
-
-### 数据没有立即更新
-
-- 写入是否提供并等待回调。
-- 是否存在内存缓存中的旧值。
-- 集合是否通过 `updateJSON` 串行更新。
-- 页面重新显示时是否重新加载。
-
-### GPS 一直使用步幅估算
-
-- manifest 是否包含定位权限。
-- `system.geolocation` 是否在当前镜像注册。
-- Extended Controls 是否提供有效位置。
-- 相邻点是否落在 2–200 米过滤范围。
-- 页面暂停或隐藏后是否错误地保持旧订阅。
-
-### 亮度或电量没有控制设备
-
-先查看兼容性矩阵。当前已验证的两个镜像均未暴露对应 Quick App feature，应用只能使用保存值和视觉降级；这不是页面滑块或表盘计算错误。
-
-### 通知演示正常但 Extended Controls 无效
-
-本地演示、`system.event` 和 Emulator Phone/SMS 是不同链路。当前 RIL 不可用，Extended Controls 不会自动转换成 `band.demo.notification`。
-
-## 发布流程
-
-1. 确认 manifest 的版本、包名、feature、权限和路由。
-2. 使用干净依赖执行质量检查和构建。
+## 合并前检查
 
 ```bash
 npm ci
 npm run check
-npm run build
 ```
 
-3. 确认 RPK 位于 `dist/com.application.watch.demo.debug.1.0.0.rpk`，并包含 `.jsc` 页面文件。
-4. 不重新构建，在冷启动的 `mi-band10` 与 `Vela_Watchs4` 中安装同一个 RPK，并分别执行最小回归。
-5. 检查 `git diff --check` 和 `git status --short`。
-6. 确认没有提交 `dist/`、`build/`、`outputs/`、签名、日志或 IDE 私有状态。
-7. 更新中英文 README、兼容性说明和相关专题文档。
+然后根据改动范围做至少一次 smoke test。对于 Scene、手势、绝对定位、Watchface、Launcher、Health、History、Settings 等高风险区域，建议覆盖：
 
-发布版使用：
+1. 冷启动；
+2. 首次进入；
+3. 返回；
+4. 连续进入/退出 5–10 次；
+5. 页面切换后状态恢复；
+6. Pill / Circle / Rect 代表设备。
 
-```bash
-npm run release
-```
+静态 contract test 是防回归网，不等价于真实 Vela 渲染验收。
 
-签名和设备分发应遵循目标平台要求，仓库不保存私钥。
+## 分支与稳定点
 
-## 评审清单
+当前稳定点记录在 [STABLE_BASELINE_V2.md](STABLE_BASELINE_V2.md)。推荐流程：
 
-- [ ] 改动解决根因且没有复制已有适配层
-- [ ] 新路由、feature 和权限已登记
-- [ ] 定时器和订阅具有成对清理
-- [ ] 存储更新不存在明显竞态
-- [ ] 模拟能力没有被描述为真实硬件能力
-- [ ] 中英文用户文档保持一致
-- [ ] 兼容性结论有可复现环境
-- [ ] `npm run check` 与 `npm run build` 通过
+1. 稳定阶段完成后更新文档；
+2. 将稳定实现通过 PR 合入默认分支；
+3. 下一阶段从默认分支新建功能分支；
+4. 不在稳定 PR 中继续加入未经验收的产品功能；
+5. 发生大范围回归时优先回到最近稳定 checkpoint 做最小修复，而不是继续叠加重构。
 
-## Git 边界
+## 文档维护
 
-提交应只包含可复现的源码、配置和正式文档。以下内容保持本地：
+修改以下内容时必须同步维护文档：
 
-- `node_modules/`
-- `build/` 和 `dist/`
-- `outputs/` 中的日志、截图和下载页面
-- `sign/`
-- IDE workspace、shelf 和个人计划
+- Scene / viewport / safe geometry；
+- Design Freedom 规则；
+- 新 form factor 或设备差异；
+- 路由/关键手势；
+- 系统能力或 fallback；
+- 稳定版本/验收范围；
+- 构建与检查命令。
 
-当前稳定分支上的用户改动不要通过全量 restore、reset 或清理命令覆盖。提交前应明确选择暂存文件并复核 `git diff --cached`。
+`npm run docs:check` 会验证 Markdown 的本地链接，但不会判断文档语义是否已经过时，因此维护者仍需主动做内容审查。

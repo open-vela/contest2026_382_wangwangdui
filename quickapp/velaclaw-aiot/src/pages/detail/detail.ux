@@ -1,53 +1,43 @@
 <template>
-  <div class="demo-page {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;">
-    <text class="title">{{ text }}</text>
-  </div>
+  <stack class="detail-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="detail-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="content" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+        <text class="title" style="font-size: {{ titleSize }}px;">欢迎打开详情页</text>
+        <text class="copy">这是一个由 V2.3 声明式配置适配的简单页面。</text>
+        <text class="back" @click="goBack" style="height: {{ buttonHeight }}px; border-radius: {{ radius }}px;">返回</text>
+      </div>
+    </div>
+  </stack>
 </template>
 
 <script>
-import pageMotion from "../../common/page_motion"
-import pageViewport from '../../common/page_viewport'
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import detailDesign from '../../v2/design/apps/detail'
 
 export default {
   private: {
-    text: "欢迎打开详情页",
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    contentLeft: 28, contentTop: 42, contentWidth: 136, contentHeight: 112, titleSize: 15, buttonHeight: 32, radius: 16,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
-    pageViewport.bind(this)
+    var self = this
+    pageRuntime.bind(this, { contentWidth: function (profile) { return detailDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = detailDesign.resolve(profile, scene, safe)
+      self.contentLeft = plan.region.left; self.contentTop = plan.region.top; self.contentWidth = plan.region.width; self.contentHeight = plan.region.height
+      self.titleSize = plan.titleSize; self.buttonHeight = plan.buttonHeight; self.radius = plan.radius
+    })
   },
-
-  onShow() {
-    pageMotion.enter(this)
-  },
-
-  onHide() {
-    pageMotion.clear(this)
-  },
-
-  onDestroy() {
-    pageMotion.clear(this)
-  }
+  onBackPress() { navigation.back(); return true },
+  goBack() { navigation.back() }
 }
 </script>
 
 <style>
-.demo-page {
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.title {
-  font-size: 20px;
-  text-align: center;
-}
+.detail-root, .detail-scene { background-color: #000000; }
+.detail-scene { position: absolute; left: 0px; top: 0px; }
+.content { position: absolute; flex-direction: column; justify-content: center; align-items: center; }
+.title { width: 100%; color: #FFFFFF; font-weight: bold; text-align: center; }
+.copy { width: 90%; color: #8E8E93; font-size: 8px; line-height: 12px; text-align: center; margin-top: 8px; }
+.back { width: 110px; background-color: #2C2C2E; color: #FFFFFF; font-size: 10px; text-align: center; margin-top: 16px; }
 </style>

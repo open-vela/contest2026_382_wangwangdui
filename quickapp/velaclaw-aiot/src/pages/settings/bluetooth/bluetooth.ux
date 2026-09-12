@@ -1,490 +1,66 @@
 <template>
-  <scroll class="bluetooth-page {{ viewportClass }}" scroll-y="true" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @touchstart="onTouchStart" @touchend="onTouchEnd">
-    <div class="top-row">
-      <text class="page-title">蓝牙同步</text>
-      <text class="transport-tag">{{ transportText }}</text>
+  <stack class="detail-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="detail-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">蓝牙同步</text><text class="transport">{{ transportText }}</text></div>
+      <scroll class="content" scroll-y="true" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;">
+        <div class="status-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; border-color: {{ statusColor }};"><text class="label">连接状态</text><text class="status-value" style="color: {{ statusColor }};">{{ statusText }}</text><text class="sub">最近同步：{{ lastSyncText }}</text></div>
+        <div class="action-row" style="width: {{ streamWidth }}px; margin-top: {{ cardGap }}px;"><text class="action" @click="toggleConnect">{{ connectButtonText }}</text><text class="action sync-action" @click="startSync">同步</text></div>
+        <div class="sync-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="sync-head"><text class="card-title">数据传输</text><text class="sync-percent">{{ syncPercent }}%</text></div><div class="sync-track"><div class="sync-fill" style="width: {{ syncWidth }};"></div></div><text class="sync-message">{{ syncMessage }}</text><text class="packet-text">{{ packetText }}</text></div>
+        <div class="data-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><text class="card-title">本次同步内容</text><text class="data-line">今日步数：{{ todayStepsText }}</text><text class="data-line">7 天健康记录：{{ historyCount }} 条</text><text class="data-line">运动记录：{{ workoutCount }} 条</text></div>
+        <text class="tip">当前使用可替换的模拟器 Transport；接真实 GATT 时只替换传输层，协议与页面不变。</text>
+      </scroll>
     </div>
-
-    <div class="status-card" style="border-color: {{ statusColor }}">
-      <text class="status-label">连接状态</text>
-      <text class="status-value" style="color: {{ statusColor }}">{{ statusText }}</text>
-      <text class="status-sub">最近同步：{{ lastSyncText }}</text>
-    </div>
-
-    <div class="action-row">
-      <text class="action-button" @click="toggleConnect">{{ connectButtonText }}</text>
-      <text class="action-button sync-button" @click="startSync">同步</text>
-    </div>
-
-    <div class="sync-card">
-      <div class="sync-header">
-        <text class="sync-title">数据传输</text>
-        <text class="sync-percent">{{ syncPercent }}%</text>
-      </div>
-      <div class="sync-track">
-        <div class="sync-fill" style="width: {{ syncWidth }};"></div>
-      </div>
-      <text class="sync-message">{{ syncMessage }}</text>
-      <text class="packet-text">{{ packetText }}</text>
-    </div>
-
-    <div class="data-card">
-      <text class="data-title">本次同步内容</text>
-      <text class="data-line">今日步数：{{ todayStepsText }}</text>
-      <text class="data-line">7 天健康记录：{{ historyCount }} 条</text>
-      <text class="data-line">运动记录：{{ workoutCount }} 条</text>
-    </div>
-
-    <text class="page-tip">模拟器使用分包与 ACK 模拟；真机需配置 GATT 服务 UUID</text>
-  </scroll>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import watchData from '../../../common/watch_data'
-import workoutManager from '../../../common/workout_manager'
-import syncProtocol from '../../../common/sync_protocol'
-import bleSync from '../../../common/ble_sync'
-import deviceSettings from '../../../common/device_settings'
-import pageMotion from '../../../common/page_motion'
-import swipeBack from '../../../common/swipe_back'
-import pageViewport from '../../../common/page_viewport'
+import pageRuntime from '../../../v2/app/page_runtime'
+import navigation from '../../../v2/app/navigation'
+import { createSyncController } from '../../../v2/features/sync/controller'
+import detailDesign from '../../../v2/design/specs/settings_detail'
+import syncView from '../../../v2/design/views/sync'
 
 export default {
   private: {
-    connected: false,
-    syncing: false,
-    statusText: '未连接',
-    statusColor: '#8E8E93',
-    connectButtonText: '连接',
-    lastSyncText: '未同步',
-    transportText: '检测中',
-    syncPercent: 0,
-    syncWidth: '0%',
-    syncMessage: '连接上位机后同步手环数据',
-    packetText: '等待打包',
-    todayStepsText: '--',
-    historyCount: '0',
-    workoutCount: '0',
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    statusText: '未连接', statusColor: '#8E8E93', connectButtonText: '连接', lastSyncText: '未同步', transportText: '检测中', syncPercent: 0, syncWidth: '0%', syncMessage: '连接上位机后同步手环数据', packetText: '等待打包', todayStepsText: '--', historyCount: '0', workoutCount: '0',
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 20, streamLeft: 22, streamTop: 49, streamWidth: 148, streamHeight: 120, titleSize: 12, cardRadius: 16, cardGap: 6,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
-    pageViewport.bind(this)
-    this.loadPageData()
-  },
-
-  onShow() {
-    pageMotion.enter(this)
-    this.loadPageData()
-  },
-
-  onHide() {
-    pageMotion.clear(this)
-    // Stop pending connection or packet timers while this page is not visible.
-    bleSync.disconnect()
-    this.connected = false
-    this.syncing = false
-  },
-
-  loadPageData() {
     var self = this
-    var capability = bleSync.getCapability()
-    this.transportText = capability.transportName
-    deviceSettings.load(function (settings) {
-      // BLE connection state is temporary and must not survive a page restart.
-      self.connected = false
-      self.lastSyncText = settings.lastSyncText
-      self.refreshConnectionView()
-      deviceSettings.update('bluetoothConnected', false)
-    })
-    this.refreshDataPreview()
-  },
-
-  refreshConnectionView() {
-    this.statusText = this.connected ? '已连接' : '未连接'
-    this.statusColor = this.connected ? '#30D158' : '#8E8E93'
-    this.connectButtonText = this.connected ? '断开' : '连接'
-  },
-
-  refreshDataPreview() {
-    var self = this
-    var snapshot = watchData.getSnapshot()
-    this.todayStepsText = snapshot.stepsText + ' 步'
-    watchData.getHealthHistory(function (history) {
-      self.historyCount = history.length.toString()
-    })
-    workoutManager.getRecords(function (records) {
-      self.workoutCount = records.length.toString()
+    this.controller = createSyncController(function (model) { self.applyModel(model) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return detailDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = detailDesign.resolve(profile, scene, safe)
+      self.headerLeft = plan.header.left; self.headerTop = plan.header.top; self.headerWidth = plan.header.width; self.headerHeight = plan.header.height
+      self.streamLeft = plan.stream.left; self.streamTop = plan.stream.top; self.streamWidth = plan.stream.width; self.streamHeight = plan.stream.height
+      self.titleSize = plan.titleSize; self.cardRadius = plan.cardRadius; self.cardGap = plan.cardGap
     })
   },
-
-  toggleConnect() {
-    if (this.syncing) {
-      this.syncMessage = '同步中不能断开'
-      return
-    }
-    if (this.connected) {
-      bleSync.disconnect()
-      this.connected = false
-      this.syncMessage = '已断开上位机'
-      this.syncPercent = 0
-      this.syncWidth = '0%'
-      this.packetText = '等待连接'
-      this.refreshConnectionView()
-      deviceSettings.update('bluetoothConnected', false)
-      return
-    }
-
-    var self = this
-    this.statusText = '连接中'
-    this.statusColor = '#0A84FF'
-    this.connectButtonText = '连接中'
-    this.syncMessage = '正在建立同步链路'
-    bleSync.connect({
-      success: function (result) {
-        self.connected = true
-        self.syncMessage = result.mode === 'mock' ? '模拟器链路已连接' : 'BLE 设备已连接'
-        self.packetText = '可开始同步'
-        self.refreshConnectionView()
-      },
-      fail: function () {
-        self.connected = false
-        self.syncMessage = '连接失败，请重试'
-        self.refreshConnectionView()
-      }
-    })
+  onShow() { if (this.controller) this.controller.load() },
+  onHide() { if (this.controller) this.controller.stop() },
+  onDestroy() { if (this.controller) this.controller.stop() },
+  onBackPress() { navigation.back(); return true },
+  applyModel(model) {
+    var view = syncView.project(model)
+    this.statusText = view.statusText; this.statusColor = view.statusColor; this.connectButtonText = view.connectButtonText; this.lastSyncText = view.lastSyncText; this.transportText = view.transportText
+    this.syncPercent = view.syncPercent; this.syncWidth = view.syncWidth; this.syncMessage = view.syncMessage; this.packetText = view.packetText
+    this.todayStepsText = view.todayStepsText; this.historyCount = view.historyCount; this.workoutCount = view.workoutCount
   },
-
-  startSync() {
-    if (!this.connected) {
-      this.syncMessage = '请先连接上位机'
-      return
-    }
-    if (this.syncing) {
-      return
-    }
-
-    var self = this
-    this.syncing = true
-    this.syncPercent = 0
-    this.syncWidth = '0%'
-    this.syncMessage = '正在收集健康与运动数据'
-    this.packetText = '正在打包'
-
-    // The protocol layer is independent from BLE so simulator and hardware share one payload.
-    syncProtocol.createPayload(function (payload) {
-      var transfer = syncProtocol.encode(payload, 96)
-      self.packetText = transfer.packets.length + ' 包 · ' + transfer.bytesText + ' 字符'
-      self.syncMessage = '等待分包 ACK'
-      bleSync.sendPackets(transfer.packets, {
-        progress: function (progress) {
-          self.syncPercent = progress.percent
-          self.syncWidth = progress.percent + '%'
-          self.syncMessage = '已确认 ' + progress.sent + '/' + progress.total + ' 包'
-        },
-        success: function () {
-          self.finishSync()
-        },
-        fail: function () {
-          self.syncing = false
-          self.syncMessage = '同步失败，可重新尝试'
-        }
-      })
-    })
-  },
-
-  finishSync() {
-    var self = this
-    var timeText = deviceSettings.formatSyncTime()
-    this.syncing = false
-    this.syncPercent = 100
-    this.syncWidth = '100%'
-    this.lastSyncText = timeText
-    this.syncMessage = '同步完成，对端已确认'
-    workoutManager.markAllSynced(function () {
-      self.refreshDataPreview()
-    })
-    deviceSettings.update('lastSyncText', timeText)
-  },
-
-  onDestroy() {
-    pageMotion.clear(this)
-    bleSync.disconnect()
-  },
-
-  onTouchStart(e) {
-    swipeBack.start(this, e)
-  },
-
-  onTouchEnd(e) {
-    swipeBack.end(this, e, router)
-  }
+  toggleConnect() { if (this.controller) this.controller.toggleConnection() },
+  startSync() { if (this.controller) this.controller.sync() }
 }
 </script>
 
 <style>
-.bluetooth-page {
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 14px;
-  background-color: #000000;
-}
-
-.top-row {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 136px;
-  height: 32px;
-  margin-top: 12px;
-  margin-bottom: 10px;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #0A84FF;
-}
-
-.transport-tag {
-  width: 54px;
-  font-size: 7px;
-  color: #8E8E93;
-  text-align: right;
-}
-
-.status-card {
-  flex-direction: column;
-  width: 164px;
-  height: 82px;
-  padding: 10px;
-  background-color: #14181F;
-  border-width: 1px;
-  border-radius: 8px;
-}
-
-.status-label {
-  font-size: 10px;
-  color: #8E8E93;
-}
-
-.status-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 3px;
-}
-
-.status-sub {
-  font-size: 10px;
-  color: #D1D1D6;
-  margin-top: 4px;
-}
-
-.action-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 164px;
-  height: 36px;
-  margin-top: 10px;
-}
-
-.action-button {
-  width: 78px;
-  height: 32px;
-  border-radius: 8px;
-  background-color: #1C1C1E;
-  color: #FFFFFF;
-  font-size: 13px;
-  font-weight: bold;
-  text-align: center;
-}
-
-.sync-button {
-  background-color: #0A84FF;
-}
-
-.sync-card {
-  flex-direction: column;
-  width: 164px;
-  height: 112px;
-  padding: 10px;
-  margin-top: 10px;
-  background-color: #111317;
-  border-radius: 8px;
-}
-
-.sync-header {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 144px;
-}
-
-.sync-title {
-  font-size: 13px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.sync-percent {
-  font-size: 13px;
-  color: #0A84FF;
-  font-weight: bold;
-}
-
-.sync-track {
-  width: 144px;
-  height: 7px;
-  margin-top: 10px;
-  background-color: #2C2C2E;
-  border-radius: 4px;
-}
-
-.sync-fill {
-  height: 7px;
-  background-color: #0A84FF;
-  border-radius: 4px;
-}
-
-.sync-message {
-  font-size: 10px;
-  color: #D1D1D6;
-  margin-top: 10px;
-}
-
-.packet-text {
-  font-size: 9px;
-  color: #8E8E93;
-  margin-top: 5px;
-}
-
-.data-card {
-  flex-direction: column;
-  width: 164px;
-  height: 108px;
-  padding: 10px;
-  margin-top: 10px;
-  background-color: #14181F;
-  border-radius: 8px;
-}
-
-.data-title {
-  font-size: 13px;
-  color: #FFFFFF;
-  font-weight: bold;
-  margin-bottom: 6px;
-}
-
-.data-line {
-  font-size: 11px;
-  color: #D1D1D6;
-  margin-top: 5px;
-}
-
-.page-tip {
-  width: 164px;
-  font-size: 9px;
-  color: #666666;
-  text-align: center;
-  margin-top: 10px;
-}
-
-@media (shape: circle) {
-  .bluetooth-page {
-    padding-top: 16px;
-    padding-left: 22px;
-    padding-right: 22px;
-    padding-bottom: 28px;
-  }
-
-  .top-row {
-    width: 118px;
-    height: 24px;
-    margin-top: 8px;
-    margin-bottom: 7px;
-  }
-
-  .page-title {
-    font-size: 13px;
-  }
-
-  .transport-tag {
-    font-size: 6px;
-  }
-
-  .status-card,
-  .action-row,
-  .sync-card,
-  .data-card,
-  .page-tip {
-    width: 148px;
-  }
-
-  .status-card {
-    height: 65px;
-    border-radius: 17px;
-  }
-
-  .status-label,
-  .status-sub {
-    font-size: 7px;
-  }
-
-  .status-value {
-    font-size: 17px;
-  }
-
-  .action-row {
-    height: 30px;
-    margin-top: 7px;
-  }
-
-  .action-button {
-    width: 71px;
-    height: 27px;
-    border-radius: 14px;
-    font-size: 9px;
-  }
-
-  .sync-card,
-  .data-card {
-    border-radius: 17px;
-    margin-top: 7px;
-  }
-
-  .sync-card {
-    height: 88px;
-  }
-
-  .sync-header,
-  .sync-track {
-    width: 128px;
-  }
-
-  .sync-title,
-  .sync-percent,
-  .data-title {
-    font-size: 9px;
-  }
-
-  .sync-message,
-  .packet-text,
-  .data-line,
-  .page-tip {
-    font-size: 7px;
-  }
-
-  .data-card {
-    height: 88px;
-  }
-}
+.detail-root, .detail-scene { background-color: #000000; } .detail-scene { position: absolute; left: 0px; top: 0px; }
+.header, .content { position: absolute; } .header, .action-row, .sync-head { flex-direction: row; justify-content: space-between; align-items: center; }
+.title { color: #0A84FF; font-weight: bold; } .transport { width: 70px; color: #8E8E93; font-size: 6px; text-align: right; }
+.content { flex-direction: column; } .status-card, .sync-card, .data-card { background-color: #111317; padding: 10px; flex-direction: column; }
+.status-card { min-height: 72px; border-width: 1px; } .label, .sub { color: #8E8E93; font-size: 7px; } .status-value { font-size: 20px; font-weight: bold; margin-top: 3px; }
+.action-row { height: 36px; } .action { width: 48%; height: 34px; border-radius: 13px; background-color: #2C2C2E; color: #FFFFFF; font-size: 11px; font-weight: bold; text-align: center; } .sync-action { background-color: #0A84FF; }
+.sync-card { min-height: 100px; } .card-title { color: #FFFFFF; font-size: 10px; font-weight: bold; } .sync-percent { color: #0A84FF; font-size: 10px; font-weight: bold; }
+.sync-track { width: 100%; height: 6px; border-radius: 3px; background-color: #2C2C2E; margin-top: 9px; } .sync-fill { height: 6px; border-radius: 3px; background-color: #0A84FF; }
+.sync-message { color: #D1D1D6; font-size: 8px; margin-top: 9px; } .packet-text { color: #8E8E93; font-size: 7px; margin-top: 4px; }
+.data-card { min-height: 94px; } .data-line { color: #D1D1D6; font-size: 8px; margin-top: 7px; }
+.tip { width: 100%; color: #636366; font-size: 6px; line-height: 9px; text-align: center; margin-top: 8px; margin-bottom: 10px; }
 </style>

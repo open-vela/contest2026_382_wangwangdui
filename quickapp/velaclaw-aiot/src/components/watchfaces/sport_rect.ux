@@ -1,0 +1,39 @@
+<template>
+  <div class="rect-sport-face">
+    <div class="sport-top"><text class="sport-date" style="color: {{ faceAccent }};">{{ displayMonth }} {{ displayDate }}</text><text class="sport-battery" style="color: {{ batteryColor }};">{{ batteryPercent }}%</text></div>
+    <div class="sport-hero"><text class="sport-time">{{ displayHours }}:{{ displayMinutes }}</text><div class="sport-hero-rule" style="background-color: {{ faceAccent }};"></div><text class="sport-hero-copy">MOVE · TRAIN · RECOVER</text></div>
+    <div class="sport-data-row">
+      <div class="sport-card" @click="openSteps"><text class="sport-label">今日步数</text><text class="sport-value sport-steps">{{ stepsText }}</text><text class="sport-sub">目标 {{ stepsGoalText }}</text></div>
+      <div class="sport-card sport-card-right" @click="openHealth"><text class="sport-label">当前心率</text><text class="sport-value sport-heart">{{ currentHeartRate }}</text><text class="sport-sub">bpm</text></div>
+    </div>
+    <div class="sport-footer"><div class="sport-footer-copy"><text class="sport-footer-label">POWER</text><text class="sport-footer-value" style="color: {{ batteryColor }};">{{ batteryPercent }}%</text></div><div class="sport-battery-track"><div class="sport-battery-fill" style="width: {{ batteryWidth }}; background-color: {{ batteryColor }};"></div></div></div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['displayMonth','displayDate','displayMinutes','displayHours','faceAccent','batteryPercent','batteryWidth','batteryColor','currentHeartRate','stepsText','stepsGoalText'],
+  openHealth() { this.$emit('openHealth') },
+  openSteps() { this.$emit('openSteps') }
+}
+</script>
+
+<style>
+.rect-sport-face { width: 192px; height: 228px; flex-direction: column; align-items: center; background-color: #050608; }
+.sport-top { width: 164px; height: 28px; margin-top: 6px; flex-direction: row; justify-content: space-between; align-items: center; }
+.sport-date, .sport-battery { font-size: 9px; font-weight: bold; }
+.sport-hero { width: 164px; height: 78px; margin-top: 2px; border-radius: 12px; background-color: #0D1117; flex-direction: column; justify-content: center; align-items: center; }
+.sport-time { width: 156px; height: 48px; font-size: 44px; color: #FFFFFF; font-weight: bold; text-align: center; }
+.sport-hero-rule { width: 54px; height: 3px; border-radius: 2px; margin-top: 2px; }
+.sport-hero-copy { width: 156px; height: 12px; margin-top: 4px; font-size: 6px; color: #6F747C; text-align: center; }
+.sport-data-row { width: 164px; height: 82px; margin-top: 8px; flex-direction: row; justify-content: center; }
+.sport-card { width: 78px; height: 82px; border-radius: 10px; background-color: #12161D; flex-direction: column; justify-content: center; align-items: center; }
+.sport-card-right { margin-left: 8px; }
+.sport-label { width: 68px; height: 12px; font-size: 7px; color: #8E8E93; text-align: center; }
+.sport-value { width: 68px; height: 28px; margin-top: 5px; font-size: 21px; font-weight: bold; text-align: center; lines: 1; }
+.sport-steps { font-size: 16px; color: #FFD60A; } .sport-heart { color: #FF375F; }
+.sport-sub { width: 68px; height: 12px; margin-top: 5px; font-size: 6px; color: #636366; text-align: center; lines: 1; }
+.sport-footer { width: 164px; height: 24px; margin-top: 4px; border-radius: 8px; background-color: #0D1117; flex-direction: column; justify-content: center; align-items: center; }
+.sport-footer-copy { width: 150px; height: 9px; flex-direction: row; justify-content: space-between; align-items: center; } .sport-footer-label { font-size: 5px; color: #8E8E93; } .sport-footer-value { font-size: 6px; font-weight: bold; }
+.sport-battery-track { width: 150px; height: 3px; border-radius: 2px; background-color: #242426; margin-top: 2px; } .sport-battery-fill { height: 3px; border-radius: 2px; }
+</style>

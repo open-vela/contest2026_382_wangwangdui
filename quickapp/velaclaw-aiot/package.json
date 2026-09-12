@@ -1,61 +1,60 @@
 {
   "name": "vela_band",
-  "version": "1.0.0",
+  "version": "2.4.0",
   "private": true,
-  "description": "A Xiaomi Vela Quick App demo for smart bands and watches.",
+  "description": "VelaClaw wearable reference app with V2.4 Layout Studio, Declarative Adapter and Capability Runtime.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://gitlink.org.cn/temlike/vela_band_rep.git"
+    "url": "https://github.com/shy20060308/contest2026_382_wangwangdui.git"
   },
-  "homepage": "https://gitlink.org.cn/temlike/vela_band_rep",
-  "keywords": [
-    "openvela",
-    "vela",
-    "quick-app",
-    "smart-band",
-    "smart-watch"
-  ],
-  "engines": {
-    "node": ">=18"
-  },
+  "homepage": "https://github.com/shy20060308/contest2026_382_wangwangdui",
+  "keywords": ["openvela", "vela", "quick-app", "smart-band", "smart-watch", "declarative-adapter", "layout-studio"],
+  "engines": { "node": ">=18" },
   "scripts": {
     "start": "aiot start --watch",
     "build": "aiot build --enable-jsc",
     "release": "aiot release --enable-jsc",
+    "bundle:audit": "aiot build && npm run bundle:check",
+    "bundle:check": "node scripts/check-page-bundle-size.js",
     "lint": "node scripts/lint.js",
     "docs:check": "node scripts/check-docs.js",
-    "multiscreen:check": "node scripts/check-multiscreen.js",
-    "safearea:check": "node scripts/check-safe-area.js",
-    "honeycomb:logic": "node test/honeycomb_layout.test.js",
-    "safearea:logic": "node test/safe_area.test.js",
-    "health:check": "node scripts/check-health-ui.js",
+    "studio": "node tools/layout-studio/server.js",
+    "studio:check": "node test/layout_studio.test.js",
+    "v2:scene": "node test/v2_scene.test.js",
+    "v2:architecture": "node test/v2_architecture.test.js",
+    "v2:runtime": "node test/v2_runtime_contracts.test.js",
+    "v2:allocation": "node test/v2_runtime_allocation.test.js",
+    "v2:visual": "node test/v2_visual_contracts.test.js",
+    "v2:interaction": "node test/v2_interaction_contracts.test.js",
+    "v2:design-views": "node test/v2_design_views.test.js",
+    "v2:design-system": "node test/v2_design_system.test.js",
+    "v2:declarative": "node test/v2_declarative_adapter.test.js",
+    "history:spacing": "node test/history_card_spacing.test.js",
+    "v2:box-model": "node test/v2_box_model_spacing.test.js",
+    "text-fit:regression": "node test/text_fit_regressions.test.js",
+    "capabilities:check": "node test/capability_runtime.test.js",
+    "power:logic": "node test/power_state_machine.test.js",
+    "power:runtime": "node test/power_runtime.test.js",
     "health:logic": "node test/health_metrics.test.js",
-    "pager:logic": "node test/fixed_pager.test.js",
+    "health:official": "node test/health_official_data.test.js",
+    "workout:experience": "node test/workout_experience.test.js",
+    "activity:persistence": "node test/activity_persistence.test.js",
+    "settings:store": "node test/settings_store.test.js",
     "motion:logic": "node test/motion_metrics.test.js",
+    "haptics:logic": "node test/haptic_patterns.test.js",
+    "haptics:runtime": "node test/haptics_runtime.test.js",
     "calendar:logic": "node test/calendar_utils.test.js",
     "analog:logic": "node test/analog_face.test.js",
-    "face:logic": "node test/face_scope.test.js",
-    "navigation:logic": "node test/navigation_guard.test.js",
-    "viewport:logic": "node test/viewport_math.test.js",
-    "haptic:logic": "node test/haptic_patterns.test.js",
-    "haptic:check": "node scripts/check-haptic-ui.js",
-    "health:visual": "node scripts/check-health-visual.js",
+    "honeycomb:logic": "node test/honeycomb_layout.test.js",
+    "check:legacy": "node test/architecture_guard.test.js && node test/layout_adapter.test.js && node scripts/check-multiscreen.js",
     "icons:render": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/render-icons.ps1 && python scripts/render-soft-icons.py",
     "backgrounds:render": "python scripts/fade-watchface-background.py --input assets/watchfaces/alpine_night_source.jpg --output src/common/watchfaces/alpine_night.jpg",
-    "check": "npm run lint && npm run multiscreen:check && npm run safearea:check && npm run health:check && npm run haptic:check && npm run health:logic && npm run pager:logic && npm run motion:logic && npm run calendar:logic && npm run analog:logic && npm run face:logic && npm run navigation:logic && npm run viewport:logic && npm run safearea:logic && npm run honeycomb:logic && npm run haptic:logic && npm run docs:check"
+    "check": "npm run lint && npm run studio:check && npm run v2:scene && npm run v2:architecture && npm run v2:runtime && npm run v2:allocation && npm run v2:visual && npm run v2:interaction && npm run v2:design-views && npm run v2:design-system && npm run v2:declarative && npm run history:spacing && npm run text-fit:regression && npm run capabilities:check && npm run power:logic && npm run power:runtime && npm run health:logic && npm run health:official && npm run workout:experience && npm run activity:persistence && npm run settings:store && npm run motion:logic && npm run haptics:logic && npm run haptics:runtime && npm run calendar:logic && npm run analog:logic && npm run honeycomb:logic && npm run docs:check"
   },
   "lint-staged": {
-    "*.{ux,js}": [
-      "prettier --write",
-      "node scripts/lint.js",
-      "git add"
-    ],
-    "*.{less,css}": [
-      "prettier --write",
-      "stylelint --fix --custom-syntax postcss-less",
-      "git add"
-    ]
+    "*.{ux,js}": ["prettier --write", "node scripts/lint.js", "git add"],
+    "*.{less,css}": ["prettier --write", "stylelint --fix --custom-syntax postcss-less", "git add"]
   },
   "devDependencies": {
     "@aiot-toolkit/jsc": "^1.0.3",

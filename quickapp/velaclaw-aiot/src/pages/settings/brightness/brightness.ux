@@ -1,424 +1,62 @@
 <template>
-  <scroll class="brightness-page {{ viewportClass }}" scroll-y="true" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; opacity: {{ pageOpacity }}; margin-left: {{ pageOffset }}px;" @touchstart="onTouchStart" @touchend="onTouchEnd">
-    <text class="page-title" static>亮度</text>
-
-    <div class="status-card">
-      <text class="status-label" static>当前亮度</text>
-      <text class="status-value">{{ brightnessText }}</text>
-      <text class="status-sub">{{ brightnessValue }} / 255</text>
+  <stack class="detail-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="detail-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">亮度与省电</text><text class="back" @click="goBack">返回</text></div>
+      <scroll class="content" scroll-y="true" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;">
+        <div class="status-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px;"><text class="label">当前亮度</text><text class="brightness-value" style="font-size: {{ valueSize }}px;">{{ brightnessText }}</text><text class="sub">{{ brightnessDetail }}</text></div>
+        <div class="slider-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="row"><text class="setting-title">手动亮度</text><text class="sub">{{ manualStateText }}</text></div><slider class="brightness-slider" min="0" max="255" step="1" value="{{ brightnessValue }}" @change="onBrightnessChange"></slider><div class="scale"><text class="scale-label">暗</text><text class="scale-label">中</text><text class="scale-label">亮</text></div></div>
+        <div class="setting-card" @click="toggleAuto" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="copy"><text class="setting-title">自动亮度</text><text class="sub">根据场景模拟调节</text></div><text class="switch" style="color: {{ autoColor }};">{{ autoText }}</text></div>
+        <div class="setting-card" @click="toggleRaiseWake" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="copy"><text class="setting-title">抬腕亮屏</text><text class="sub">息屏后动作唤醒</text></div><text class="switch" style="color: {{ raiseColor }};">{{ raiseText }}</text></div>
+        <div class="setting-card" @click="toggleLowPower" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="copy"><text class="setting-title">低功耗模式</text><text class="sub">暗屏、息屏与降刷新率</text></div><text class="switch" style="color: {{ lowPowerColor }};">{{ lowPowerText }}</text></div>
+      </scroll>
     </div>
-
-    <div class="slider-card">
-      <div class="slider-label-row">
-        <text class="slider-label" static>手动亮度</text>
-        <text class="slider-state">{{ manualStateText }}</text>
-      </div>
-      <slider class="brightness-slider"
-        min="0"
-        max="255"
-        step="1"
-        value="{{ brightnessValue }}"
-        @change="onBrightnessChange">
-      </slider>
-      <div class="slider-scale">
-        <text class="scale-text" static>暗</text>
-        <text class="scale-text center" static>中</text>
-        <text class="scale-text right" static>亮</text>
-      </div>
-    </div>
-
-    <div class="setting-card" @click="toggleAutoBrightness">
-      <div class="setting-copy">
-        <text class="setting-title" static>自动亮度</text>
-        <text class="setting-sub" static>根据场景模拟调节</text>
-      </div>
-      <text class="switch-text" style="color: {{ autoColor }}">{{ autoText }}</text>
-    </div>
-
-    <div class="setting-card" @click="toggleRaiseWake">
-      <div class="setting-copy">
-        <text class="setting-title" static>抬腕亮屏</text>
-        <text class="setting-sub" static>息屏后可模拟唤醒</text>
-      </div>
-      <text class="switch-text" style="color: {{ raiseColor }}">{{ raiseText }}</text>
-    </div>
-
-    <div class="setting-card" @click="toggleLowPower">
-      <div class="setting-copy">
-        <text class="setting-title" static>低功耗模式</text>
-        <text class="setting-sub" static>暗屏/息屏/降刷新率</text>
-      </div>
-      <text class="switch-text" style="color: {{ lowPowerColor }}">{{ lowPowerText }}</text>
-    </div>
-  </scroll>
+  </stack>
 </template>
 
 <script>
-import router from '@system.router'
-import brightness from '@system.brightness'
-import deviceSettings from '../../../common/device_settings'
-import pageMotion from '../../../common/page_motion'
-import swipeBack from '../../../common/swipe_back'
-import pageViewport from '../../../common/page_viewport'
+import pageRuntime from '../../../v2/app/page_runtime'
+import navigation from '../../../v2/app/navigation'
+import { createBrightnessController } from '../../../v2/features/settings/brightness_controller'
+import detailDesign from '../../../v2/design/specs/settings_detail'
+import brightnessView from '../../../v2/design/views/settings_brightness'
 
 export default {
   private: {
-    brightnessValue: 140,
-    brightnessText: '55%',
-    manualEnabled: true,
-    manualStateText: '可调节',
-    autoText: '关',
-    autoColor: '#8E8E93',
-    raiseText: '开',
-    raiseColor: '#30D158',
-    lowPowerText: '开',
-    lowPowerColor: '#30D158',
-    autoBrightness: false,
-    raiseWakeEnabled: true,
-    lowPowerEnabled: true,
-    pageOpacity: 1,
-    pageOffset: 0,
-    viewportClass: '',
-    viewportPosition: 'relative',
-    viewportLeft: '0px',
-    viewportWidth: '100%',
-    viewportHeight: '100%',
-    viewportTop: '0px'
+    brightnessValue: 140, brightnessText: '55%', brightnessDetail: '140 / 255', manualStateText: '可调节', autoText: '关', autoColor: '#8E8E93', raiseText: '开', raiseColor: '#30D158', lowPowerText: '开', lowPowerColor: '#30D158',
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 20, streamLeft: 22, streamTop: 49, streamWidth: 148, streamHeight: 120, titleSize: 12, cardRadius: 16, cardGap: 6, valueSize: 18,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
   },
-
   onInit() {
-    pageViewport.bind(this)
-    this.loadSettings()
-  },
-
-  onShow() {
-    pageMotion.enter(this)
-    this.loadSettings()
-  },
-
-  onHide() {
-    pageMotion.clear(this)
-  },
-
-  onDestroy() {
-    pageMotion.clear(this)
-  },
-
-  loadSettings() {
     var self = this
-    deviceSettings.load(function (settings) {
-      self.brightnessValue = deviceSettings.getBrightnessValue(settings.brightnessValue)
-      self.autoBrightness = settings.autoBrightness
-      self.raiseWakeEnabled = settings.raiseWakeEnabled
-      self.lowPowerEnabled = settings.lowPowerEnabled
-      self.refreshView()
+    this.controller = createBrightnessController(function (model) { self.applyView(brightnessView.project(model)) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return detailDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = detailDesign.resolve(profile, scene, safe)
+      self.headerLeft = plan.header.left; self.headerTop = plan.header.top; self.headerWidth = plan.header.width; self.headerHeight = plan.header.height
+      self.streamLeft = plan.stream.left; self.streamTop = plan.stream.top; self.streamWidth = plan.stream.width; self.streamHeight = plan.stream.height
+      self.titleSize = plan.titleSize; self.cardRadius = plan.cardRadius; self.cardGap = plan.cardGap; self.valueSize = plan.valueSize
     })
   },
-
-  refreshView() {
-    this.brightnessText = Math.round((this.brightnessValue / 255) * 100) + '%'
-    this.manualEnabled = !this.autoBrightness
-    this.manualStateText = this.autoBrightness ? '自动管理' : '可调节'
-    this.autoText = this.autoBrightness ? '开' : '关'
-    this.autoColor = this.autoBrightness ? '#30D158' : '#8E8E93'
-    this.raiseText = this.raiseWakeEnabled ? '开' : '关'
-    this.raiseColor = this.raiseWakeEnabled ? '#30D158' : '#8E8E93'
-    this.lowPowerText = this.lowPowerEnabled ? '开' : '关'
-    this.lowPowerColor = this.lowPowerEnabled ? '#30D158' : '#8E8E93'
-  },
-
-  applyBrightness(value) {
-    try {
-      if (brightness && brightness.setValue) {
-        brightness.setValue({
-          value: value,
-          fail: function () {
-            console.log('brightness setting uses UI simulation')
-          }
-        })
-      }
-    } catch (e) {
-      console.log('brightness API unavailable, keep UI setting')
-    }
-  },
-
-  onBrightnessChange(e) {
-    if (this.autoBrightness) {
-      return
-    }
-    // Different simulator versions may expose progress directly or under detail.
-    var value = this.brightnessValue
-    if (e && e.progress !== undefined) {
-      value = Number(e.progress)
-    } else if (e && e.value !== undefined) {
-      value = Number(e.value)
-    } else if (e && e.detail && e.detail.progress !== undefined) {
-      value = Number(e.detail.progress)
-    } else if (e && e.detail && e.detail.value !== undefined) {
-      value = Number(e.detail.value)
-    }
-    this.setBrightness(value)
-  },
-
-  setBrightness(value) {
-    var self = this
-    this.brightnessValue = deviceSettings.getBrightnessValue(value)
-    this.refreshView()
-    this.applyBrightness(this.brightnessValue)
-    deviceSettings.update('brightnessValue', this.brightnessValue, function () {
-      self.refreshView()
-    })
-  },
-
-  toggleAutoBrightness() {
-    this.autoBrightness = !this.autoBrightness
-    this.refreshView()
-    deviceSettings.update('autoBrightness', this.autoBrightness)
-    try {
-      if (brightness && brightness.setMode) {
-        brightness.setMode({
-          mode: this.autoBrightness ? 1 : 0,
-          fail: function () {
-            console.log('brightness mode uses UI simulation')
-          }
-        })
-      }
-    } catch (e) {
-      console.log('brightness setMode unavailable, keep UI setting')
-    }
-    if (!this.autoBrightness) {
-      this.applyBrightness(this.brightnessValue)
-    }
-  },
-
-  toggleRaiseWake() {
-    this.raiseWakeEnabled = !this.raiseWakeEnabled
-    this.refreshView()
-    deviceSettings.update('raiseWakeEnabled', this.raiseWakeEnabled)
-  },
-
-  toggleLowPower() {
-    this.lowPowerEnabled = !this.lowPowerEnabled
-    this.refreshView()
-    deviceSettings.update('lowPowerEnabled', this.lowPowerEnabled)
-  },
-
-  onTouchStart(e) {
-    swipeBack.start(this, e)
-  },
-
-  onTouchEnd(e) {
-    swipeBack.end(this, e, router)
-  }
+  onShow() { this.controller.load() },
+  onBackPress() { navigation.back(); return true },
+  applyView(view) { this.brightnessValue = view.brightnessValue; this.brightnessText = view.brightnessText; this.brightnessDetail = view.brightnessDetail; this.manualStateText = view.manualStateText; this.autoText = view.autoText; this.autoColor = view.autoColor; this.raiseText = view.raiseText; this.raiseColor = view.raiseColor; this.lowPowerText = view.lowPowerText; this.lowPowerColor = view.lowPowerColor },
+  onBrightnessChange(event) { var value = this.brightnessValue; if (event && event.progress !== undefined) value = event.progress; else if (event && event.value !== undefined) value = event.value; else if (event && event.detail && event.detail.progress !== undefined) value = event.detail.progress; else if (event && event.detail && event.detail.value !== undefined) value = event.detail.value; this.controller.setBrightness(value) },
+  toggleAuto() { this.controller.toggleAuto() },
+  toggleRaiseWake() { this.controller.toggleRaiseWake() },
+  toggleLowPower() { this.controller.toggleLowPower() },
+  goBack() { navigation.back() }
 }
 </script>
 
 <style>
-.brightness-page {
-  flex-direction: column;
-  align-items: center;
-  background-color: #000000;
-  width: 100%;
-  height: 100%;
-  padding: 16px;
-}
-
-.page-title {
-  font-size: 24px;
-  font-weight: bold;
-  color: #FFD60A;
-  text-align: center;
-  margin-top: 8px;
-  margin-bottom: 12px;
-}
-
-.status-card {
-  flex-direction: column;
-  width: 160px;
-  height: 84px;
-  background-color: #14181F;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.status-label {
-  font-size: 12px;
-  color: #8E8E93;
-}
-
-.status-value {
-  font-size: 28px;
-  color: #FFD60A;
-  font-weight: bold;
-  margin-top: 4px;
-}
-
-.status-sub {
-  font-size: 10px;
-  color: #8E8E93;
-  margin-top: 3px;
-}
-
-.slider-card {
-  flex-direction: column;
-  width: 160px;
-  height: 76px;
-  margin-top: 10px;
-  padding: 9px;
-  background-color: #111317;
-  border-radius: 8px;
-}
-
-.slider-label-row {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 142px;
-}
-
-.slider-label {
-  font-size: 12px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.slider-state {
-  font-size: 10px;
-  color: #8E8E93;
-}
-
-.brightness-slider {
-  width: 142px;
-  height: 22px;
-  color: #FFD60A;
-  selected-color: #FFD60A;
-  block-color: #FFFFFF;
-}
-
-.slider-scale {
-  flex-direction: row;
-  justify-content: space-between;
-  width: 142px;
-}
-
-.scale-text {
-  width: 34px;
-  font-size: 9px;
-  color: #666666;
-}
-
-.center {
-  text-align: center;
-}
-
-.right {
-  text-align: right;
-}
-
-.setting-card {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 160px;
-  height: 58px;
-  background-color: #111317;
-  border-radius: 8px;
-  padding-left: 10px;
-  padding-right: 10px;
-  margin-top: 10px;
-}
-
-.setting-copy {
-  flex-direction: column;
-  width: 112px;
-}
-
-.setting-title {
-  font-size: 15px;
-  color: #FFFFFF;
-  font-weight: bold;
-}
-
-.setting-sub {
-  font-size: 10px;
-  color: #8E8E93;
-  margin-top: 4px;
-}
-
-.switch-text {
-  width: 28px;
-  font-size: 15px;
-  font-weight: bold;
-  text-align: right;
-}
-
-@media (shape: circle) {
-  .brightness-page {
-    padding-top: 16px;
-    padding-left: 22px;
-    padding-right: 22px;
-    padding-bottom: 28px;
-  }
-
-  .page-title {
-    font-size: 14px;
-    margin-top: 0px;
-    margin-bottom: 7px;
-  }
-
-  .status-card,
-  .slider-card,
-  .setting-card {
-    width: 148px;
-    border-radius: 17px;
-  }
-
-  .status-card {
-    height: 65px;
-    padding: 9px;
-  }
-
-  .status-label,
-  .status-sub,
-  .slider-state,
-  .setting-sub {
-    font-size: 7px;
-  }
-
-  .status-value {
-    font-size: 19px;
-  }
-
-  .slider-card {
-    height: 67px;
-    margin-top: 7px;
-  }
-
-  .slider-label-row,
-  .brightness-slider,
-  .slider-scale {
-    width: 130px;
-  }
-
-  .slider-label {
-    font-size: 9px;
-  }
-
-  .scale-text {
-    font-size: 6px;
-  }
-
-  .setting-card {
-    height: 48px;
-    margin-top: 7px;
-  }
-
-  .setting-copy {
-    width: 103px;
-  }
-
-  .setting-title,
-  .switch-text {
-    font-size: 10px;
-  }
-}
+.detail-root, .detail-scene { background-color: #000000; }
+.detail-scene { position: absolute; left: 0px; top: 0px; }
+.header, .content { position: absolute; }
+.header, .row, .setting-card { flex-direction: row; justify-content: space-between; align-items: center; }
+.title { color: #FFD60A; font-weight: bold; } .back { color: #8E8E93; font-size: 8px; }
+.content { flex-direction: column; }
+.status-card, .slider-card, .setting-card { background-color: #111317; padding: 12px; flex-direction: column; }
+.status-card { min-height: 76px; } .label, .sub { color: #8E8E93; font-size: 8px; } .brightness-value { color: #FFD60A; font-weight: bold; margin-top: 3px; }
+.slider-card { min-height: 78px; } .row { width: 100%; } .setting-title { color: #FFFFFF; font-size: 11px; font-weight: bold; } .brightness-slider { width: 100%; height: 24px; color: #FFD60A; selected-color: #FFD60A; block-color: #FFFFFF; }
+.scale { width: 100%; flex-direction: row; justify-content: space-between; } .scale-label { color: #636366; font-size: 7px; }
+.setting-card { min-height: 58px; flex-direction: row; } .copy { flex: 1; flex-direction: column; } .switch { width: 28px; font-size: 13px; font-weight: bold; text-align: right; }
 </style>

@@ -1,0 +1,56 @@
+const fs = require('fs')
+const path = require('path')
+const assert = require('assert')
+const powerState = require('../src/domain/power/state_machine')
+const powerPolicy = require('../src/domain/power/policy')
+
+const root = path.resolve(__dirname, '..')
+const controllerSource = fs.readFileSync(path.join(root, 'src/runtime/power/controller.js'), 'utf8')
+const coreSource = fs.readFileSync(path.join(root, 'src/runtime/power/core.js'), 'utf8')
+
+assert.strictEqual(powerState.modeForIdle(0), powerState.MODE_ACTIVE)
+assert.strictEqual(powerState.modeForIdle(7999), powerState.MODE_ACTIVE)
+assert.strictEqual(powerState.modeForIdle(8000), powerState.MODE_DIM)
+assert.strictEqual(powerState.modeForIdle(14999), powerState.MODE_DIM)
+assert.strictEqual(powerState.modeForIdle(15000), powerState.MODE_SLEEP)
+
+const machine = powerState.create(1000)
+assert.strictEqual(machine.getSnapshot().mode, powerState.MODE_ACTIVE)
+assert.strictEqual(machine.evaluate(8999).mode, powerState.MODE_ACTIVE)
+assert.strictEqual(machine.evaluate(9000).mode, powerState.MODE_DIM)
+assert.strictEqual(machine.evaluate(16000).mode, powerState.MODE_SLEEP)
+assert.strictEqual(machine.markActive('touch', 17000).mode, powerState.MODE_ACTIVE)
+assert.strictEqual(machine.getSnapshot().lastActiveAt, 17000)
+
+const active = powerPolicy.get(powerState.MODE_ACTIVE)
+const dim = powerPolicy.get(powerState.MODE_DIM)
+const sleep = powerPolicy.get(powerState.MODE_SLEEP)
+
+assert.strictEqual(active.timeInterval, 1000, 'ACTIVE clock refresh must stay 1s')
+assert.strictEqual(active.heartInterval, 3000, 'ACTIVE heart cadence must stay 3s')
+assert.strictEqual(active.healthEnabled, true, 'ACTIVE keeps health sampling on')
+
+assert.strictEqual(dim.timeInterval, 5000, 'DIM clock refresh must stay 5s')
+assert.strictEqual(dim.heartInterval, 30000, 'DIM business heart updates must stay 30s')
+assert.strictEqual(dim.healthEnabled, true, 'DIM keeps the health subscription alive')
+
+assert.strictEqual(sleep.heartInterval, 0, 'SLEEP must stop heart business updates')
+assert.strictEqual(sleep.batteryInterval, 0, 'SLEEP must stop battery polling')
+assert.strictEqual(sleep.healthEnabled, false, 'SLEEP must release health sampling')
+assert.strictEqual(sleep.keepScreenOn, false, 'SLEEP must let the screen turn off')
+
+assert.ok(controllerSource.includes("import heartRate from '../../capabilities/heart_rate'"), 'power controller must inject watchface HR capability')
+assert.ok(controllerSource.includes("import battery from '../../capabilities/battery'"), 'power controller must inject battery capability')
+assert.ok(controllerSource.includes("import motion from '../../capabilities/motion'"), 'power controller must inject motion capability')
+assert.ok(controllerSource.includes("import displayPower from '../../capabilities/display_power'"), 'power controller must inject display effects')
+assert.ok(controllerSource.includes('core.create({'), 'power controller must create the executable core with explicit dependencies')
+
+assert.ok(coreSource.includes("if (currentMode === stateMachine.MODE_ACTIVE) onHeartRate(sample, 'live')"), 'ACTIVE must publish live HR immediately')
+assert.ok(coreSource.includes("onHeartRate(latestHeartSample, 'cadence')"), 'DIM cadence must publish buffered HR')
+assert.ok(coreSource.includes('powerPolicy.get(mode).healthEnabled'), 'health subscription must follow power policy')
+assert.ok(coreSource.includes('else stopHealth()'), 'SLEEP must release health capability')
+assert.ok(coreSource.includes("../../domain/power/raise_wake"), 'raw accelerometer samples must pass through semantic raise-wake detection')
+assert.ok(!controllerSource.includes('@system.') && !coreSource.includes('@system.'), 'power runtime must never own raw Vela APIs')
+assert.ok(!controllerSource.includes('@service.') && !coreSource.includes('@service.'), 'power runtime must never own raw Vela services')
+
+console.log('Power policy verified: ACTIVE/DIM/SLEEP and runtime-core boundaries are preserved')
