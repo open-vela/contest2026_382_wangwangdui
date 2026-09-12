@@ -150,6 +150,7 @@ Use `references/failure-playbook.md` when a symptom resembles a known regression
 Read only what the task needs:
 
 - Official-source hierarchy and API legality: `references/sources-and-api-boundary.md`
+- Bounded machine-readable API catalog: `references/vela-api-catalog.json`
 - Shape-native visual design and aesthetics: `references/wearable-design.md`
 - State machines, canonical storage, hydration, lifecycle ownership: `references/architecture-state-data.md`
 - Memory, CPU, IO, bundle, and startup discipline: `references/performance-memory.md`
@@ -166,4 +167,10 @@ Run:
 node skills/openvela-wearable-engineering/scripts/audit-quickapp.mjs <project-root>
 ```
 
-Use its findings as guardrails, not as a substitute for build, simulator, or device validation.
+After changing the audit script or API catalog, run its regression suite:
+
+```bash
+node skills/openvela-wearable-engineering/scripts/test-audit.mjs
+```
+
+Use audit findings as guardrails, not as a substitute for build, simulator, or device validation.
