@@ -1,53 +1,104 @@
 # Contributing to vela_band
 
-感谢你参与 `vela_band`。本项目是面向 Xiaomi Vela Quick App 模拟器的演示应用，贡献内容应保持可构建、可回退，并明确区分真实系统能力与模拟行为。
+感谢参与 `vela_band`。贡献应保持边界清晰、可验证、可回退，并尊重 Vela 可穿戴运行时的资源和布局约束。
 
 ## 开发环境
 
 - Node.js 18 或更高版本
 - npm
-- AIoT-IDE 与可用的 Vela 模拟器
+- Xiaomi Vela Quick App 开发环境
+- 与变更目标相匹配的模拟器或设备
 
-安装锁定依赖：
+安装依赖：
 
 ```bash
 npm ci
 ```
 
-## 开发流程
+## 开发原则
 
-1. 从最新目标分支创建功能分支。
-2. 保持改动聚焦，不混入 IDE 配置、普通构建产物或模拟器日志。
-3. 修改系统 API、路由、存储结构或用户行为时同步更新文档。
-4. 提交前运行完整检查。
+### 保持依赖方向
+
+新代码优先遵循：
+
+```text
+Capability → Domain → Feature → Design → Page
+```
+
+- 原生系统 API 封装放在 `src/capabilities`。
+- 与设备形态无关的业务事实放在 `src/domain`。
+- 页面级状态和资源所有权放在 `src/v2/features`。
+- 几何、形态差异和显示语义放在 `src/v2/design`。
+- `.ux` 页面只承担生命周期、事件绑定和渲染。
+
+不要把系统 API、持久化、业务状态机或复杂格式化重新复制到页面中。
+
+### 保持数据真实性
+
+- `service.health` 等系统能力可用时，保留样本来源信息。
+- 没有可信系统样本时显示等待或不可用状态。
+- 不使用模拟值伪装真实心率、血氧、压力或历史趋势。
+- 运动心率只接受官方心率能力的有效实时样本。
+- 模拟同步 transport 必须明确保持为模拟边界，不描述为真实 BLE。
+
+### 保持资源生命周期
+
+传感器、定位、健康订阅、计时器和事件监听必须有单一 owner，并在对应状态结束时释放。至少覆盖：
+
+- `onHide`；
+- `onDestroy`；
+- Workout pause、finish、cancel；
+- DIM 或 SLEEP 导致的资源降级场景。
+
+不得依靠页面销毁后的垃圾回收替代显式释放。
+
+### 保持形态设计边界
+
+V2.5 采用 L1、L2、L3 设计自由度。先判断差异属于自动几何、辅助构图还是独立交互，再修改对应 Design Spec 或布局配置。
+
+- Circle 关注圆弧和弦区。
+- Pill 利用纵向空间并避开端部舒适区。
+- Rect 利用横向空间和更高信息密度。
+- 背景 Scene 与前景安全内容分开处理。
+
+避免在页面里堆叠 `isCircle`、`isPill`、`isRect` 分支来修补布局。
+
+## 提交流程
+
+从目标分支创建聚焦的工作分支。提交前至少运行：
 
 ```bash
 npm run check
 npm run build
 ```
 
-涉及页面交互、生命周期或系统 API 时，还需在 `mi-band10` 和 `Vela_Watchs4` 中执行对应形态回归；仅影响单一形态的改动也必须确认另一形态可以启动。
+涉及 Layout Studio 时运行：
 
-## 编码约定
+```bash
+npm run studio:check
+```
 
-- 与现有 `.ux` 和 JavaScript 风格保持一致。
-- 兼容 Vela 运行时支持的 JavaScript 子集，避免依赖浏览器 DOM 或 Node.js API。
-- 页面跳转统一通过 `page_motion.js`，并始终传递路由 `params`。
-- 定时器、传感器和事件订阅必须在 `onHide` 或 `onDestroy` 中释放。
-- 持久化数据通过 `storage_adapter.js`，同一键的读改写使用串行更新接口。
-- 系统能力不可用时提供明确降级，不得把模拟链路描述为真实硬件能力。
-- 页面根节点使用可用视口，不恢复 `192×490` 固定根尺寸；圆屏内容必须位于安全区或提供滚动。
-- 圆屏蜂窝坐标集中维护在 `launcher_apps.js`，拖拽定时器必须随页面生命周期释放。
-- 应用标签、路由和图标路径集中维护在 `launcher_apps.js`；图标先修改 `assets/icons/*.svg`，再转换为 `src/common/icons/*.jpg`，两种列表不得各自维护图标。
+涉及页面体积时运行：
 
-## 文档要求
+```bash
+npm run bundle:audit
+```
 
-- 用户可见行为更新 `README.md` 与 `docs/README_EN.md`。
-- 架构或公共模块变化更新 `docs/TECHNICAL.md`。
-- 模拟器或系统 API 差异更新 `docs/COMPATIBILITY.md`。
-- 运动和同步协议变化更新 `docs/B_F_IMPLEMENTATION.md`。
+静态检查通过后，对受影响的形态做模拟器或设备 smoke test。交互、绝对定位、系统能力和资源生命周期改动不能只依赖 Node.js 测试。
 
-本地文档链接可通过以下命令检查：
+## 文档维护
+
+文档按长期主题维护，不创建以阶段号、临时重构名或个人工作记录命名的长期文档。
+
+- 用户可见能力变化：更新 `README.md` 与 `docs/README_EN.md`。
+- 架构边界变化：更新 `docs/ARCHITECTURE.md`。
+- 形态和设计规则变化：更新 `docs/DESIGN_SYSTEM.md`。
+- Layout Studio 行为变化：更新 `docs/LAYOUT_STUDIO.md`。
+- 运动与同步边界变化：更新 `docs/WORKOUT_AND_SYNC.md`。
+- 模拟器、系统 API 或设备差异：更新 `docs/COMPATIBILITY.md`。
+- 能体现项目方法论的新增能力：更新 `docs/INNOVATIONS.md`。
+
+检查 Markdown 本地链接：
 
 ```bash
 npm run docs:check
@@ -55,28 +106,29 @@ npm run docs:check
 
 ## 提交信息
 
-推荐使用 Conventional Commits：
+推荐 Conventional Commits：
 
 ```text
 feat: add a user-visible capability
 fix: correct runtime behavior
-docs: update documentation only
-refactor: reorganize code without behavior changes
+docs: update documentation
+refactor: reorganize code without changing behavior
 test: add or adjust verification
 chore: maintain tooling or dependencies
 ```
 
-## 提交前检查清单
+## 代码评审检查
 
-- [ ] `npm run check` 通过
-- [ ] `npm run build` 生成 JSC 调试 RPK
-- [ ] 参赛发布前使用生产模式生成并验证 `dist/*.release.rpk`
-- [ ] 相关模拟器场景已回归
-- [ ] 同一 RPK 可安装并启动于 `mi-band10` 与 `Vela_Watchs4`
-- [ ] 新增资源、页面和 feature 已在 `src/manifest.json` 中登记
-- [ ] 中英文 README 与兼容性说明保持一致
-- [ ] 未提交 `build/`、普通 `dist/` 产物、`outputs/`、IDE 私有文件或密钥；赛事要求的 `dist/*.release.rpk` 例外
+评审时重点确认：
 
-## 问题反馈
+- 业务事实是否只有一个 owner；
+- 系统能力是否存在明确失败路径；
+- 订阅和计时器是否成对释放；
+- 形态差异是否位于 Design 层；
+- 页面是否仍保持薄层；
+- 持久化读改写是否避免竞态；
+- 新增 UI 是否覆盖 Circle、Pill、Rect 的合理行为；
+- 文档中的能力声明是否能从源码、测试或运行证据中找到依据；
+- 没有提交密钥、IDE 私有配置、普通构建缓存或无关日志。
 
-报告问题时请提供：复现步骤、AVD/系统镜像名称、Node.js 与 AIoT Toolkit 版本、相关日志片段以及预期行为。请先删除账号、设备标识和其他敏感信息。
+问题报告应包含复现步骤、目标 skin 或设备、Vela 镜像信息、Node.js 与 AIoT Toolkit 版本、相关日志和预期行为，并删除账号、设备标识等敏感信息。
