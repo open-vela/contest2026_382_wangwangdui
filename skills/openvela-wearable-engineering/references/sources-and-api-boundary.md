@@ -30,6 +30,31 @@ Use the current pages, not remembered syntax:
 
 If network access is available and an API or rule is material to the implementation, re-check the current official page instead of relying on this reference file.
 
+## Machine-readable API catalog
+
+`vela-api-catalog.json` is a bounded snapshot used by `scripts/audit-quickapp.mjs`. It exists to reject invented native members early, but it is intentionally **not** an exhaustive copy of all Vela documentation.
+
+Each catalog entry records an authority level:
+
+- `xiaomi-official` — method names are taken from the linked current Xiaomi Vela JS page;
+- `project-verified` — the member exists in this project's adapter/runtime evidence, but a current public Xiaomi Vela JS primary reference was not located;
+- uncataloged module/member — do not guess; verify against a current primary source before adding it.
+
+When adding a native API to the catalog:
+
+1. Prefer a current Xiaomi Vela JS page and record its URL.
+2. Copy only the documented module/member names, not remembered parameters.
+3. Record required manifest feature declaration.
+4. Record method-specific permissions.
+5. Record minimum API level when the official page marks the feature/method as version-gated.
+6. Leave device support as `check-current-official-table` instead of freezing a fast-changing hardware matrix into the Skill.
+7. If only project/runtime evidence exists, label it `project-verified`; never upgrade it to `xiaomi-official` for convenience.
+8. Add a positive and negative audit fixture for newly supported catalog behavior.
+
+At verification time on 2026-09-12, current Xiaomi Vela JS pages were located for the cataloged `system.router`, `system.device`, `system.battery`, `system.brightness`, `system.sensor`, `system.geolocation`, `system.vibrator`, `system.event`, `system.storage`, and `system.interconnect` entries. A current public Xiaomi Vela JS page for `service.health` was not located, so the project adapter's bounded members remain explicitly `project-verified`.
+
+The catalog must never be used to claim hardware support without re-checking the current device support table. For example, current official geolocation and sensor pages show materially different support across Band/Watch products.
+
 ## Native API legality checklist
 
 Before calling a native module:
@@ -57,6 +82,8 @@ Treat `src/manifest.json` as part of runtime correctness:
 - `router` defines valid pages;
 - `deviceTypeList` and `designWidth` influence target assumptions;
 - `minAPILevel` must cover APIs used by the app.
+
+Official Vela manifest guidance states that when an application uses a feature added in a newer API standard, `minAPILevel` must be at least that version so the package is not installed on an incompatible lower-level platform.
 
 When debugging a runtime mismatch, inspect the manifest before changing business logic.
 

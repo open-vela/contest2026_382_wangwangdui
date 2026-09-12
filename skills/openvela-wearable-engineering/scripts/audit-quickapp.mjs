@@ -2,10 +2,13 @@
 
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
 const root = path.resolve(process.argv[2] || process.cwd())
 const srcRoot = path.join(root, 'src')
 const manifestPath = path.join(srcRoot, 'manifest.json')
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const catalogPath = path.resolve(scriptDir, '../references/vela-api-catalog.json')
 
 const errors = []
 const warnings = []
@@ -19,7 +22,7 @@ function readJson(file) {
   try {
     return JSON.parse(fs.readFileSync(file, 'utf8'))
   } catch (error) {
-    report(errors, 'JSON_PARSE', `${error.message}`, file)
+    report(errors, 'JSON_PARSE', error.message, file)
     return null
   }
 }
@@ -38,14 +41,59 @@ function walk(dir, output = []) {
   return output
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function maskNonCode(source) {
+  let out = ''
+  let quote = null
+  let lineComment = false
+  let blockComment = false
+  let escaped = false
+
+  for (let i = 0; i < source.length; i++) {
+    const ch = source[i]
+    const next = source[i + 1]
+
+    if (lineComment) {
+      if (ch === '\n') { lineComment = false; out += '\n' } else out += ' '
+      continue
+    }
+    if (blockComment) {
+      if (ch === '*' && next === '/') { out += '  '; blockComment = false; i++ }
+      else out += ch === '\n' ? '\n' : ' '
+      continue
+    }
+    if (quote) {
+      if (escaped) { escaped = false; out += ' '; continue }
+      if (ch === '\\') { escaped = true; out += ' '; continue }
+      if (ch === quote) { quote = null; out += ' ' }
+      else out += ch === '\n' ? '\n' : ' '
+      continue
+    }
+    if (ch === '/' && next === '/') { lineComment = true; out += '  '; i++; continue }
+    if (ch === '/' && next === '*') { blockComment = true; out += '  '; i++; continue }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; out += ' '; continue }
+    out += ch
+  }
+  return out
+}
+
 if (!fs.existsSync(manifestPath)) {
   console.error(`[ERROR] MANIFEST_MISSING: ${path.relative(process.cwd(), manifestPath)}`)
   process.exit(1)
 }
+if (!fs.existsSync(catalogPath)) {
+  console.error(`[ERROR] API_CATALOG_MISSING: ${catalogPath}`)
+  process.exit(1)
+}
 
 const manifest = readJson(manifestPath)
-if (!manifest) process.exit(1)
+const catalog = readJson(catalogPath)
+if (!manifest || !catalog) process.exit(1)
 
+const modules = catalog.modules || {}
 const declaredFeatures = new Set(
   (Array.isArray(manifest.features) ? manifest.features : [])
     .map(item => typeof item === 'string' ? item : item && item.name)
@@ -56,9 +104,11 @@ const declaredPermissions = new Set(
     .map(item => typeof item === 'string' ? item : item && item.name)
     .filter(Boolean)
 )
+const manifestMinApi = Math.max(1, Number(manifest.minAPILevel) || 1)
 
 const runtimeFiles = walk(srcRoot).filter(file => /\.(?:js|ux)$/.test(file))
 const nativeModules = new Map()
+const moduleUsage = new Map()
 const nodeBuiltins = new Set([
   'assert', 'buffer', 'child_process', 'cluster', 'crypto', 'dgram', 'dns',
   'events', 'fs', 'http', 'https', 'module', 'net', 'os', 'path', 'perf_hooks',
@@ -78,16 +128,79 @@ function rememberNative(moduleName, file) {
   nativeModules.get(moduleName).add(path.relative(root, file))
 }
 
-function scanImports(source, file) {
-  const nativePatterns = [
-    /\bfrom\s+['"]@([^'"]+)['"]/g,
-    /\brequire\(\s*['"]@([^'"]+)['"]\s*\)/g,
-    /\bimport\s+['"]@([^'"]+)['"]/g
-  ]
-  for (const re of nativePatterns) {
-    let match
-    while ((match = re.exec(source))) rememberNative(match[1], file)
+function rememberMember(moduleName, member, file) {
+  if (!moduleUsage.has(moduleName)) moduleUsage.set(moduleName, new Map())
+  const members = moduleUsage.get(moduleName)
+  if (!members.has(member)) members.set(member, new Set())
+  members.get(member).add(path.relative(root, file))
+}
+
+function parseNativeAliases(source, file) {
+  const aliases = new Map()
+  const importRe = /\bimport\s+([A-Za-z_$][\w$]*)\s+from\s+['"]@([^'"]+)['"]/g
+  const requireRe = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*require\(\s*['"]@([^'"]+)['"]\s*\)/g
+  const bareRe = /\bimport\s+['"]@([^'"]+)['"]/g
+  let match
+
+  while ((match = importRe.exec(source))) {
+    aliases.set(match[1], match[2])
+    rememberNative(match[2], file)
   }
+  while ((match = requireRe.exec(source))) {
+    aliases.set(match[1], match[2])
+    rememberNative(match[2], file)
+  }
+  while ((match = bareRe.exec(source))) rememberNative(match[1], file)
+
+  return aliases
+}
+
+function scanModuleMembers(source, masked, file, aliases) {
+  const returnedAliases = new Map()
+
+  for (const [alias, moduleName] of aliases) {
+    const entry = modules[moduleName]
+    const allowedMethods = new Set(entry ? Object.keys(entry.methods || {}) : [])
+    const allowedProperties = new Set(entry && Array.isArray(entry.properties) ? entry.properties : [])
+    const memberRe = new RegExp(`\\b${escapeRegExp(alias)}\\.([A-Za-z_$][\\w$]*)`, 'g')
+    let match
+
+    while ((match = memberRe.exec(masked))) {
+      const member = match[1]
+      rememberMember(moduleName, member, file)
+      if (!entry) continue
+      if (!allowedMethods.has(member) && !allowedProperties.has(member)) {
+        report(errors, 'UNKNOWN_NATIVE_MEMBER', `@${moduleName} has no cataloged member '${member}' (${entry.authority})`, file)
+      }
+    }
+
+    if (!entry) continue
+    for (const [method, spec] of Object.entries(entry.methods || {})) {
+      if (!spec || !spec.returns || !entry.returned_objects || !entry.returned_objects[spec.returns]) continue
+      const direct = new RegExp(`\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${escapeRegExp(alias)}\\.${escapeRegExp(method)}\\s*\\(`, 'g')
+      const assign = new RegExp(`\\b([A-Za-z_$][\\w$]*)\\s*=\\s*${escapeRegExp(alias)}\\.${escapeRegExp(method)}\\s*\\(`, 'g')
+      while ((match = direct.exec(masked))) returnedAliases.set(match[1], { moduleName, type: spec.returns })
+      while ((match = assign.exec(masked))) returnedAliases.set(match[1], { moduleName, type: spec.returns })
+    }
+  }
+
+  for (const [alias, binding] of returnedAliases) {
+    const entry = modules[binding.moduleName]
+    const objectSpec = entry && entry.returned_objects && entry.returned_objects[binding.type]
+    if (!objectSpec) continue
+    const allowed = new Set([...(objectSpec.methods || []), ...(objectSpec.events || []), ...(objectSpec.properties || [])])
+    const memberRe = new RegExp(`\\b${escapeRegExp(alias)}\\.([A-Za-z_$][\\w$]*)`, 'g')
+    let match
+    while ((match = memberRe.exec(masked))) {
+      if (!allowed.has(match[1])) {
+        report(errors, 'UNKNOWN_RETURNED_OBJECT_MEMBER', `@${binding.moduleName} ${binding.type} object has no cataloged member '${match[1]}'`, file)
+      }
+    }
+  }
+}
+
+function scanImports(source, masked, file) {
+  const aliases = parseNativeAliases(source, file)
 
   const modulePatterns = [
     /\bfrom\s+['"]([^.'/@][^'"]*)['"]/g,
@@ -98,17 +211,15 @@ function scanImports(source, file) {
     let match
     while ((match = re.exec(source))) {
       const top = match[1].split('/')[0]
-      if (nodeBuiltins.has(top)) {
-        report(errors, 'NODE_BUILTIN_RUNTIME', `Runtime source imports Node.js builtin '${match[1]}'`, file)
-      }
+      if (nodeBuiltins.has(top)) report(errors, 'NODE_BUILTIN_RUNTIME', `Runtime source imports Node.js builtin '${match[1]}'`, file)
     }
   }
 
   for (const [re, name] of browserPatterns) {
-    if (re.test(source)) {
-      report(errors, 'BROWSER_GLOBAL_RUNTIME', `Runtime source uses browser global '${name}'`, file)
-    }
+    if (re.test(masked)) report(errors, 'BROWSER_GLOBAL_RUNTIME', `Runtime source uses browser global '${name}'`, file)
   }
+
+  scanModuleMembers(source, masked, file, aliases)
 }
 
 function scanStyle(source, file) {
@@ -125,9 +236,7 @@ function scanStyle(source, file) {
       if (!raw || raw.startsWith('@')) continue
       for (const selector of raw.split(',').map(value => value.trim()).filter(Boolean)) {
         const simple = /^(?:\.[A-Za-z_][\w-]*|#[A-Za-z_][\w-]*|[A-Za-z][\w-]*)$/
-        if (!simple.test(selector)) {
-          report(warnings, 'VERIFY_VELA_SELECTOR', `Verify selector '${selector}' against current Vela CSS support`, file)
-        }
+        if (!simple.test(selector)) report(warnings, 'VERIFY_VELA_SELECTOR', `Verify selector '${selector}' against current Vela CSS support`, file)
       }
     }
   }
@@ -135,33 +244,46 @@ function scanStyle(source, file) {
 
 for (const file of runtimeFiles) {
   const source = fs.readFileSync(file, 'utf8')
-  scanImports(source, file)
+  const masked = maskNonCode(source)
+  scanImports(source, masked, file)
   if (file.endsWith('.ux')) scanStyle(source, file)
 }
 
 for (const [moduleName, files] of nativeModules) {
-  const featureName = moduleName
-  if (!declaredFeatures.has(featureName)) {
-    report(
-      warnings,
-      'FEATURE_NOT_DECLARED',
-      `Native module '@${moduleName}' is used but '${featureName}' is not present in manifest.features; verify whether this interface requires declaration`,
-      path.join(root, [...files][0])
-    )
+  const entry = modules[moduleName]
+  const firstFile = path.join(root, [...files][0])
+
+  if (!entry) {
+    report(warnings, 'API_MODULE_NOT_CATALOGED', `@${moduleName} is not in the bundled API catalog; verify it against current official Vela documentation before use`, firstFile)
+    continue
   }
-}
 
-if (nativeModules.has('system.geolocation') && !declaredPermissions.has('hapjs.permission.LOCATION')) {
-  report(errors, 'LOCATION_PERMISSION_MISSING', `system.geolocation requires hapjs.permission.LOCATION for documented location APIs`, manifestPath)
-}
+  if (entry.authority !== 'xiaomi-official') {
+    report(warnings, 'NON_OFFICIAL_API_AUTHORITY', `@${moduleName} is cataloged as '${entry.authority}', not Xiaomi-official; preserve this provenance in claims and review`, firstFile)
+  }
 
-const deviceUsers = nativeModules.get('system.device') || new Set()
-for (const relative of deviceUsers) {
-  const file = path.join(root, relative)
-  const source = fs.readFileSync(file, 'utf8')
-  if (/\.(?:getDeviceId|getSerial)\s*\(/.test(source) && !declaredPermissions.has('hapjs.permission.DEVICE_INFO')) {
-    report(errors, 'DEVICE_INFO_PERMISSION_MISSING', `getDeviceId/getSerial requires hapjs.permission.DEVICE_INFO`, manifestPath)
-    break
+  if (entry.feature_declaration === 'required' && !declaredFeatures.has(moduleName)) {
+    report(errors, 'FEATURE_NOT_DECLARED', `@${moduleName} requires '${moduleName}' in manifest.features`, manifestPath)
+  }
+
+  if (Number(entry.min_api_level) > manifestMinApi) {
+    report(errors, 'MIN_API_LEVEL_TOO_LOW', `@${moduleName} requires API Level ${entry.min_api_level} but manifest.minAPILevel is ${manifestMinApi}`, manifestPath)
+  }
+
+  const usedMembers = moduleUsage.get(moduleName) || new Map()
+  for (const member of usedMembers.keys()) {
+    const method = entry.methods && entry.methods[member]
+    if (!method) continue
+    if (Number(method.min_api_level) > manifestMinApi) {
+      report(errors, 'METHOD_MIN_API_LEVEL_TOO_LOW', `@${moduleName}.${member} requires API Level ${method.min_api_level} but manifest.minAPILevel is ${manifestMinApi}`, manifestPath)
+    }
+    for (const permission of method.permissions || []) {
+      if (!declaredPermissions.has(permission)) report(errors, 'PERMISSION_MISSING', `@${moduleName}.${member} requires ${permission}`, manifestPath)
+    }
+  }
+
+  if (entry.device_support === 'check-current-official-table') {
+    info.push(`device support must be checked for @${moduleName} against ${entry.source_url}`)
   }
 }
 
@@ -186,13 +308,15 @@ const stateMachines = allProjectFiles.filter(file => /(?:state[_-]?machine|state
 const repositories = allProjectFiles.filter(file => /(?:repository|store)\.(?:js|mjs|cjs)$/i.test(path.basename(file)))
 const designLayouts = allProjectFiles.filter(file => /(?:^|[/\\])layout\.(?:js|mjs|cjs)$/i.test(file))
 
-info.push(`project: ${root}`)
-info.push(`runtime files scanned: ${runtimeFiles.length}`)
-info.push(`manifest features: ${[...declaredFeatures].sort().join(', ') || '(none)'}`)
-info.push(`native modules observed: ${[...nativeModules.keys()].sort().map(name => '@' + name).join(', ') || '(none)'}`)
-info.push(`state-machine files discovered: ${stateMachines.length}`)
-info.push(`repository/store files discovered: ${repositories.length}`)
-info.push(`layout recipe files discovered: ${designLayouts.length}`)
+info.unshift(`layout recipe files discovered: ${designLayouts.length}`)
+info.unshift(`repository/store files discovered: ${repositories.length}`)
+info.unshift(`state-machine files discovered: ${stateMachines.length}`)
+info.unshift(`catalog coverage: ${Object.keys(modules).length} native modules (${catalog.scope})`)
+info.unshift(`native modules observed: ${[...nativeModules.keys()].sort().map(name => '@' + name).join(', ') || '(none)'}`)
+info.unshift(`manifest minAPILevel: ${manifestMinApi}`)
+info.unshift(`manifest features: ${[...declaredFeatures].sort().join(', ') || '(none)'}`)
+info.unshift(`runtime files scanned: ${runtimeFiles.length}`)
+info.unshift(`project: ${root}`)
 
 function print(label, list) {
   if (!list.length) return

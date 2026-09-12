@@ -1,0 +1,121 @@
+{
+  "schema_version": "1.0",
+  "verified_on": "2026-09-12",
+  "scope": "Native modules used by vela_band plus immediately reusable wearable APIs. This is not an exhaustive Xiaomi Vela API catalog; uncataloged modules must be checked against current official documentation before use.",
+  "modules": {
+    "system.router": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/basic/router.html",
+      "feature_declaration": "not-required",
+      "min_api_level": 1,
+      "methods": {
+        "push": {}, "replace": {}, "back": {}, "clear": {}, "getLength": {}, "getState": {}, "getPages": {}
+      }
+    },
+    "system.device": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/basic/device.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "methods": {
+        "getInfo": {},
+        "getDeviceId": { "permissions": ["hapjs.permission.DEVICE_INFO"] },
+        "getSerial": { "permissions": ["hapjs.permission.DEVICE_INFO"] },
+        "getTotalStorage": {},
+        "getAvailableStorage": {}
+      }
+    },
+    "system.battery": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/battery.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "device_support": "check-current-official-table",
+      "methods": { "getStatus": {} }
+    },
+    "system.brightness": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/brightness.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "methods": {
+        "getValue": {}, "setValue": {}, "getMode": {}, "setMode": {}, "setKeepScreenOn": {}
+      }
+    },
+    "system.sensor": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/sensor.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "device_support": "check-current-official-table",
+      "methods": {
+        "subscribePressure": {}, "unsubscribePressure": {},
+        "subscribeAccelerometer": {}, "unsubscribeAccelerometer": {},
+        "subscribeCompass": {}, "unsubscribeCompass": {}
+      }
+    },
+    "system.geolocation": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/geolocation.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "device_support": "check-current-official-table",
+      "methods": {
+        "getLocation": { "permissions": ["hapjs.permission.LOCATION"] },
+        "subscribe": { "permissions": ["hapjs.permission.LOCATION"] },
+        "unsubscribe": { "permissions": ["hapjs.permission.LOCATION"] }
+      }
+    },
+    "system.vibrator": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/vibrator.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "device_support": "check-current-official-table",
+      "methods": {
+        "vibrate": {}, "start": {}, "stop": {}, "getSystemDefaultMode": {}
+      }
+    },
+    "system.event": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/system/event.html",
+      "feature_declaration": "required",
+      "min_api_level": 4,
+      "device_support": "check-current-official-table",
+      "methods": { "publish": {}, "subscribe": {}, "unsubscribe": {} }
+    },
+    "system.storage": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/data/storage.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "methods": { "get": {}, "set": {}, "clear": {}, "delete": {} }
+    },
+    "system.interconnect": {
+      "authority": "xiaomi-official",
+      "source_url": "https://iot.mi.com/vela/quickapp/zh/features/network/interconnect.html",
+      "feature_declaration": "required",
+      "min_api_level": 1,
+      "methods": { "instance": { "returns": "connect" } },
+      "returned_objects": {
+        "connect": {
+          "methods": ["getReadyState", "diagnosis", "send"],
+          "events": ["onmessage", "onopen", "onclose", "onerror"]
+        }
+      }
+    },
+    "service.health": {
+      "authority": "project-verified",
+      "source_url": "project://quickapp/velaclaw-aiot/src/capabilities/internal/health_channel.js",
+      "feature_declaration": "required",
+      "min_api_level": null,
+      "notes": "No current public Xiaomi Vela JS service.health reference page was located during verification on 2026-09-12. These members are bounded to the project adapter and must not be described as Xiaomi-official without a newer primary source.",
+      "methods": {
+        "getRecentSamples": { "permissions": ["hapjs.permission.HEALTH"] },
+        "subscribeSample": { "permissions": ["hapjs.permission.HEALTH"] },
+        "unsubscribeSample": { "permissions": ["hapjs.permission.HEALTH"] }
+      },
+      "properties": ["DATA_TYPES"]
+    }
+  }
+}
