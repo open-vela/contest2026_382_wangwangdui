@@ -5,48 +5,51 @@ description: Refactor an existing Xiaomi Vela JS / Quick App wearable applicatio
 
 # openvela Existing App Refactor
 
-Refactor an existing product without confusing architectural cleanup with product redesign. The default objective is:
+Refactor an existing product without confusing architectural cleanup with product redesign. Target:
 
-`same product behavior + same visible UI + safer internal architecture + better evidence`
+`same product behavior + authorized visual scope + safer internal architecture + stronger evidence`
 
-Use the sibling `../openvela-wearable-engineering/SKILL.md` as the engineering standard. Reuse its API catalog, verification model, performance rules, and project patterns instead of creating competing rules.
+Use sibling `../openvela-wearable-engineering/SKILL.md` as the engineering standard. Reuse its API catalog, verification model, performance rules and project patterns instead of creating competing rules.
 
 ## 0. Decide visual scope before editing
 
-Determine whether visual redesign is authorized.
+Select exactly one mode before non-trivial edits:
 
-- If the user explicitly requests a redesign, enter **Redesign Mode**.
-- If the user explicitly requests no redesign, enter **Preserve UI Mode**.
-- If intent is unclear and interaction is possible, ask once:
-  - **Preserve UI** — keep current appearance and interaction as close as possible;
-  - **Light Refresh** — allow small polish that does not change information architecture or interaction model;
-  - **Redesign** — allow shape-native recomposition and visual direction changes.
-- If work must proceed without an answer, default to **Preserve UI Mode**.
+- **Preserve UI** — keep current appearance and interaction as close as runtime correctness allows.
+- **Light Refresh** — allow small polish without changing information architecture, primary interaction or task flow.
+- **Redesign** — allow shape-native recomposition and a new visual direction.
 
-Record the selected mode in the refactor plan. Never infer redesign permission from words such as “modernize”, “clean up”, “restructure”, or “refactor”.
+If the user explicitly chose a mode, do not ask again. If intent is unclear and interaction is possible, ask once. If work must proceed without an answer, default to Preserve UI. Never infer redesign permission from “refactor”, “modernize”, “clean up”, “optimize”, or “restructure”.
 
-## 1. Capture the existing product before changing it
+Record the selected mode in the refactor plan and final evidence report.
 
-Treat the existing application as evidence, not as disposable legacy code.
+## 1. Capture the existing product
 
-Inspect:
+Treat the existing app as evidence, not disposable legacy code. Inspect:
 
-- `src/manifest.json`, package/build metadata, routes, device profiles, API level;
-- pages, components, styles, assets, icons, copy, navigation and gestures;
-- current state machines, stores, repositories, caches and persistence keys;
-- native modules, permissions, capability wrappers and lifecycle ownership;
+- manifest, routes, package/build metadata, API level and target profiles;
+- pages, components, styles, assets, copy, navigation, gestures and shape-specific behavior;
+- state machines, page-local business state, repositories, stores, caches and persistence keys;
+- native modules, permissions, wrappers and lifecycle owners;
 - timers, sensors, health/location/event subscriptions and haptics;
-- tests, build scripts, bundle budgets, simulator/device procedures;
-- recent Git history for regression-sensitive behavior.
+- tests, build/JSC/RPK scripts, bundle budgets and simulator/device procedures;
+- recent Git history when behavior is regression-sensitive.
 
-Run when available:
+Run:
 
 ```bash
 node skills/openvela-existing-app-refactor/scripts/inventory-existing-app.mjs <project-root>
 node skills/openvela-wearable-engineering/scripts/audit-quickapp.mjs <project-root>
 ```
 
-Before a non-trivial refactor, create a preservation contract from `references/preservation-contract.md`.
+For Preserve UI or Light Refresh, capture a static preservation baseline before editing:
+
+```bash
+node skills/openvela-existing-app-refactor/scripts/capture-preservation-baseline.mjs \
+  <project-root> --out <temporary-baseline.json>
+```
+
+Keep the baseline outside production source unless the project intentionally versions regression fixtures. Read `references/preservation-contract.md`.
 
 ## 2. Discover before inventing
 
@@ -54,147 +57,159 @@ Use:
 
 `discover → map ownership → reuse → consolidate → extend → create`
 
-Do not introduce a new store, state machine, repository, adapter, renderer, layout engine, or service wrapper until existing ownership has been identified.
+Do not add a store, state machine, repository, adapter, renderer, layout engine or native wrapper until existing ownership is mapped. When two owners already exist, select one canonical destination and migrate callers incrementally; do not create a third abstraction just to bridge duplication.
 
-When multiple implementations own the same fact, choose one canonical owner and migrate callers incrementally. Do not create a third abstraction merely to bridge two duplicates.
-
-## 3. Classify each concern into the target architecture
+## 3. Classify target ownership
 
 Migrate toward:
 
 `Capability → Domain → Feature → Design → Page`
 
-- **Capability** — official native API boundary, normalization, availability and failure isolation.
-- **Domain** — canonical business state, state machine, persistence schema and deterministic rules.
-- **Feature** — runtime orchestration and lifecycle/resource ownership.
-- **Design** — semantic projection, shape-native composition, layout recipes and display metadata.
-- **Page** — thin lifecycle/event binding and rendering surface.
+- **Capability** — official native API boundary, availability, normalization and failure isolation.
+- **Domain** — canonical business facts, state machines, deterministic rules and persistence schema.
+- **Feature** — runtime orchestration and resource/lifecycle ownership.
+- **Design** — semantic projection, shape-native composition, recipes and display metadata.
+- **Page** — thin lifecycle/event binding and rendering.
 
-Move code only when ownership becomes clearer. Directory symmetry alone is not a refactor goal.
+Move code only when responsibility becomes clearer. Directory symmetry alone is not a refactor goal.
 
 ## 4. Refactor in evidence-preserving stages
 
-Prefer several reviewable migrations over a rewrite.
+Prefer reviewable migrations over rewrite:
 
-1. **Baseline** — record current routes, behaviors, UI contract, build result and known failures.
-2. **Platform legality** — replace or isolate unsupported APIs/selectors and align manifest/API level.
-3. **Canonical state/data** — merge duplicate stores, page-local business truth and redundant persistence paths.
-4. **Lifecycle ownership** — give every timer/subscription/native resource one owner and explicit release path.
-5. **Presentation ownership** — move business calculations out of pages without changing the rendered contract.
-6. **Shape/design ownership** — make Circle/Pill/Rect intent explicit while preserving the chosen visual scope.
-7. **Memory/build cleanup** — remove proven redundant allocations, writes, listeners, startup work and build hazards.
-8. **Optional redesign** — only after the internal baseline is stable and only within the authorized visual mode.
+1. **Baseline** — behavior, routes, UI contract, storage compatibility, build result and known defects.
+2. **Platform legality** — APIs, selectors, permissions, manifest declarations and API level.
+3. **Canonical state** — remove parallel booleans/business truth.
+4. **Canonical persistence** — centralize reads/writes and preserve schema compatibility.
+5. **Lifecycle ownership** — one owner for each timer/subscription/native resource.
+6. **Presentation ownership** — move calculations out of pages without unauthorized visual change.
+7. **Shape/design ownership** — make Circle/Pill/Rect intent explicit without flattening valid differences.
+8. **Memory/build cleanup** — optimize proven waste and build-chain hazards.
+9. **Optional visual work** — only within the authorized mode.
 
 Read `references/migration-playbook.md` before large migrations.
 
-## 5. Preserve UI Mode is a hard constraint
+## 5. Preserve UI is a hard constraint
 
-When Preserve UI Mode is selected:
+In Preserve UI mode, preserve unless correctness requires otherwise:
 
-- preserve route structure unless a route is objectively dead or broken;
-- preserve visible copy, icons, assets, color roles, typography hierarchy and control order;
-- preserve component geometry, spacing, alignment, scroll behavior, gestures and navigation semantics as closely as runtime correctness allows;
-- preserve Circle/Pill/Rect differences already visible to the user;
-- do not “improve” density, spacing, colors, radius, typography or composition merely because a new design system exists;
-- do not replace a distinctive screen with a generic card/list layout;
-- do not normalize working shape-specific layout into one scaled layout;
-- treat CSS/template rewrites as risky because equivalent-looking source can render differently on Vela.
+- route/task flow and navigation result;
+- visible copy, icons, images and assets;
+- information hierarchy and control order;
+- color roles, typography hierarchy, geometry, spacing and alignment;
+- scroll/paging behavior, gestures and hit targets;
+- loading/empty/error/disabled states;
+- existing Circle/Pill/Rect distinctions.
 
-Internal refactoring may change DOM/template structure only when necessary. When it does, compare the resulting rendered contract against the baseline.
+Do not “improve” spacing, colors, radius, typography, density or composition merely because a newer design system exists. Do not replace distinctive screens with generic cards/lists. Do not normalize working shape-native layouts into one scaled layout.
 
-If exact preservation conflicts with an unsupported Vela API, broken geometry, inaccessible control, data-truth violation, or lifecycle correctness, fix correctness first and explicitly report the visible delta.
+Classify suspicious existing behavior as `intent`, `constraint`, `defect`, or `unknown`. Do not preserve obvious defects such as black bands, clipping, dead hitboxes, unsupported selectors, stale state, fake health data or leaked resources merely because they are visible today. Fix the smallest correctness issue and report the visible delta.
 
-## 6. Light Refresh and Redesign Mode
+Template/style source similarity is only static evidence. Equivalent source may render differently on Vela; changed source may still render equivalently. Use simulator/device comparison for visual claims.
 
-**Light Refresh** may adjust polish without changing information architecture, feature hierarchy, primary gestures, navigation model, or user task flow.
+## 6. Light Refresh and Redesign
 
-**Redesign** may recompose surfaces using the sibling engineering skill’s L1/L2/L3 shape-native model. Even in Redesign Mode, preserve business behavior and data truth unless the user separately authorizes product behavior changes.
+Light Refresh may polish within the existing product hierarchy and interaction model. Redesign may use the sibling engineering skill’s L1/L2/L3 shape-native model.
 
-Do not mix a broad redesign into an architecture migration commit when the changes can be separated.
+Even in Redesign mode, preserve business behavior, persistence compatibility and data truth unless the user separately authorizes product-behavior changes. Separate broad visual changes from architecture migration when reasonably possible.
 
-## 7. State and persistence migration rules
+## 7. State and persistence migration
 
-For every mutable fact, classify it as:
+Classify every mutable fact as:
 
 - persistent truth;
 - runtime truth;
 - derived view state.
 
-Prefer existing state machines over parallel booleans. Prefer one canonical repository/store over page-local storage access. Migrate keys/schema deliberately; preserve user data when feasible. Serialize overlapping writes and guard stale async hydration callbacks.
+Prefer existing canonical state machines over page booleans. Prefer one repository/store over direct page storage. Inventory keys before migration. Preserve old data when feasible. Serialize overlapping writes and invalidate stale async hydration callbacks.
 
-Never persist transient connection/subscription state merely to make pages easier to render.
+Never persist live connection state, listener presence, current page visibility or other runtime-only truth merely for rendering convenience.
 
-## 8. Runtime resource migration rules
+## 8. Runtime ownership migration
 
-For sensors, health, location, system events, timers and haptics:
+For each sensor, health/location/event subscription, timer and haptic flow, identify:
 
-- identify the current owner;
-- identify every acquire/start/subscribe path;
-- identify every pause/hide/finish/destroy/replacement path;
-- consolidate duplicate owners;
-- prevent late callbacks from reviving stale flows;
-- verify pause/resume and recovery behavior.
+- acquire/start/subscribe paths;
+- canonical runtime owner;
+- pause/hide behavior;
+- finish/destroy/replacement behavior;
+- late callback guard;
+- recovery/resume behavior.
 
-A resource-ownership refactor is incomplete until release behavior is proven.
+Do not leave old and new owners active simultaneously. A lifecycle refactor is incomplete until release behavior is proven.
 
-## 9. Keep the refactor reversible
+## 9. Keep migration reversible
 
-Change one architectural axis at a time when possible. Review the Git diff after every stage.
+Change one architectural axis at a time when practical. Review Git diff after each stage. Avoid mass rename + persistence rewrite + lifecycle rewrite + redesign in one change.
 
-Avoid:
+Use temporary adapters only when they enable a bounded migration and have a removal condition. Do not add “clean architecture” layers that only forward calls without protecting an invariant.
 
-- mass rename + state rewrite + redesign in one step;
-- mechanical file moves with hidden semantic changes;
-- “clean architecture” layers that only forward calls;
-- deleting compatibility behavior before the replacement is proven;
-- replacing known working code with fashionable patterns without a concrete invariant benefit.
+## 10. Compare preservation after changes
 
-Prefer temporary adapters only when they enable a safe staged migration and have a clear removal point.
+For Preserve UI or Light Refresh, compare against the captured baseline:
 
-## 10. Validate equivalence and improvement separately
+```bash
+node skills/openvela-existing-app-refactor/scripts/compare-preservation-baseline.mjs \
+  <temporary-baseline.json> <project-root> --mode preserve
+```
 
-A refactor needs two kinds of evidence:
+Use `--mode light` for Light Refresh. The comparison treats removed routes, static copy/assets and interaction bindings as stronger drift signals. Template/style hash changes are warnings requiring visual verification, not proof of failure.
 
-**Equivalence evidence**
-- existing user flows still work;
-- UI preservation contract still holds for the selected mode;
-- persisted data remains readable or is intentionally migrated;
-- navigation, gestures and shape-specific behavior remain correct.
+The tool is a guardrail. It cannot prove pixel equivalence, dynamic copy equivalence, runtime layout, gestures or device behavior.
 
-**Engineering improvement evidence**
-- fewer owners/sources of truth;
-- legal API and manifest usage;
-- deterministic lifecycle release;
-- reduced duplicate allocations/writes/subscriptions;
-- clearer architecture contracts;
-- build/JSC/RPK and relevant bundle checks pass.
+## 11. Validate improvement and equivalence separately
 
-Static tests do not prove visual equivalence. Preview tools do not prove device behavior.
+Collect **equivalence evidence** for user flows, UI mode, persisted data, navigation, gestures and shape-specific behavior.
+
+Collect **engineering evidence** for ownership reduction, API legality, lifecycle release, allocation/IO reduction, architecture contracts, build/JSC/RPK and bundle/resource budgets.
+
+Static tests do not prove visual equivalence. Preview does not prove device behavior. Simulator does not prove every hardware capability.
+
+## 12. Produce an evidence report
+
+Use `references/refactor-report.md`. Explicitly list:
+
+- selected visual mode;
+- baseline and ownership map;
+- before/after ownership changes;
+- persistence compatibility;
+- preserved UI and intentional visible corrections;
+- resource/performance changes backed by evidence;
+- platform/build legality;
+- verification matrix;
+- unresolved runtime/device risks.
+
+Never turn untested areas into successful claims.
 
 ## Hard invariants
 
-- Do not redesign without explicit authorization; default to preservation when uncertain.
-- Do not rewrite a working frontend merely to match a preferred component vocabulary.
-- Do not create a second source of truth during migration without a bounded transition plan.
+- Do not redesign without authorization; default to Preserve UI when uncertain.
+- Do not rewrite a working frontend merely to match a preferred vocabulary.
+- Do not create a second source of business truth without a bounded transition plan.
+- Do not silently change or delete persistence schema/user data.
 - Do not promote mock, fallback, compatibility or estimated values to real device data.
 - Do not leave old and new lifecycle owners active simultaneously.
-- Do not delete user data or change persistence schema silently.
-- Do not claim a refactor is behavior-preserving without evidence appropriate to the changed layer.
-- Do not turn a refactor into a full rewrite unless incremental migration is demonstrably unsafe or impossible.
+- Do not flatten intentional shape-specific UI without authorization.
+- Do not claim behavior/UI preservation without evidence appropriate to that layer.
+- Do not turn a refactor into a rewrite unless incremental migration is demonstrably unsafe or impossible.
 
 ## References
 
-- UI/interaction baseline: `references/preservation-contract.md`
-- Staged architecture migration: `references/migration-playbook.md`
-- Patterns grounded in `vela_band`: `references/project-refactor-patterns.md`
+- UI/interaction preservation: `references/preservation-contract.md`
+- Staged migration: `references/migration-playbook.md`
+- Project-grounded migration patterns: `references/project-refactor-patterns.md`
+- Refactor delivery/evidence contract: `references/refactor-report.md`
 - General engineering standard: `../openvela-wearable-engineering/SKILL.md`
 
-## Deterministic inventory
+## Skill self-checks
 
-Run:
+After modifying either skill or its scripts, run:
 
 ```bash
-node skills/openvela-existing-app-refactor/scripts/inventory-existing-app.mjs <project-root>
+node skills/openvela-wearable-engineering/scripts/test-audit.mjs
+node skills/openvela-existing-app-refactor/scripts/test-inventory.mjs
+node skills/openvela-existing-app-refactor/scripts/test-preservation.mjs
+node skills/validate-skill-suite.mjs
 ```
 
-Use the inventory to discover the current system. It is not permission to refactor every reported file.
+Use these self-checks to protect the Skill package itself. They do not replace target-project build, simulator or device validation.
