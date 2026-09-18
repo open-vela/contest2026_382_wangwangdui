@@ -303,9 +303,8 @@ quickapp/velaclaw-aiot/
 └── NOTICE
 ```
 
-- [V2 稳定基线](docs/STABLE_BASELINE_V2.md)
-- [V2 Stable Architecture](docs/REWRITE_V2_ARCHITECTURE.md)
-- [Wearable Design Engine](docs/DESIGN_ENGINE.md)
+- [V2 Architecture](docs/ARCHITECTURE.md)
+- [Wearable Design System](docs/DESIGN_SYSTEM.md)
 - [技术审计 2026-09-18](docs/AUDIT_20260918.md)
 - [兼容性说明](docs/COMPATIBILITY.md)
 
