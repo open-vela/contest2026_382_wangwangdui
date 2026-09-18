@@ -51,29 +51,55 @@ function smoothStep(value) {
   return t * t * (3 - 2 * t)
 }
 
-function buildCoords() {
-  return [
-    { x: FOCUS_X, y: FOCUS_Y },
-    { x: FOCUS_X - HALF_STEP, y: FOCUS_Y - ROW_HEIGHT },
-    { x: FOCUS_X + HALF_STEP, y: FOCUS_Y - ROW_HEIGHT },
-    { x: FOCUS_X - SPACING, y: FOCUS_Y },
-    { x: FOCUS_X + SPACING, y: FOCUS_Y },
-    { x: FOCUS_X - HALF_STEP, y: FOCUS_Y + ROW_HEIGHT },
-    { x: FOCUS_X + HALF_STEP, y: FOCUS_Y + ROW_HEIGHT },
-    { x: FOCUS_X - SPACING - HALF_STEP, y: FOCUS_Y - ROW_HEIGHT },
-    { x: FOCUS_X + SPACING + HALF_STEP, y: FOCUS_Y - ROW_HEIGHT },
-    { x: FOCUS_X - SPACING - HALF_STEP, y: FOCUS_Y + ROW_HEIGHT },
-    { x: FOCUS_X + SPACING + HALF_STEP, y: FOCUS_Y + ROW_HEIGHT }
-  ]
+// Axial directions of a flat-top hex lattice, walking one ring at a time.
+var AXIAL_DIRECTIONS = [
+  { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
+  { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 }
+]
+
+function axialPoint(q, r) {
+  return {
+    x: Math.round(FOCUS_X + SPACING * (q + r / 2)),
+    y: Math.round(FOCUS_Y + ROW_HEIGHT * r)
+  }
+}
+
+/**
+ * The lattice holds one unique cell per requested app.
+ *
+ * This used to return eleven fixed points and `buildSlots` wrapped with
+ * `index % coords.length`, so on a launcher with twelve entries the twelfth app
+ * was drawn exactly on top of the first. Growing the ring keeps every app on its
+ * own cell — ring sizes are 1, 7, 19, 37 … — and leaves the spacing, focus and
+ * projection math untouched.
+ */
+function buildCoords(count) {
+  var wanted = Math.max(11, Math.floor(Number(count) || 0))
+  var coords = [axialPoint(0, 0)]
+  var ring = 1
+  while (coords.length < wanted) {
+    var q = 0
+    var r = -ring
+    for (var side = 0; side < AXIAL_DIRECTIONS.length && coords.length < wanted; side++) {
+      var direction = AXIAL_DIRECTIONS[side]
+      for (var step = 0; step < ring && coords.length < wanted; step++) {
+        coords.push(axialPoint(q, r))
+        q += direction.q
+        r += direction.r
+      }
+    }
+    ring++
+  }
+  return coords
 }
 
 function buildSlots(apps) {
   var source = apps || []
-  var coords = buildCoords()
+  var coords = buildCoords(source.length)
   var slots = []
   for (var index = 0; index < source.length; index++) {
     var app = source[index]
-    var coordinate = coords[index % coords.length]
+    var coordinate = coords[index]
     slots.push({
       slotKey: app.id + '-' + index,
       id: app.id,

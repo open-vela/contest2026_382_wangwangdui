@@ -1,0 +1,14 @@
+# Editor / IDE state (not part of the deliverable)
+.idea/
+.vscode/
+*.iml
+
+# Build output and local caches
+build/
+dist/
+node_modules/
+*.rpk
+
+# Local run artifacts
+outputs/
+*.log

@@ -1,0 +1,100 @@
+<template>
+  <stack class="root" style="position: relative; width: 100%; height: 100%;">
+    <div class="scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <text class="title" style="left: {{ titleLeft }}px; width: {{ titleWidth }}px; top: {{ titleTop }}px; font-size: {{ titleSize }}px; text-align: {{ titleAlign }};">番茄钟设置</text>
+      <scroll class="list" scroll-y="true" style="left: {{ listLeft }}px; top: {{ listTop }}px; width: {{ listWidth }}px; height: {{ listHeight }}px;">
+        <div class="row" style="width: {{ listWidth }}px; height: {{ rowHeight }}px; border-radius: {{ rowRadius }}px; margin-bottom: {{ rowGap }}px;">
+          <text class="row-label" style="width: {{ labelWidth }}px; margin-left: {{ rowInset }}px; font-size: {{ bodySize }}px;">专注时长</text>
+          <div class="control" style="width: {{ controlWidth }}px; height: {{ rowHeight }}px; margin-right: {{ rowInset }}px;">
+            <div class="step" style="width: {{ stepSize }}px; height: {{ stepSize }}px; border-radius: {{ stepRadius }}px;" @click="shorterFocus"><text class="step-text" style="font-size: {{ valueSize }}px;">-</text></div>
+            <text class="row-value" style="width: {{ valueWidth }}px; margin-left: {{ controlGap }}px; margin-right: {{ controlGap }}px; font-size: {{ valueSize }}px;">{{ focusText }}</text>
+            <div class="step" style="width: {{ stepSize }}px; height: {{ stepSize }}px; border-radius: {{ stepRadius }}px;" @click="longerFocus"><text class="step-text" style="font-size: {{ valueSize }}px;">+</text></div>
+          </div>
+        </div>
+        <div class="row" style="width: {{ listWidth }}px; height: {{ rowHeight }}px; border-radius: {{ rowRadius }}px; margin-bottom: {{ rowGap }}px;">
+          <text class="row-label" style="width: {{ labelWidth }}px; margin-left: {{ rowInset }}px; font-size: {{ bodySize }}px;">休息时长</text>
+          <div class="control" style="width: {{ controlWidth }}px; height: {{ rowHeight }}px; margin-right: {{ rowInset }}px;">
+            <div class="step" style="width: {{ stepSize }}px; height: {{ stepSize }}px; border-radius: {{ stepRadius }}px;" @click="shorterBreak"><text class="step-text" style="font-size: {{ valueSize }}px;">-</text></div>
+            <text class="row-value" style="width: {{ valueWidth }}px; margin-left: {{ controlGap }}px; margin-right: {{ controlGap }}px; font-size: {{ valueSize }}px;">{{ breakText }}</text>
+            <div class="step" style="width: {{ stepSize }}px; height: {{ stepSize }}px; border-radius: {{ stepRadius }}px;" @click="longerBreak"><text class="step-text" style="font-size: {{ valueSize }}px;">+</text></div>
+          </div>
+        </div>
+        <div class="row" style="width: {{ listWidth }}px; height: {{ rowHeight }}px; border-radius: {{ rowRadius }}px; margin-bottom: {{ rowGap }}px;">
+          <text class="row-label" style="width: {{ labelWidth }}px; margin-left: {{ rowInset }}px; font-size: {{ bodySize }}px;">自动开始</text>
+          <div class="control" style="width: {{ controlWidth }}px; height: {{ rowHeight }}px; margin-right: {{ rowInset }}px;">
+            <div class="toggle" style="width: {{ toggleWidth }}px; height: {{ stepSize }}px; margin-left: {{ toggleOffset }}px; border-radius: {{ stepRadius }}px;" @click="toggleAuto"><text class="step-text" style="font-size: {{ bodySize }}px;">{{ autoText }}</text></div>
+          </div>
+        </div>
+        <text class="note" style="width: {{ listWidth }}px; font-size: {{ bodySize }}px;">{{ noteText }}</text>
+      </scroll>
+      <div class="pill" style="left: {{ backLeft }}px; top: {{ backTop }}px; width: {{ backWidth }}px; height: {{ backHeight }}px; border-radius: {{ pillRadius }}px;" @click="goBack"><text class="pill-text" style="font-size: {{ pillFontSize }}px;">返回计时</text></div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageNavigation from '../../common/page_navigation'
+import deviceProfile from '../../capabilities/device_profile'
+import settingsLayout from '../../design/settings_layout'
+import repository from '../../domain/repository'
+import settingsModel from '../../domain/settings_model'
+
+export default {
+  private: {
+    sceneWidth: 192, sceneHeight: 490, pad: 12, titleTop: 12, titleLeft: 12, titleWidth: 168,
+    titleSize: 11, titleAlign: 'left', listTop: 28, listWidth: 168, listHeight: 400, rowHeight: 30, rowGap: 6, rowRadius: 10,
+    listLeft: 12, rowInset: 8, labelWidth: 60, controlWidth: 92, controlGap: 3, valueWidth: 42,
+    stepSize: 22, stepRadius: 11, toggleWidth: 48, toggleOffset: 44, bodySize: 9, valueSize: 13,
+    backLeft: 12, backTop: 454, backWidth: 168, backHeight: 24, pillRadius: 12, pillFontSize: 10,
+    focusText: '25 分', breakText: '5 分', autoText: '关', noteText: '修改在计时空闲时生效'
+  },
+  onInit() {
+    var self = this
+    this.settings = settingsModel.normalize(settingsModel.DEFAULTS)
+    deviceProfile.get().then(function (profile) {
+      self.applyProfile(profile)
+      return repository.loadSettings()
+    }).then(function (result) { self.settings = result.settings; self.render() })
+  },
+  onBackPress() { pageNavigation.back(); return true },
+  applyProfile(profile) {
+    var plan = settingsLayout.compute(profile)
+    this.sceneWidth = plan.sceneWidth; this.sceneHeight = plan.sceneHeight; this.pad = plan.pad
+    this.titleTop = plan.titleTop; this.titleSize = plan.titleSize; this.titleLeft = plan.titleLeft; this.titleWidth = plan.titleWidth; this.titleAlign = plan.titleAlign
+    this.listTop = plan.listTop; this.listLeft = plan.listLeft; this.listWidth = plan.listWidth; this.listHeight = plan.listHeight
+    this.rowHeight = plan.rowHeight; this.rowGap = plan.rowGap; this.rowRadius = Math.max(4, Math.round(plan.rowHeight / 3))
+    this.rowInset = plan.rowInset; this.labelWidth = plan.labelWidth; this.controlWidth = plan.controlWidth; this.controlGap = plan.controlGap; this.valueWidth = plan.valueWidth
+    this.stepSize = plan.stepSize; this.stepRadius = plan.stepRadius; this.toggleWidth = plan.toggleWidth; this.toggleOffset = plan.toggleOffset
+    this.bodySize = plan.bodySize; this.valueSize = plan.valueSize
+    this.backLeft = plan.backLeft; this.backTop = plan.backTop; this.backWidth = plan.backWidth; this.backHeight = plan.backHeight
+    this.pillRadius = Math.round(plan.backHeight / 2); this.pillFontSize = plan.pillFontSize
+  },
+  render() {
+    this.focusText = this.settings.focusMinutes + ' 分'; this.breakText = this.settings.breakMinutes + ' 分'; this.autoText = this.settings.autoStart ? '开' : '关'
+    this.noteText = this.settings.autoStart ? '一段结束后自动开始下一段' : '一段结束后等待手动开始'
+  },
+  persist() { this.render(); repository.saveSettings(this.settings) },
+  shorterFocus() { this.settings.focusMinutes = settingsModel.cycleFocus(this.settings.focusMinutes, -1); this.persist() },
+  longerFocus() { this.settings.focusMinutes = settingsModel.cycleFocus(this.settings.focusMinutes, 1); this.persist() },
+  shorterBreak() { this.settings.breakMinutes = settingsModel.cycleBreak(this.settings.breakMinutes, -1); this.persist() },
+  longerBreak() { this.settings.breakMinutes = settingsModel.cycleBreak(this.settings.breakMinutes, 1); this.persist() },
+  toggleAuto() { this.settings = settingsModel.toggleAutoStart(this.settings); this.persist() },
+  goBack() { pageNavigation.back() }
+}
+</script>
+
+<style>
+.root, .scene { background-color: #000000; }
+.scene { position: relative; margin-left: auto; margin-right: auto; }
+.title { position: absolute; color: #FF9F0A; font-weight: bold; }
+.list { position: absolute; }
+.row { background-color: #14181F; flex-direction: row; justify-content: space-between; align-items: center; }
+.row-label { color: #FFFFFF; }
+.control { flex-direction: row; align-items: center; }
+.step, .toggle { background-color: #2C2C2E; justify-content: center; align-items: center; }
+.step-text { color: #FFFFFF; font-weight: bold; }
+.row-value { color: #FF9F0A; font-weight: bold; text-align: center; }
+.note { color: #8E8E93; margin-top: 2px; text-align: center; }
+.pill { position: absolute; background-color: #1C1C1E; justify-content: center; align-items: center; }
+.pill-text { color: #FFFFFF; }
+</style>

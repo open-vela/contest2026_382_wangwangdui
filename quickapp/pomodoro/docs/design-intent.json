@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "level": "L2",
+  "rationale": "Focus timing shares business semantics across devices, while Circle uses a ring-first composition and Pill/Rect use a value-first column. Settings and statistics reuse list semantics but keep shape-aware geometry.",
+  "sharedSemantics": ["timer state", "settings", "statistics", "navigation"],
+  "shapeStrategy": {
+    "circle": "Ring-first focus surface with chord-safe controls; compact centered list geometry for settings and statistics.",
+    "pill": "Tall value-first column with full-width list rows and bottom controls.",
+    "rect": "Value-first column with width-aware rows and bottom controls."
+  },
+  "profiles": ["circle-466", "circle-480", "pill-192x490", "pill-212x520", "rect-336x480", "rect-432x514"]
+}

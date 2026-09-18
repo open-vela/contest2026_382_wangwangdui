@@ -1,0 +1,421 @@
+/*
+ * design-studio / canvas.css
+ * The viewport, artboard, element primitives and the selection overlay.
+ * Everything inside .artboard is the user's artifact: it must look like a real
+ * device screen, not like an editor widget.
+ */
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  contain: strict;
+  background-color: var(--c-canvas);
+  background-image:
+    radial-gradient(820px 460px at 24% -10%, rgba(255, 150, 90, .16), transparent 62%),
+    radial-gradient(760px 460px at 88% 4%, rgba(120, 160, 255, .14), transparent 60%),
+    linear-gradient(var(--c-grid-line, rgba(20, 20, 40, .045)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-grid-line, rgba(20, 20, 40, .045)) 1px, transparent 1px);
+  background-size: auto, auto, 28px 28px, 28px 28px;
+  cursor: default;
+}
+
+.viewport.is-panning {
+  cursor: grabbing;
+}
+
+.viewport.is-drawing {
+  cursor: crosshair;
+}
+
+.viewport-pan {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.artboard-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ab-radius, 22px);
+  box-shadow:
+    0 26px 60px rgba(24, 28, 45, .18),
+    0 6px 18px rgba(24, 28, 45, .1),
+    0 0 0 1px rgba(24, 28, 45, .07),
+    0 0 0 8px rgba(255, 255, 255, .5);
+  pointer-events: none;
+}
+
+.artboard {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--ab-radius, 22px);
+  background-color: var(--ab-bg, #0b0d12);
+  isolation: isolate;
+}
+
+.artboard.has-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.safe-area-layer,
+.guide-layer,
+.overlay-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.safe-area-layer[hidden] {
+  display: none;
+}
+
+.safe-frame {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px dashed rgba(94, 200, 255, .3);
+  clip-path: inset(var(--safe-top, 12px) 0 var(--safe-bottom, 12px) 0);
+}
+
+.safe-caption {
+  position: absolute;
+  right: 6px;
+  top: calc(var(--safe-top, 12px) + 3px);
+  font-size: 7px;
+  letter-spacing: .1em;
+  color: rgba(94, 200, 255, .55);
+}
+
+/* ------------------------------------------------------------- elements */
+
+.el {
+  position: absolute;
+  transform-origin: center center;
+  contain: layout style paint;
+}
+
+.el.is-locked .el-body {
+  cursor: default;
+}
+
+.el-body {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.el[data-type="text"] .el-body,
+.el[data-type="button"] .el-body {
+  align-items: center;
+}
+
+.el-text {
+  width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.el[data-type="text"][data-align="center"] .el-body,
+.el[data-type="button"] .el-body {
+  justify-content: center;
+  text-align: center;
+}
+
+.el[data-type="text"][data-align="right"] .el-body {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.el[data-type="container"] .el-body {
+  flex-direction: column;
+}
+
+.el[data-type="container"][data-direction="row"] .el-body {
+  flex-direction: row;
+}
+
+.el[data-type="container"][data-direction="grid"] .el-body {
+  display: grid;
+  place-content: start;
+}
+
+.el-progress-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.el-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.el-chart {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.el-chart i {
+  flex: 1;
+  border-radius: 2px;
+  display: block;
+}
+
+.el-icon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.el-icon svg {
+  width: 58%;
+  height: 58%;
+}
+
+.el-listrow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+}
+
+.el-listrow .row-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .22;
+  flex: none;
+}
+
+.el-listrow .row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.el-listrow .row-arrow {
+  opacity: .5;
+  font-size: 12px;
+}
+
+.el-honeycomb {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.el-honeycomb i {
+  position: absolute;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 9px;
+  color: rgba(255, 255, 255, .72);
+  background: linear-gradient(160deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .04));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.el-group-hint {
+  width: 100%;
+  height: 100%;
+  border: 1px dashed rgba(255, 138, 61, .34);
+  border-radius: 8px;
+}
+
+/* ------------------------------------------------------------- overlay */
+
+.ov-box {
+  position: absolute;
+  pointer-events: none;
+  border: 1.4px solid var(--c-select);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(94, 200, 255, .2);
+}
+
+.ov-box.is-multi {
+  border-style: solid;
+}
+
+.ov-label {
+  position: absolute;
+  top: -19px;
+  left: -1.4px;
+  max-width: 220px;
+  padding: 2px 6px;
+  border-radius: 5px 5px 5px 0;
+  background: var(--c-select);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ov-handle {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 1.4px solid var(--c-select);
+  border-radius: 2px;
+  background: var(--c-solid);
+  box-shadow: 0 1px 2px rgba(20, 24, 40, .18);
+  pointer-events: auto;
+  z-index: 3;
+}
+
+.ov-handle[data-handle="nw"],
+.ov-handle[data-handle="se"] {
+  cursor: nwse-resize;
+}
+
+.ov-handle[data-handle="ne"],
+.ov-handle[data-handle="sw"] {
+  cursor: nesw-resize;
+}
+
+.ov-handle[data-handle="n"],
+.ov-handle[data-handle="s"] {
+  cursor: ns-resize;
+}
+
+.ov-handle[data-handle="e"],
+.ov-handle[data-handle="w"] {
+  cursor: ew-resize;
+}
+
+.ov-handle:hover {
+  background: var(--c-select);
+}
+
+.ov-child {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed rgba(94, 200, 255, .38);
+  border-radius: 2px;
+}
+
+.guide {
+  position: absolute;
+  background: var(--c-guide);
+  box-shadow: 0 0 0 1px rgba(255, 79, 163, .25);
+  pointer-events: none;
+}
+
+.guide.axis-x {
+  width: 1px;
+  transform: translateX(-.5px);
+}
+
+.guide.axis-y {
+  height: 1px;
+  transform: translateY(-.5px);
+}
+
+.guide.is-center {
+  background: var(--c-accent);
+  box-shadow: 0 0 0 1px rgba(255, 138, 61, .22);
+}
+
+.marquee {
+  position: absolute;
+  border: 1px solid var(--c-select);
+  background: var(--c-select-soft);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.drop-preview {
+  position: absolute;
+  border: 1.4px dashed var(--c-accent);
+  border-radius: 6px;
+  background: var(--c-accent-soft);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.note-pin {
+  position: absolute;
+  max-width: 150px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 209, 102, .5);
+  border-radius: 8px;
+  background: rgba(255, 209, 102, .14);
+  color: #ffe6a3;
+  font-size: 9.5px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-sm);
+}
+
+.note-pin.is-selected {
+  box-shadow: 0 0 0 1px rgba(255, 209, 102, .7), var(--shadow-md);
+}
+
+.zoom-hud {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 5px;
+  z-index: 6;
+}
+
+.hud-btn {
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  background: rgba(20, 23, 31, .86);
+  backdrop-filter: blur(8px);
+  font-size: 10.5px;
+  color: var(--c-text-2);
+  transition: color var(--fast), border-color var(--fast);
+}
+
+.hud-btn:hover {
+  color: var(--c-text);
+  border-color: var(--c-line-strong);
+}
+
+/* text editing state */
+
+.el.is-editing .el-body {
+  pointer-events: auto;
+}
+
+.el.is-editing .el-text {
+  outline: 1px solid var(--c-accent-line);
+  outline-offset: 2px;
+  cursor: text;
+}
+
+.el.is-editing [contenteditable] {
+  pointer-events: auto;
+}

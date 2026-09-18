@@ -155,7 +155,15 @@ export default {
       if (event && event.stopPropagation) event.stopPropagation()
       this.stopHoneycombMotion(); navigation.back(); return
     }
-    if (!this.dragMoved) { this.honeyLabelOpacity = 1; this.scheduleHoneycombLayout(); return }
+    if (!this.dragMoved) {
+      this.honeyLabelOpacity = 1
+      this.scheduleHoneycombLayout()
+      // The lattice owns the whole touch sequence, so the tile's own @click is
+      // not reliably delivered. Resolve the tap here against the frame that is
+      // actually on screen: a tap means "open the tile under the finger".
+      if (p) this.tapHoneyAt(p.pageX, p.pageY)
+      return
+    }
     if (event && event.preventDefault) event.preventDefault()
     if (event && event.stopPropagation) event.stopPropagation()
     this.suppressTapUntil = Date.now() + 220
@@ -214,6 +222,35 @@ export default {
     if (!item || Date.now() < (this.suppressTapUntil || 0)) return
     this.stopHoneycombMotion()
     this.openApp(item)
+  },
+
+  tapHoneyAt(x, y) {
+    if (Date.now() < (this.suppressTapUntil || 0)) return
+    var slot = this.honeySlotAt(x, y)
+    if (!slot) return
+    // One navigation only: a late @click from the same gesture is ignored.
+    this.suppressTapUntil = Date.now() + 350
+    this.stopHoneycombMotion()
+    this.openApp(slot)
+  },
+
+  /**
+   * Nearest rendered tile whose hit area contains the point. The radius is
+   * generous because the focused tile grows and a fingertip is not pixel
+   * accurate on a 30-50px target.
+   */
+  honeySlotAt(x, y) {
+    var slots = this.circleVisibleSlots || []
+    var best = null
+    var bestDistance = Infinity
+    for (var i = 0; i < slots.length; i++) {
+      var slot = slots[i]
+      var dx = x - slot.centerX
+      var dy = y - slot.centerY
+      var distance = Math.sqrt(dx * dx + dy * dy)
+      if (distance <= slot.size * 0.75 && distance < bestDistance) { best = slot; bestDistance = distance }
+    }
+    return best
   },
 
   handleListSwipe(event) {

@@ -1,0 +1,21 @@
+{
+  "name": "pomodoro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-page pomodoro Quick App used to test the openvela wearable engineering skills end to end.",
+  "license": "Apache-2.0",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "aiot start --watch",
+    "build": "aiot build --enable-jsc",
+    "release": "aiot release --enable-jsc",
+    "test": "node test/timer_machine.test.js && node test/timer_layout.test.js && node test/settings_model.test.js && node test/stats_model.test.js && node test/date_key.test.js",
+    "audit": "node ../../skills/openvela-wearable-engineering/scripts/audit-quickapp.mjs .",
+    "inventory": "node ../../skills/openvela-existing-app-refactor/scripts/inventory-existing-app.mjs .",
+    "check": "npm run test"
+  },
+  "devDependencies": {
+    "@aiot-toolkit/jsc": "^1.0.3",
+    "aiot-toolkit": "^2.0.5"
+  }
+}

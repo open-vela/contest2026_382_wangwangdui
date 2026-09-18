@@ -1,4 +1,9 @@
 var APPS = {
+  // The pomodoro timer ships as its own Quick App (`com.application.pomodoro`).
+  // It is listed here as well so the wearable launcher shows the entry next to
+  // the built-in surfaces: the system launcher does not always surface a
+  // side-loaded package, and the watch needs the icon to be reachable either way.
+  pomodoro: { label: '番茄钟', icon: '/common/icons/pomodoro.jpg', accent: '#FF5A36' },
   workout: { label: '运动', icon: '/common/icons/workout.jpg', accent: '#3A7DFF' },
   history: { label: '趋势', icon: '/common/icons/history.jpg', accent: '#30D158' },
   heart: { label: '心率', icon: '/common/icons/heart.jpg', accent: '#FF375F' },

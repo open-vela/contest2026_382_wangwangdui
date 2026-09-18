@@ -1,0 +1,10 @@
+<script>
+export default {
+  onCreate() {
+    console.log('pomodoro app created')
+  },
+  onDestroy() {
+    console.log('pomodoro app destroyed')
+  }
+}
+</script>

@@ -1,0 +1,121 @@
+<template>
+  <stack class="root" style="position: relative; width: 100%; height: 100%;">
+    <div class="scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <text class="title" style="left: {{ titleLeft }}px; width: {{ titleWidth }}px; top: {{ titleTop }}px; font-size: {{ titleSize }}px; text-align: {{ titleAlign }};">番茄统计</text>
+
+      <scroll class="list" scroll-y="true" style="left: {{ listLeft }}px; top: {{ listTop }}px; width: {{ listWidth }}px; height: {{ listHeight }}px;">
+        <div class="summary" style="width: {{ listWidth }}px; height: {{ summaryHeight }}px; border-radius: {{ rowRadius }}px; margin-bottom: {{ rowGap }}px;">
+          <div class="summary-cell">
+            <text class="summary-label" style="font-size: {{ bodySize }}px;">今日</text>
+            <text class="summary-value" style="font-size: {{ valueSize }}px;">{{ todayText }}</text>
+          </div>
+          <div class="summary-cell summary-cell-right">
+            <text class="summary-label" style="font-size: {{ bodySize }}px;">累计</text>
+            <text class="summary-value" style="font-size: {{ valueSize }}px;">{{ totalText }}</text>
+          </div>
+        </div>
+        <div class="day" for="{{ days }}" tid="date" style="width: {{ listWidth }}px; height: {{ rowHeight }}px; border-radius: {{ rowRadius }}px; margin-bottom: {{ rowGap }}px;">
+          <text class="day-label" style="font-size: {{ bodySize }}px;">{{ $item.label }}</text>
+          <text class="day-value" style="font-size: {{ valueSize }}px;">{{ $item.count }}</text>
+        </div>
+      </scroll>
+
+      <div class="pill" style="left: {{ backLeft }}px; top: {{ backTop }}px; width: {{ backWidth }}px; height: {{ backHeight }}px; border-radius: {{ pillRadius }}px;" @click="goBack">
+        <text class="pill-text" style="font-size: {{ pillFontSize }}px;">返回计时</text>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageNavigation from '../../common/page_navigation'
+import deviceProfile from '../../capabilities/device_profile'
+import timerLayout from '../../design/timer_layout'
+import repository from '../../domain/repository'
+import statsModel from '../../domain/stats_model'
+import dateKey from '../../domain/date_key'
+
+export default {
+  private: {
+    sceneWidth: 192, sceneHeight: 490, pad: 12, titleTop: 10, titleLeft: 12, titleWidth: 168,
+    titleSize: 11, titleAlign: 'left',
+    summaryHeight: 40, listTop: 34, listLeft: 12, listWidth: 168, listHeight: 360,
+    rowHeight: 28, rowGap: 5, rowRadius: 10,
+    bodySize: 9, valueSize: 13,
+    backLeft: 12, backTop: 454, backWidth: 168, backHeight: 24, pillRadius: 12, pillFontSize: 10,
+    todayText: '0', totalText: '0', days: []
+  },
+  onInit() {
+    var self = this
+    deviceProfile.get().then(function (profile) {
+      self.applyProfile(profile)
+      return repository.loadStats()
+    }).then(function (result) {
+      self.applyStats(result.store)
+    })
+  },
+  onShow() {
+    var self = this
+    repository.loadStats().then(function (result) {
+      self.applyStats(result.store)
+    })
+  },
+  onBackPress() {
+    pageNavigation.back()
+    return true
+  },
+  applyProfile(profile) {
+    var plan = timerLayout.computeListLayout(profile)
+    this.sceneWidth = plan.sceneWidth
+    this.sceneHeight = plan.sceneHeight
+    this.pad = plan.pad
+    this.titleTop = plan.titleTop
+    this.titleLeft = plan.titleLeft
+    this.titleWidth = plan.titleWidth
+    this.titleAlign = plan.titleAlign
+    this.titleSize = plan.titleSize
+    this.listWidth = plan.listWidth
+    this.listLeft = plan.listLeft
+    this.listTop = plan.listTop
+    this.listHeight = plan.listHeight
+    this.rowHeight = plan.rowHeight
+    this.rowGap = plan.rowGap
+    this.rowRadius = Math.max(4, Math.round(plan.rowHeight / 3))
+    this.bodySize = plan.bodySize
+    this.valueSize = plan.valueSize
+    this.summaryHeight = Math.max(plan.rowHeight, Math.round(plan.scale * 34))
+    this.backLeft = plan.backLeft
+    this.backTop = plan.backTop
+    this.backWidth = plan.backWidth
+    this.backHeight = plan.backHeight
+    this.pillRadius = Math.round(plan.backHeight / 2)
+    this.pillFontSize = plan.pillFontSize
+  },
+  applyStats(store) {
+    var today = dateKey.keyOf(new Date())
+    this.todayText = String(statsModel.countFor(store, today))
+    this.totalText = String(statsModel.normalize(store).total)
+    this.days = statsModel.recentDays(store, dateKey.recentKeys(7, new Date()))
+  },
+  goBack() {
+    pageNavigation.back()
+  }
+}
+</script>
+
+<style>
+.root, .scene { background-color: #000000; }
+.scene { position: relative; margin-left: auto; margin-right: auto; }
+.title { position: absolute; color: #FF9F0A; font-weight: bold; }
+.summary { background-color: #14181F; flex-direction: row; justify-content: space-between; align-items: center; }
+.summary-cell { flex-direction: column; align-items: flex-start; margin-left: 10px; }
+.summary-cell-right { flex-direction: column; align-items: flex-end; margin-right: 10px; }
+.summary-label { color: #8E8E93; }
+.summary-value { color: #FFFFFF; font-weight: bold; }
+.list { position: absolute; }
+.day { background-color: #14181F; flex-direction: row; justify-content: space-between; align-items: center; }
+.day-label { color: #8E8E93; margin-left: 8px; }
+.day-value { color: #30D158; font-weight: bold; margin-right: 8px; }
+.pill { position: absolute; background-color: #1C1C1E; justify-content: center; align-items: center; }
+.pill-text { color: #FFFFFF; }
+</style>

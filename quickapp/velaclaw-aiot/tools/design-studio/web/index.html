@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Design Studio · JSON 型提示词生成器</title>
+  <link rel="stylesheet" href="./styles/tokens.css">
+  <link rel="stylesheet" href="./styles/app.css">
+  <link rel="stylesheet" href="./styles/canvas.css">
+  <script>
+    // Applied before first paint so the studio never flashes the wrong theme.
+    try {
+      var savedTheme = localStorage.getItem('design-studio:theme')
+      if (savedTheme === 'dark') document.documentElement.dataset.theme = 'dark'
+    } catch (error) {
+      /* private mode / storage disabled: fall back to the light theme */
+    }
+  </script>
+</head>
+<body>
+  <div class="app" id="app" data-mode="edit">
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h6.2a2.5 2.5 0 0 1 2.5 2.5v6.2a2.5 2.5 0 0 1-2.5 2.5H6.5A2.5 2.5 0 0 1 4 12.7Z"/>
+            <path d="M10.8 14.8h4.7a2.5 2.5 0 0 0 2.5-2.5V7.6"/>
+            <path d="M14.5 17.4h2.4a2.5 2.5 0 0 0 2.5-2.5v-2.4"/>
+          </svg>
+        </span>
+        <div class="brand-text">
+          <input class="doc-name" id="docName" value="未命名设计" aria-label="设计名称" spellcheck="false">
+          <span class="doc-meta" id="docMeta">JSON 型提示词生成器</span>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <div class="tool-cluster" role="group" aria-label="历史">
+          <button class="tool" id="undoBtn" title="撤销 (Ctrl+Z)" aria-label="撤销">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7H15.5a4.5 4.5 0 0 1 0 9H6"/><path d="M12 4 9 7l3 3"/></svg>
+          </button>
+          <button class="tool" id="redoBtn" title="重做 (Ctrl+Shift+Z)" aria-label="重做">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7H8.5a4.5 4.5 0 0 0 0 9H18"/><path d="M12 4l3 3-3 3"/></svg>
+          </button>
+        </div>
+
+        <div class="tool-cluster" role="group" aria-label="对齐">
+          <button class="tool" data-align="left" title="左对齐" aria-label="左对齐">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 3v18"/><rect x="8" y="6" width="10" height="4" rx="1.2"/><rect x="8" y="14" width="7" height="4" rx="1.2"/></svg>
+          </button>
+          <button class="tool" data-align="centerX" title="水平居中" aria-label="水平居中">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v18"/><rect x="5" y="6" width="14" height="4" rx="1.2"/><rect x="7" y="14" width="10" height="4" rx="1.2"/></svg>
+          </button>
+          <button class="tool" data-align="right" title="右对齐" aria-label="右对齐">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M20 3v18"/><rect x="6" y="6" width="10" height="4" rx="1.2"/><rect x="9" y="14" width="7" height="4" rx="1.2"/></svg>
+          </button>
+          <button class="tool" data-align="top" title="顶对齐" aria-label="顶对齐">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 4h18"/><rect x="6" y="8" width="4" height="10" rx="1.2"/><rect x="14" y="8" width="4" height="7" rx="1.2"/></svg>
+          </button>
+          <button class="tool" data-align="centerY" title="垂直居中" aria-label="垂直居中">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 12h18"/><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="7" width="4" height="10" rx="1.2"/></svg>
+          </button>
+          <button class="tool" data-align="bottom" title="底对齐" aria-label="底对齐">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 20h18"/><rect x="6" y="6" width="4" height="10" rx="1.2"/><rect x="14" y="9" width="4" height="7" rx="1.2"/></svg>
+          </button>
+        </div>
+
+        <div class="tool-cluster" role="group" aria-label="层级与组合">
+          <button class="tool" data-order="front" title="置于顶层 (Ctrl+])" aria-label="置于顶层">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="4" width="10" height="10" rx="2"/><path d="M10 14h10V10"/><path d="M10 20h10v-4"/></svg>
+          </button>
+          <button class="tool" data-order="back" title="置于底层 (Ctrl+[)" aria-label="置于底层">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="10" y="10" width="10" height="10" rx="2"/><path d="M14 10H4v4"/><path d="M14 4H4v4"/></svg>
+          </button>
+          <button class="tool" id="groupBtn" title="组合 (Ctrl+G)" aria-label="组合">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M13 7h3.5A2.5 2.5 0 0 1 19 9.5V13"/></svg>
+          </button>
+          <button class="tool" id="ungroupBtn" title="解除组合 (Ctrl+Shift+G)" aria-label="解除组合">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><path d="M14 6.5h4M6.5 14v4"/></svg>
+          </button>
+        </div>
+
+        <div class="tool-cluster" role="group" aria-label="视图">
+          <button class="tool" id="zoomOutBtn" title="缩小" aria-label="缩小">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.2"/><path d="M8.6 11h4.8M20 20l-4.4-4.4"/></svg>
+          </button>
+          <button class="zoom-readout" id="zoomReadout" title="点击适配窗口">100%</button>
+          <button class="tool" id="zoomInBtn" title="放大" aria-label="放大">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.2"/><path d="M8.6 11h4.8M11 8.6v4.8M20 20l-4.4-4.4"/></svg>
+          </button>
+          <button class="tool has-text" id="gridToggle" title="标尺网格 (Ctrl+')">网格</button>
+          <button class="tool has-text" id="safeToggle" title="安全区 (Ctrl+;)">安全区</button>
+          <button class="tool has-text" id="snapToggle" title="吸附 (Ctrl+Shift+;)">吸附</button>
+          <button class="tool" id="themeToggle" title="切换明暗主题" aria-label="切换明暗主题">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4.2"/>
+              <path d="M12 3.4v2M12 18.6v2M3.4 12h2M18.6 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <span class="save-state" id="saveState" data-state="saved">已保存</span>
+        <button class="btn ghost" id="newDocBtn" title="新建空白设计">新建</button>
+        <button class="btn ghost" id="importBtn" title="导入 JSON">导入</button>
+        <button class="btn ghost" id="previewBtn" title="预览交互 (P)">预览</button>
+        <button class="btn primary" id="exportBtn" title="导出 JSON 提示词 (Ctrl+E)">导出 JSON</button>
+      </div>
+    </header>
+
+    <div class="body">
+      <nav class="rail" aria-label="面板切换">
+        <button class="rail-btn is-active" data-panel="insert" title="组件库">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <span>组件</span>
+        </button>
+        <button class="rail-btn" data-panel="layers" title="图层">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 8.5l9 4.5 9-4.5Z"/><path d="M3 13.5 12 18l9-4.5"/></svg>
+          <span>图层</span>
+        </button>
+        <button class="rail-btn" data-panel="pages" title="页面与跳转">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M8 4v5"/></svg>
+          <span>页面</span>
+        </button>
+        <button class="rail-btn" data-panel="tokens" title="设计令牌">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 3.8v16.4A8.2 8.2 0 0 0 12 3.8Z"/><path d="M4.6 9.4h14.8M4.6 14.6h14.8"/></svg>
+          <span>令牌</span>
+        </button>
+        <div class="rail-spacer"></div>
+        <button class="rail-btn" id="shortcutsBtn" title="快捷键">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M8 14h8"/></svg>
+          <span>帮助</span>
+        </button>
+      </nav>
+
+      <aside class="side side-left" id="panelHost">
+        <div class="side-head">
+          <div>
+            <span class="eyebrow" id="panelEyebrow">INSERT</span>
+            <h2 id="panelTitle">组件库</h2>
+          </div>
+          <button class="icon-btn" id="panelCollapse" title="折叠面板">«</button>
+        </div>
+        <div class="side-body" id="panelBody"></div>
+      </aside>
+
+      <main class="canvas-shell">
+        <div class="canvas-toolbar">
+          <div class="hint-group" id="hintGroup">
+            <span class="hint-dot"></span>
+            <span id="hintText">从左侧拖入组件，或双击画板空白处快速添加</span>
+          </div>
+          <div class="canvas-meta">
+            <span id="deviceLabel">方屏 192×228</span>
+            <span class="dot-sep"></span>
+            <span id="selectionLabel">未选中</span>
+          </div>
+        </div>
+        <div class="viewport" id="viewport">
+          <div class="viewport-pan" id="viewportPan">
+            <div class="stage" id="stage">
+              <div class="artboard-shadow"></div>
+              <div class="artboard" id="artboard"></div>
+              <div class="safe-area-layer" id="safeLayer"></div>
+              <div class="guide-layer" id="guideLayer"></div>
+              <div class="overlay-layer" id="overlayLayer"></div>
+              <div class="marquee" id="marquee" hidden></div>
+            </div>
+          </div>
+          <div class="zoom-hud">
+            <button class="hud-btn" id="fitBtn">适配窗口</button>
+            <button class="hud-btn" id="resetZoomBtn">100%</button>
+          </div>
+        </div>
+      </main>
+
+      <aside class="side side-right">
+        <div class="side-head">
+          <div>
+            <span class="eyebrow">INSPECT</span>
+            <h2 id="inspectorTitle">未选中元素</h2>
+          </div>
+          <div class="head-actions">
+            <button class="icon-btn" id="duplicateBtn" title="复制 (Ctrl+D)">⧉</button>
+            <button class="icon-btn danger" id="deleteBtn" title="删除 (Delete)">✕</button>
+          </div>
+        </div>
+        <div class="side-body" id="inspectorBody"></div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <div class="tab-strip" id="pageTabs"></div>
+      <div class="status-right">
+        <button class="tab-add" id="addPageBtn" title="新建页面">+ 新建页面</button>
+        <span class="status-chip" id="flowCount">0 个跳转</span>
+        <span class="status-chip" id="elementCount">0 个元素</span>
+      </div>
+    </footer>
+  </div>
+
+  <div class="overlay-preview" id="previewOverlay" hidden>
+    <div class="preview-chrome">
+      <div class="preview-title" id="previewTitle">预览</div>
+      <div class="preview-actions">
+        <span class="preview-hint">点击热区可跳转 · Esc 退出</span>
+        <button class="btn ghost" id="closePreview">退出预览</button>
+      </div>
+    </div>
+    <div class="preview-stage" id="previewStage"></div>
+  </div>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" id="modalCard">
+      <div class="modal-head">
+        <h3 id="modalTitle">导出 JSON</h3>
+        <button class="icon-btn" id="modalClose" title="关闭">✕</button>
+      </div>
+      <div class="modal-tabs" id="modalTabs"></div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot" id="modalFoot"></div>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toastStack"></div>
+  <div class="tooltip" id="tooltip" hidden></div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

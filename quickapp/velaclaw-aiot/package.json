@@ -2,25 +2,36 @@
   "name": "vela_band",
   "version": "2.4.0",
   "private": true,
-  "description": "VelaClaw wearable reference app with V2.4 Layout Studio, Declarative Adapter and Capability Runtime.",
+  "description": "VelaClaw wearable reference app with Declarative Adapter and Capability Runtime.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/shy20060308/contest2026_382_wangwangdui.git"
   },
   "homepage": "https://github.com/shy20060308/contest2026_382_wangwangdui",
-  "keywords": ["openvela", "vela", "quick-app", "smart-band", "smart-watch", "declarative-adapter", "layout-studio"],
-  "engines": { "node": ">=18" },
+  "keywords": [
+    "openvela",
+    "vela",
+    "quick-app",
+    "smart-band",
+    "smart-watch",
+    "declarative-adapter"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "aiot start --watch",
-    "build": "aiot build --enable-jsc",
-    "release": "aiot release --enable-jsc",
-    "bundle:audit": "aiot build && npm run bundle:check",
+    "build": "aiot build --enable-jsc --devtool false && npm run size:check",
+    "build:debug": "aiot build --enable-jsc --devtool inline-source-map",
+    "release": "aiot release --enable-jsc --devtool false && npm run size:check",
+    "bundle:audit": "aiot build --devtool false && npm run bundle:check && npm run size:check",
     "bundle:check": "node scripts/check-page-bundle-size.js",
+    "size:check": "node scripts/check-artifact-size.js",
     "lint": "node scripts/lint.js",
     "docs:check": "node scripts/check-docs.js",
-    "studio": "node tools/layout-studio/server.js",
-    "studio:check": "node test/layout_studio.test.js",
+    "studio": "node tools/design-studio/server.js",
+    "studio:check": "node tools/design-studio/test/design_studio.test.js",
     "v2:scene": "node test/v2_scene.test.js",
     "v2:architecture": "node test/v2_architecture.test.js",
     "v2:runtime": "node test/v2_runtime_contracts.test.js",
@@ -50,11 +61,20 @@
     "check:legacy": "node test/architecture_guard.test.js && node test/layout_adapter.test.js && node scripts/check-multiscreen.js",
     "icons:render": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/render-icons.ps1 && python scripts/render-soft-icons.py",
     "backgrounds:render": "python scripts/fade-watchface-background.py --input assets/watchfaces/alpine_night_source.jpg --output src/common/watchfaces/alpine_night.jpg",
-    "check": "npm run lint && npm run studio:check && npm run v2:scene && npm run v2:architecture && npm run v2:runtime && npm run v2:allocation && npm run v2:visual && npm run v2:interaction && npm run v2:design-views && npm run v2:design-system && npm run v2:declarative && npm run history:spacing && npm run text-fit:regression && npm run capabilities:check && npm run power:logic && npm run power:runtime && npm run health:logic && npm run health:official && npm run workout:experience && npm run activity:persistence && npm run settings:store && npm run motion:logic && npm run haptics:logic && npm run haptics:runtime && npm run calendar:logic && npm run analog:logic && npm run honeycomb:logic && npm run docs:check"
+    "check": "npm run lint && npm run studio:check && npm run v2:scene && npm run v2:architecture && npm run v2:runtime && npm run v2:allocation && npm run v2:visual && npm run v2:interaction && npm run v2:design-views && npm run v2:design-system && npm run v2:declarative && npm run history:spacing && npm run text-fit:regression && npm run capabilities:check && npm run power:logic && npm run power:runtime && npm run health:logic && npm run health:official && npm run workout:experience && npm run activity:persistence && npm run settings:store && npm run motion:logic && npm run haptics:logic && npm run haptics:runtime && npm run calendar:logic && npm run analog:logic && npm run honeycomb:logic && npm run registry:check && npm run docs:check",
+    "registry:check": "node scripts/check-app-registry.js"
   },
   "lint-staged": {
-    "*.{ux,js}": ["prettier --write", "node scripts/lint.js", "git add"],
-    "*.{less,css}": ["prettier --write", "stylelint --fix --custom-syntax postcss-less", "git add"]
+    "*.{ux,js}": [
+      "prettier --write",
+      "node scripts/lint.js",
+      "git add"
+    ],
+    "*.{less,css}": [
+      "prettier --write",
+      "stylelint --fix --custom-syntax postcss-less",
+      "git add"
+    ]
   },
   "devDependencies": {
     "@aiot-toolkit/jsc": "^1.0.3",

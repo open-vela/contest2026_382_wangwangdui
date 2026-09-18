@@ -1,0 +1,257 @@
+<template>
+  <stack class="root" style="position: relative; width: 100%; height: 100%;">
+    <div class="scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+
+      <!-- ============================ circle: ring is the surface ============ -->
+      <div if="{{ isCircle }}" class="ring" style="left: {{ ringLeft }}px; top: {{ ringTop }}px; width: {{ ringSize }}px; height: {{ ringSize }}px; border-radius: {{ ringRadius }}px; border-width: {{ ringBorder }}px; border-color: {{ phaseColor }};"></div>
+
+      <text if="{{ isCircle }}" class="phase" style="left: {{ centreLeft }}px; width: {{ centreWidth }}px; top: {{ phaseTop }}px; font-size: {{ phaseSize }}px; color: {{ phaseColor }};">{{ phaseText }}</text>
+      <text if="{{ isCircle }}" class="clock" style="left: {{ centreLeft }}px; width: {{ centreWidth }}px; top: {{ timeTop }}px; font-size: {{ timeSize }}px;">{{ clockText }}</text>
+      <text if="{{ isCircle }}" class="hint" style="left: {{ centreLeft }}px; width: {{ centreWidth }}px; top: {{ hintTop }}px; font-size: {{ hintSize }}px;">{{ hintText }}</text>
+      <div if="{{ isCircle }}" class="bar-track" style="left: {{ circleBarLeft }}px; top: {{ barTop }}px; width: {{ barWidth }}px; height: {{ barHeight }}px; border-radius: {{ barRadius }}px;">
+        <div class="bar-fill" style="width: {{ progressWidth }}; height: {{ barHeight }}px; border-radius: {{ barRadius }}px; background-color: {{ phaseColor }};"></div>
+      </div>
+      <div if="{{ isCircle }}" class="primary-round" style="left: {{ primaryLeft }}px; top: {{ primaryTop }}px; width: {{ primarySize }}px; height: {{ primarySize }}px; border-radius: {{ primaryRadius }}px; background-color: {{ phaseColor }};" @click="toggle">
+        <text class="primary-round-text" style="font-size: {{ primaryFontSize }}px;">{{ actionText }}</text>
+      </div>
+
+      <!-- ============================ rect: value-first column =============== -->
+      <text if="{{ !isCircle }}" class="status" style="left: {{ pad }}px; top: {{ statusTop }}px; font-size: {{ statusSize }}px; color: {{ phaseColor }};">{{ phaseText }} · {{ hintText }}</text>
+      <text if="{{ !isCircle }}" class="status-count" style="left: {{ pad }}px; width: {{ listWidth }}px; top: {{ statusTop }}px; font-size: {{ statusSize }}px;">今日 {{ todayText }}</text>
+      <text if="{{ !isCircle }}" class="clock" style="left: {{ pad }}px; width: {{ listWidth }}px; top: {{ timeTop }}px; font-size: {{ timeSize }}px;">{{ clockText }}</text>
+      <div if="{{ !isCircle }}" class="bar-track" style="left: {{ pad }}px; top: {{ barTop }}px; width: {{ barWidth }}px; height: {{ barHeight }}px; border-radius: {{ barRadius }}px;">
+        <div class="bar-fill" style="width: {{ progressWidth }}; height: {{ barHeight }}px; border-radius: {{ barRadius }}px; background-color: {{ phaseColor }};"></div>
+      </div>
+      <text if="{{ !isCircle && hasCard }}" class="count" style="left: {{ pad }}px; width: {{ listWidth }}px; top: {{ countTop }}px; font-size: {{ countSize }}px;">今日完成 {{ todayText }} 个番茄</text>
+      <div if="{{ !isCircle }}" class="primary-wide" style="left: {{ pad }}px; top: {{ actionTop }}px; width: {{ actionWidth }}px; height: {{ actionHeight }}px; border-radius: {{ actionRadius }}px; background-color: {{ phaseColor }};" @click="toggle">
+        <text class="primary-wide-text" style="font-size: {{ actionFontSize }}px;">{{ actionText }}</text>
+      </div>
+
+      <!-- ============================ shared bottom control chord ============ -->
+      <div class="pill" style="left: {{ controlsLeft }}px; top: {{ controlsTop }}px; width: {{ controlWidth }}px; height: {{ controlsHeight }}px; border-radius: {{ controlRadius }}px;" @click="reset">
+        <text class="pill-text" style="font-size: {{ controlFontSize }}px;">重置</text>
+      </div>
+      <div class="pill" style="left: {{ controlsCentre }}px; top: {{ controlsTop }}px; width: {{ controlWidth }}px; height: {{ controlsHeight }}px; border-radius: {{ controlRadius }}px;" @click="openSettings">
+        <text class="pill-text" style="font-size: {{ controlFontSize }}px;">设置</text>
+      </div>
+      <div class="pill" style="left: {{ controlsRight }}px; top: {{ controlsTop }}px; width: {{ controlWidth }}px; height: {{ controlsHeight }}px; border-radius: {{ controlRadius }}px;" @click="openStats">
+        <text class="pill-text" style="font-size: {{ controlFontSize }}px;">统计</text>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageNavigation from '../../common/page_navigation'
+import deviceProfile from '../../capabilities/device_profile'
+import timerLayout from '../../design/timer_layout'
+import repository from '../../domain/repository'
+import timerMachine from '../../domain/timer_state_machine'
+import statsModel from '../../domain/stats_model'
+import dateKey from '../../domain/date_key'
+import focusSession from '../../features/focus_session'
+
+var COLORS = { focus: '#FF9F0A', rest: '#30D158' }
+
+export default {
+  private: {
+    isCircle: false,
+    sceneWidth: 192, sceneHeight: 274, pad: 12,
+    ringLeft: 0, ringTop: 0, ringSize: 0, ringRadius: 0, ringBorder: 0,
+    centreLeft: 0, centreWidth: 192,
+    phaseTop: 0, phaseSize: 12, timeTop: 46, timeSize: 40, hintTop: 90, hintSize: 11,
+    statusTop: 12, statusSize: 10, countTop: 0, countSize: 10, hasCard: true,
+    barTop: 80, barWidth: 168, barHeight: 4, barRadius: 2, circleBarLeft: 0, progressWidth: '0px',
+    primaryLeft: 0, primaryTop: 112, primarySize: 36, primaryRadius: 18, primaryFontSize: 16,
+    actionTop: 0, actionWidth: 168, actionHeight: 34, actionRadius: 17, actionFontSize: 13,
+    controlsTop: 238, controlsHeight: 24, controlsLeft: 12, controlsCentre: 70, controlsRight: 128,
+    controlWidth: 52, controlRadius: 12, controlFontSize: 10,
+    listWidth: 168,
+    phaseText: '专注', hintText: '待开始', clockText: '25:00', actionText: '开始',
+    todayText: '0', phaseColor: COLORS.focus
+  },
+  onInit() {
+    var self = this
+    this.session = null
+    this.stats = statsModel.emptyStore()
+    this.settings = null
+    this.profileInfo = null
+    this.plan = null
+
+    repository.loadSettings().then(function (settingsResult) {
+      self.settings = settingsResult.settings
+      return repository.loadStats()
+    }).then(function (statsResult) {
+      self.stats = statsResult.store
+      return deviceProfile.get()
+    }).then(function (profile) {
+      self.profileInfo = profile
+      self.applyProfile(profile)
+      self.bindSession()
+      self.refreshStats()
+    })
+  },
+  onShow() {
+    var self = this
+    repository.loadSettings().then(function (settingsResult) {
+      self.settings = settingsResult.settings
+      if (self.session) self.session.applySettings(self.settings)
+      self.bindSession()
+      if (self.session) self.session.resume()
+      return repository.loadStats()
+    }).then(function (statsResult) {
+      self.stats = statsResult.store
+      self.refreshStats()
+      self.render(self.session ? self.session.snapshot() : null)
+    })
+  },
+  onHide() {
+    if (this.session) {
+      this.session.unbind()
+      this.session.suspend()
+    }
+  },
+  onDestroy() {
+    focusSession.release()
+    this.session = null
+  },
+  applyProfile(profile) {
+    var plan = timerLayout.computeLayout(profile)
+    this.plan = plan
+    this.isCircle = plan.composition === 'circle-ring'
+    this.sceneWidth = plan.sceneWidth
+    this.sceneHeight = plan.sceneHeight
+    this.pad = plan.pad
+    this.listWidth = plan.listWidth
+
+    // circle ring surface
+    this.ringLeft = plan.ringLeft
+    this.ringTop = plan.ringTop
+    this.ringSize = plan.ringSize
+    this.ringRadius = Math.round(plan.ringSize / 2)
+    this.ringBorder = plan.ringBorder
+    this.centreWidth = plan.ringSize - plan.ringBorder * 2
+    this.centreLeft = Math.round((plan.sceneWidth - this.centreWidth) / 2)
+    this.phaseTop = plan.phaseTop
+    this.phaseSize = plan.phaseSize
+    this.timeTop = plan.timeTop
+    this.timeSize = plan.timeSize
+    this.hintTop = plan.hintTop
+    this.hintSize = plan.hintSize
+    this.circleBarLeft = Math.round((plan.sceneWidth - plan.barWidth) / 2)
+
+    // rect column blocks
+    this.statusTop = plan.statusTop
+    this.statusSize = plan.statusSize
+    this.valueTop = plan.valueTop
+    this.countTop = plan.countTop
+    this.countSize = plan.countSize
+    this.hasCard = plan.hasCard
+
+    // shared progress bar
+    this.barTop = plan.barTop
+    this.barWidth = plan.barWidth
+    this.barHeight = plan.barHeight
+    this.barRadius = Math.max(1, Math.round(plan.barHeight / 2))
+
+    // primary action: round inside the ring, wide bar in the column
+    this.primaryTop = plan.primaryTop
+    this.primarySize = plan.primarySize
+    this.primaryRadius = Math.round(plan.primarySize / 2)
+    this.primaryLeft = Math.round((plan.sceneWidth - plan.primarySize) / 2)
+    this.primaryFontSize = plan.primaryFontSize
+    this.actionTop = plan.actionTop
+    this.actionWidth = plan.actionWidth
+    this.actionHeight = plan.actionHeight
+    this.actionRadius = Math.round(plan.actionHeight / 2)
+    this.actionFontSize = plan.actionFontSize
+
+    // bottom control chord
+    this.controlsTop = plan.controlsTop
+    this.controlsHeight = plan.controlsHeight
+    this.controlWidth = plan.controlWidth
+    this.controlFontSize = plan.controlFontSize
+    this.controlRadius = Math.round(plan.controlsHeight / 2)
+    var rowWidth = plan.controlWidth * 3 + plan.controlGap * 2
+    this.controlsLeft = Math.round((plan.sceneWidth - rowWidth) / 2)
+    this.controlsCentre = this.controlsLeft + plan.controlWidth + plan.controlGap
+    this.controlsRight = this.controlsCentre + plan.controlWidth + plan.controlGap
+    this.updateProgress(plan)
+
+    console.log('[pomodoro] composition=' + plan.composition +
+      ' physical=' + profile.physicalWidth + 'x' + profile.physicalHeight +
+      ' design=' + profile.logicalWidth + 'x' + profile.logicalHeight +
+      ' blocks=' + plan.blocks.map(function (b) { return b.id + '@' + b.top + '+' + b.height }).join(','))
+  },
+  updateProgress(plan) {
+    var state = this.session ? this.session.snapshot() : null
+    var ratio = state ? timerMachine.progress(state) : 0
+    this.progressWidth = Math.round(plan.barWidth * ratio) + 'px'
+  },
+  bindSession() {
+    var self = this
+    this.session = focusSession.getOrCreate(this.settings)
+    this.session.bind(
+      function (state) { self.render(state) },
+      function (result) { self.onPhaseComplete(result) }
+    )
+    this.session.resume()
+    this.render(this.session.snapshot())
+  },
+  onPhaseComplete(result) {
+    if (result && result.focusCompleted) {
+      this.stats = statsModel.recordCompletion(this.stats, dateKey.keyOf(new Date()))
+      repository.saveStats(this.stats)
+    }
+    this.refreshStats()
+  },
+  render(state) {
+    if (!state) return
+    this.clockText = timerMachine.formatClock(state.remainingSeconds)
+    this.phaseText = timerMachine.phaseLabel(state.phase)
+    this.hintText = timerMachine.statusLabel(state.status)
+    this.actionText = timerMachine.actionLabel(state)
+    this.phaseColor = state.phase === timerMachine.PHASE_BREAK ? COLORS.rest : COLORS.focus
+    if (this.plan) this.updateProgress(this.plan)
+  },
+  refreshStats() {
+    var today = dateKey.keyOf(new Date())
+    this.todayText = String(statsModel.countFor(this.stats, today))
+  },
+  toggle() {
+    if (this.session) this.session.toggle()
+  },
+  reset() {
+    if (this.session) {
+      this.session.reset()
+      this.refreshStats()
+    }
+  },
+  openSettings() {
+    pageNavigation.to('pages/settings')
+  },
+  openStats() {
+    pageNavigation.to('pages/stats')
+  }
+}
+</script>
+
+<style>
+.root, .scene { background-color: #000000; }
+.scene { position: relative; margin-left: auto; margin-right: auto; }
+.ring { position: absolute; }
+.phase { position: absolute; text-align: center; color: #FF9F0A; }
+.clock { position: absolute; text-align: center; color: #FFFFFF; font-weight: bold; }
+.hint { position: absolute; text-align: center; color: #8E8E93; }
+.status { position: absolute; color: #FF9F0A; font-weight: bold; }
+.status-count { position: absolute; text-align: right; color: #8E8E93; }
+.count { position: absolute; text-align: center; color: #8E8E93; }
+.bar-track { position: absolute; background-color: #1C1C1E; }
+.bar-fill { position: absolute; left: 0px; top: 0px; }
+.primary-round { position: absolute; justify-content: center; align-items: center; }
+.primary-round-text { color: #000000; font-weight: bold; }
+.primary-wide { position: absolute; justify-content: center; align-items: center; }
+.primary-wide-text { color: #000000; font-weight: bold; }
+.pill { position: absolute; background-color: #1C1C1E; justify-content: center; align-items: center; }
+.pill-text { color: #FFFFFF; }
+</style>
