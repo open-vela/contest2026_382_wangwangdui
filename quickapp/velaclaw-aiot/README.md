@@ -21,6 +21,21 @@
 - **增量演进优于激进重写**：V2.5 在 V2.4 可工作的基础上继续收敛边界、修复已知问题和固化经验，避免让大规模重构本身成为新的风险源。
 - **文档描述当前事实**：README 和长期技术文档服务于使用、维护和评审，不保存临时阶段叙事，也不把尚未验证的能力写成既成事实。
 
+| 模块 | 当前能力 |
+| --- | --- |
+| 表盘 | 多表盘切换、持久化、圆屏机械表盘、胶囊 Alpine 表盘、表盘库 |
+| 应用启动器 | Circle / Rect 蜂巢、Pill 分页列表；首项为番茄钟入口 |
+| 番茄钟 | 25 分钟专注 / 5 分钟休息、开始·暂停·继续·重置、今日完成计数；Circle 与 Rect 两套构图 |
+| 健康 | 心率、血氧、压力、窗口趋势与系统能力降级 |
+| 活动趋势 | 7 日趋势；Circle/Pill/Rect 使用不同 L2 构图 |
+| 运动 | 步行/跑步、暂停/继续、运动历史、可用时使用位置能力 |
+| 今日日历 | 日期、农历、健康摘要、圆屏月历交互 |
+| 通知 | 本地/事件演示的来电、短信和应用通知 |
+| 同步 | 协议、分包、ACK、进度与模拟 transport |
+| 低功耗 | ACTIVE / DIM / SLEEP、抬腕唤醒演示 |
+| 设置 | 同步、震动、亮度、动作诊断、设备自检与分页导航 |
+
+## 快速开始
 这些原则共同指向一个目标：在资源有限、形态差异明显、平台能力并不完全一致的可穿戴环境中，让每一次优化都能解释、能验证，也能安全地继续演进。
 
 ## 开发者友好
@@ -40,6 +55,53 @@
 
 ## Vibe Coding 友好
 
+### 安装体积上限
+
+设备安装器拒绝包含 **单个文件大于 1 MiB** 的包，而构建"成功"和"可安装"是两件事：包一旦超标，安装阶段只会失败，日志里不会指出是哪个文件。
+
+因此打包路径固定关闭内联 source map（它会把 base64 映射塞进每个页面包，最大的页面会凭空多出几百 KiB），并在构建后立刻做一次逐文件体积校验：
+
+```bash
+npm run build         # aiot build --enable-jsc --devtool false && npm run size:check
+npm run release       # 生产包走同一条规则
+npm run build:debug   # 仅本地调试用，保留内联 source map，不用于打包
+npm run size:check    # 单独校验 build/ 与 dist/ 里的每个文件
+npm run bundle:check  # 页面包预算（1024 KiB 硬上限 + 禁止内联 source map）
+```
+
+`size:check` 会同时扫描构建产物和 RPK 内的条目，并在失败时点名具体文件与字节数，例如：
+
+```text
+Artifact size violations (the device cannot install these):
+- build/pages/clock/clock.js = 1060032 bytes
+```
+
+### 为什么还需要 `quickapp.config.js`
+
+IDE 的构建面板与 `aiot build` 命令行走的是同一条编译路径，而 IDE 默认带 `--devtool inline-source-map`。只改 npm 脚本挡不住 IDE 发起的构建，所以项目根目录的 `quickapp.config.js` 会把 `webpack.devtool` 归一到关闭内联映射，并在 `postHook` 中兜底——**命令行和 IDE 都读这个文件**：
+
+```js
+module.exports = {
+  webpack: { devtool: false },
+  postHook(config) { if (config.devtool) config.devtool = false }
+}
+```
+
+需要本地调试 source map 时用环境变量显式开启，它不影响默认打包：
+
+```powershell
+$env:VELACLAW_ALLOW_INLINE_MAPS = '1'; npx aiot build
+```
+
+实测（`aiot build --devtool inline-source-map` 也被覆盖）：
+
+| 构建方式 | clock 页面包 | RPK |
+|---|---|---|
+| 内联 source map（旧行为） | 1,049,781 B ❌ 超出 1 MiB | 1,439,453 B（不可安装）|
+| 项目规则归一后 | 671,152 B ✅ | 596,655 B |
+| `npm run build`（JSC） | 117 KiB `.jsc` ✅ | 556,106 B（安装通过）|
+
+开发 watch 模式：
 V2.5 的开发友好也直接降低了 AI 辅助编码的成本。这里的 Vibe Coding 不是让模型绕过架构或凭感觉改运行时，而是把高频迭代收敛为一条可控闭环：**描述意图 → 修改小而显式的设计面 → 使用同一套运行语义预览 → 运行契约检查 → review Git diff → 必要时回退**。
 
 - **低上下文修改面**：大量视觉调整可以优先落在 `src/v2/design/apps/<app>/layout.js`、Design Spec 或 Design View，而不要求 AI 同时理解页面生命周期、健康数据、存储和原生能力实现。
@@ -158,6 +220,47 @@ npm run studio
 
 Studio 的使用方式和安全边界见 [Layout Studio](docs/LAYOUT_STUDIO.md)。
 
+## 辅助设计工具：Design Studio
+
+`tools/design-studio/` 是一个本地网页辅助设计工具（JSON 型提示词生成器），用一个和 PowerPoint 相近的操作方式产出**可直接交给 agent 的设计 JSON**：
+
+```bash
+npm run studio        # http://127.0.0.1:4174
+npm run studio:check  # 工具自身的几何 / 导出契约测试
+```
+
+- 多设备画板（Rect / Circle / Pill / Phone），组件拖放、缩放、旋转、吸附、对齐、图层与组合；
+- 组合可以填写「语义备注」，备注与跳转一起进入导出 JSON 的 `groups[] / flows[] / summary`；
+- 多页面 + 交互定义（点击 / 长按 / 上下左右滑动 / 进入页面 / 定时器 → 跳转、返回），并提供运行态预览；
+- 导出五个视图：Agent 提示词 JSON、中文摘要、Vela `<template>` 脚手架、字段说明、原始文档；
+- 零依赖：服务端只用 Node 内置模块，前端是原生 ES module（无构建步骤）。
+
+它取代了早期的 Recipe 参数表单工具（`tools/layout-studio`），后者已删除。详细用法见 [tools/design-studio/README.md](tools/design-studio/README.md)。
+
+## 番茄钟入口
+
+番茄钟同时以两种形式提供，避免只依赖系统启动器是否收录侧载包：
+
+1. **独立 Quick App**：`quickapp/pomodoro`（包名 `com.application.pomodoro`），安装后会出现在系统应用列表中；
+2. **本应用内的入口**：启动器应用列表的第一项「番茄钟」→ `pages/pomodoro`。
+
+第二项是本仓库自己控制的，也是唯一能在本工程内验证的一条：`src/v2/design/catalogs/apps.js` 提供图标与配色，`app_routes.js` 指向 `pages/pomodoro`，`src/v2/design/apps/launcher/layout.js` 把 `pomodoro` 放在 `appIds` 首位。13 个条目在蜂巢晶格上各有独立格位（Circle / Rect 均 13 格唯一、13 个可见），Pill 分页列表的第一页也以它开头。
+
+图标沿用与内建应用相同的生成链，所以风格一致：
+
+```bash
+# 1. 画 96x96 的源素材（实心强调色圆 + 白色字形，与 assets/icons/*.svg 同构）
+# 2. 用无头浏览器渲染成黑底 JPG
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/render-icons.ps1 -Names pomodoro
+# 3. 生成聚焦态使用的柔化版本（降饱和 0.55 / 降亮 0.72 / 高斯模糊 1.15）
+python scripts/render-soft-icons.py
+```
+
+蜂巢晶格的点击由 `onHoneyEnd` 解析：该手势归晶格所有时子元素的 `@click` 不可靠，因此在"未发生拖动"的分支里用同一帧的格位做命中检测（`honeySlotAt`），取最近的且落在 `size × 0.75` 半径内的格；命中后置 350ms 的 `suppressTapUntil`，避免同一次手势再触发一遍 `@click` 造成重复跳转。
+
+计时逻辑在 `src/v2/features/pomodoro/controller.js`：页面只做生命周期绑定与投影，`setInterval` 由 controller 独占，`onHide` / `onDestroy` 会释放时钟，跨页返回不会重置倒计时。
+
+## 调试提示
 ## 质量检查
 
 `npm run check` 汇总项目的静态和纯逻辑门禁，包括：
@@ -200,7 +303,11 @@ quickapp/velaclaw-aiot/
 └── NOTICE
 ```
 
-`src/common` 与 `src/presentation` 仍包含历史兼容代码或资源。新增能力应优先沿 Capability → Domain → Feature → Design → Page 链路扩展，避免重新把业务逻辑散回页面或旧公共模块。
+- [V2 稳定基线](docs/STABLE_BASELINE_V2.md)
+- [V2 Stable Architecture](docs/REWRITE_V2_ARCHITECTURE.md)
+- [Wearable Design Engine](docs/DESIGN_ENGINE.md)
+- [技术审计 2026-09-18](docs/AUDIT_20260918.md)
+- [兼容性说明](docs/COMPATIBILITY.md)
 
 ## 文档
 

@@ -1,7 +1,7 @@
 module.exports = {
   base: {
     contentWidth: 164,
-    appIds: ['workout','history','heart','clock','steps','faces','sync','brightness','settings','vibration','notification','today'],
+    appIds: ['pomodoro','workout','history','heart','clock','steps','faces','sync','brightness','settings','vibration','notification','today'],
     surface: 'designed-grid',
     pageSize: 6,
     header: { top: 0, width: 164, height: 24 },

@@ -29,7 +29,7 @@ Do not generalize into a universal auto-layout engine for highly visual L3 surfa
 
 ## 2. Shape-local authoring and source rewrite
 
-**File**: `tools/layout-studio/lib/recipe_file.js`
+**File** (legacy, removed): `tools/layout-studio/lib/recipe_file.js`
 
 Useful pattern:
 
@@ -136,12 +136,9 @@ High-frequency visual intent can change in design-layer source without moving he
 
 This is the preferred Vibe Coding change surface when existing design vocabulary already expresses the request.
 
-## 8. Layout Studio shares project semantics
+## 8. Auxiliary design tool shares project semantics
 
-**Files**:
-
-- `tools/layout-studio/server.js`
-- `tools/layout-studio/lib/recipe_file.js`
+**Files**: the legacy Vela Layout Studio (`tools/layout-studio/`) was removed and is being replaced by the `tools/design-studio/` JSON prompt generator, which exports an agent-readable prompt JSON from the same design source.
 
 Useful pattern:
 
@@ -149,7 +146,7 @@ A design tool should consume the same design source and Scene/Adapter semantics 
 
 Important boundary:
 
-Studio preview is still not the Vela Runtime. It shortens the loop and proves design-resolution/tooling behavior, while final geometry/gesture/native behavior still needs Vela runtime evidence.
+Design-tool preview is still not the Vela Runtime. It shortens the loop and proves design-resolution/tooling behavior, while final geometry/gesture/native behavior still needs Vela runtime evidence.
 
 ## 9. Architecture and regression tests as executable ownership rules
 

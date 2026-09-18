@@ -59,7 +59,8 @@
       "pages/settings/brightness": { "component": "brightness" },
       "pages/settings/diagnostics": { "component": "diagnostics" },
       "pages/settings/motion": { "component": "motion" },
-      "pages/today": { "component": "today" }
+      "pages/today": { "component": "today" },
+      "pages/pomodoro": { "component": "pomodoro" }
     }
   }
 }

@@ -80,7 +80,7 @@ Do not generalize one device result to every supported model without evidence.
 | native capability wrapper | E1 source/failure tests | E4/E5 based on claimed target support |
 | Circle/Pill/Rect layout | E1 geometry/text contracts | E4 on affected profiles |
 | gesture/navigation | E1 interaction contracts | E4 runtime smoke |
-| Layout Studio/tooling | E1 tool tests | E3; E4 for final runtime claim |
+| auxiliary design tool/tooling | E1 tool tests | E3; E4 for final runtime claim |
 | memory/allocation optimization | E1 regression guard when possible | measurement/runtime evidence appropriate to claim |
 | bundle optimization | E2 measured bundle sizes | E2; E4 if behavior/performance claim extends beyond size |
 | build/packaging fix | E2 build artifact | E4 install/launch if claiming runnable |

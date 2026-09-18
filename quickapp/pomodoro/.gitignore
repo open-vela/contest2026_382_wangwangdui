@@ -1,0 +1,14 @@
+# Build / toolchain output - only source, tests and docs are versioned.
+/node_modules/
+/build/
+/dist/*
+/sign/
+/.nyc_output/
+/coverage/
+*.log
+
+# Editor / OS noise
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db

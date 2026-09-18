@@ -83,7 +83,7 @@ When reorganizing existing UI, preserve current Circle/Pill/Rect composition fir
 
 ## 6. Shape-local tooling edits
 
-Reference:
+Reference (legacy, removed with the old Vela Layout Studio):
 - `quickapp/velaclaw-aiot/tools/layout-studio/lib/recipe_file.js`
 
 Pattern:

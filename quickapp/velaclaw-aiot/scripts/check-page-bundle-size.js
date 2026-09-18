@@ -17,7 +17,11 @@ function filesUnder(dir, out) {
     const file = path.join(dir, name)
     const stat = fs.statSync(file)
     if (stat.isDirectory()) filesUnder(file, out)
-    else if (/\.js$/.test(name)) out.push({ file: file, size: stat.size })
+    // `aiot build --enable-jsc` ships bytecode (.jsc); a build without that flag
+    // ships .js. Both are page bundles and both are subject to the budget, so
+    // the gate must see whichever the current build produced instead of
+    // reporting "no page JavaScript output found".
+    else if (/\.(js|jsc)$/.test(name)) out.push({ file: file, size: stat.size, binary: /\.jsc$/.test(name) })
   })
   return out
 }
@@ -46,10 +50,11 @@ console.log('V2 page JavaScript bundle budget (hard limit 1024 KiB; inline sourc
 console.log('Bundle root: ' + pagesRoot)
 files.forEach(entry => {
   const relative = path.relative(root, entry.file).split(path.sep).join('/')
-  const source = fs.readFileSync(entry.file, 'utf8')
-  const inlineIndex = source.lastIndexOf(inlineMapMarker)
-  const hasInlineMap = inlineIndex >= 0
-  const inlineBytes = hasInlineMap ? Buffer.byteLength(source.slice(inlineIndex), 'utf8') : 0
+  // Bytecode is not text: read it as bytes so a stray 0x00 cannot truncate the
+  // scan, and skip the source-map probe that only applies to JavaScript.
+  const inline = entry.binary ? { has: false, bytes: 0 } : findInlineMap(entry.file)
+  const hasInlineMap = inline.has
+  const inlineBytes = inline.bytes
   const executableBytes = entry.size - inlineBytes
   const kib = (entry.size / 1024).toFixed(1)
   const executableKib = (executableBytes / 1024).toFixed(1)
@@ -66,4 +71,22 @@ if (failures.length) {
   process.exit(1)
 }
 
-console.log('\nPage bundle budget verified: ' + files.length + ' page JS files are <= 1024 KiB and contain no inline source maps')
+console.log('\nPage bundle budget verified: ' + files.length + ' page bundles are <= 1024 KiB and contain no inline source maps')
+
+/**
+ * Locate a base64 inline source map without loading the whole file as a UTF-8
+ * string. Returns the byte length of the map comment on success.
+ */
+function findInlineMap(file) {
+  const marker = Buffer.from(inlineMapMarker, 'utf8')
+  const padding = 16 * 1024 * 1024
+  const stat = fs.statSync(file)
+  const length = Math.min(stat.size, marker.length + padding)
+  const buffer = Buffer.alloc(length)
+  const handle = fs.openSync(file, 'r')
+  fs.readSync(handle, buffer, 0, length, Math.max(0, stat.size - length))
+  fs.closeSync(handle)
+  const index = buffer.lastIndexOf(marker)
+  if (index < 0) return { has: false, bytes: 0 }
+  return { has: true, bytes: buffer.length - index }
+}

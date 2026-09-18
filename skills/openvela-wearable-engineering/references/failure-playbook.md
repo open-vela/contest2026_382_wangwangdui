@@ -190,11 +190,13 @@ Only inspect page logic after these facts are proven.
 - remove obsolete development packages only when allowed;
 - preserve the mandated environment and verify package identity/update semantics.
 
-## Layout Studio preview differs from runtime intent
+## Design-tool preview differs from runtime intent
+
+The legacy Vela Layout Studio (`tools/layout-studio/`, removed) was the original example for this entry; the guardrails below apply to any editor/preview tooling, including its replacement `tools/design-studio/`.
 
 **Likely causes**:
 
-- Studio has a second layout algorithm;
+- the tool has a second layout algorithm;
 - preview reads different config than runtime;
 - tool rewrites more than the selected shape;
 - runtime adapter silently repositions content.

@@ -1,4 +1,5 @@
 var ROUTES = {
+  pomodoro: '/pages/pomodoro',
   workout: '/pages/workout_select',
   history: '/pages/history',
   heart: '/pages/heartrate',

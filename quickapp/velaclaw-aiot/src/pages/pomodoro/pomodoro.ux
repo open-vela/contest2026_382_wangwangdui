@@ -1,0 +1,133 @@
+<template>
+  <stack class="pomodoro-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="pomodoro-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <text class="phase" style="left: {{ pad }}px; top: {{ phaseTop }}px; width: {{ innerWidth }}px; font-size: {{ phaseSize }}px; color: {{ phaseColor }};">{{ phaseText }}</text>
+      <text class="clock" style="left: {{ pad }}px; top: {{ timeTop }}px; width: {{ innerWidth }}px; font-size: {{ timeSize }}px;">{{ clockText }}</text>
+      <text class="hint" style="left: {{ pad }}px; top: {{ hintTop }}px; width: {{ innerWidth }}px; font-size: {{ hintSize }}px;">{{ hintText }}</text>
+      <div class="bar-track" style="left: {{ barLeft }}px; top: {{ barTop }}px; width: {{ barWidth }}px; height: {{ barHeight }}px; border-radius: {{ barRadius }}px;">
+        <div class="bar-fill" style="width: {{ progressWidth }}; height: {{ barHeight }}px; border-radius: {{ barRadius }}px; background-color: {{ phaseColor }};"></div>
+      </div>
+      <div class="primary" style="left: {{ primaryLeft }}px; top: {{ primaryTop }}px; width: {{ primaryWidth }}px; height: {{ primaryHeight }}px; border-radius: {{ primaryRadius }}px; background-color: {{ phaseColor }};" @click="toggle">
+        <text class="primary-text" style="font-size: {{ primaryFontSize }}px;">{{ actionText }}</text>
+      </div>
+      <div class="pill" style="left: {{ resetLeft }}px; top: {{ controlsTop }}px; width: {{ controlWidth }}px; height: {{ controlsHeight }}px; border-radius: {{ controlsRadius }}px;" @click="reset">
+        <text class="pill-text" style="font-size: {{ controlFontSize }}px;">重置</text>
+      </div>
+      <div class="pill" style="left: {{ backLeft }}px; top: {{ controlsTop }}px; width: {{ controlWidth }}px; height: {{ controlsHeight }}px; border-radius: {{ controlsRadius }}px;" @click="goBack">
+        <text class="pill-text" style="font-size: {{ controlFontSize }}px;">返回</text>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { pomodoroController } from '../../v2/features/pomodoro/controller'
+
+var COLORS = { focus: '#FF5A36', break: '#30D158' }
+
+export default {
+  private: {
+    sceneWidth: 192, sceneHeight: 192,
+    viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%',
+    pad: 12, innerWidth: 168,
+    phaseTop: 34, phaseSize: 11, timeTop: 52, timeSize: 42, hintTop: 104, hintSize: 9,
+    barLeft: 12, barTop: 124, barWidth: 168, barHeight: 4, barRadius: 2, progressWidth: '0px',
+    primaryLeft: 12, primaryTop: 146, primaryWidth: 168, primaryHeight: 34, primaryRadius: 17, primaryFontSize: 13,
+    controlsTop: 190, controlWidth: 76, controlsHeight: 24, controlsRadius: 12, controlFontSize: 10,
+    resetLeft: 12, backLeft: 104,
+    phaseText: '专注', hintText: '待开始', clockText: '25:00', actionText: '开始', phaseColor: COLORS.focus
+  },
+  onInit() {
+    var self = this
+    pageRuntime.bind(this, { contentWidth: 168 }, function () {
+      self.applyShape()
+      pomodoroController.bind(function (state) {
+        self.applyState(state)
+      })
+    })
+  },
+  onShow() {
+    var self = this
+    pomodoroController.bind(function (state) {
+      self.applyState(state)
+    })
+  },
+  onHide() {
+    pomodoroController.stop()
+  },
+  onDestroy() {
+    pomodoroController.stop()
+    pomodoroController.bind(null)
+  },
+  onBackPress() { navigation.back(); return true },
+  /**
+   * Two compositions rather than one scaled layout: the circle keeps the value
+   * and the two controls inside the chord, the rectangular band uses full-width
+   * rows. Both are derived from the scene the runtime reported.
+   */
+  applyShape() {
+    var wide = this.sceneWidth >= 190
+    var tall = this.sceneHeight >= 200
+    this.pad = wide ? 12 : 16
+    this.innerWidth = Math.max(80, this.sceneWidth - this.pad * 2)
+    if (tall) {
+      this.phaseTop = 44
+      this.timeTop = 66
+      this.hintTop = 124
+      this.barTop = 146
+      this.primaryTop = 172
+      this.controlsTop = this.sceneHeight - 34
+    } else {
+      this.phaseTop = 28
+      this.timeTop = 46
+      this.timeSize = 40
+      this.hintTop = 92
+      this.barTop = 108
+      this.primaryTop = 126
+      this.primaryHeight = 32
+      this.primaryRadius = 16
+      this.controlsTop = 166
+    }
+    this.barLeft = this.pad
+    this.barWidth = this.innerWidth
+    this.primaryLeft = this.pad
+    this.primaryWidth = this.innerWidth
+    this.controlWidth = Math.round((this.innerWidth - 4) / 2)
+    this.resetLeft = this.pad
+    this.backLeft = this.pad + this.controlWidth + 4
+  },
+  /** The page only projects controller state onto the two compositions. */
+  applyState(state) {
+    if (!state) return
+    this.clockText = state.clockText
+    this.phaseText = state.phaseText
+    this.phaseColor = state.phase === 'focus' ? COLORS.focus : COLORS.break
+    this.actionText = state.actionText
+    this.hintText = state.hintText
+    this.progressWidth = Math.round(state.progress * 100) + '%'
+  },
+  toggle() {
+    pomodoroController.toggle()
+  },
+  reset() {
+    pomodoroController.reset()
+  },
+  goBack() { navigation.back() }
+}
+</script>
+
+<style>
+.pomodoro-root, .pomodoro-scene { background-color: #000000; }
+.pomodoro-scene { position: absolute; left: 0px; top: 0px; }
+.phase { position: absolute; height: 16px; text-align: center; font-weight: bold; letter-spacing: 1px; }
+.clock { position: absolute; height: 52px; color: #FFFFFF; font-weight: bold; text-align: center; }
+.hint { position: absolute; height: 14px; color: #8E8E93; text-align: center; }
+.bar-track { position: absolute; background-color: #1C1C1E; overflow: hidden; }
+.bar-fill { position: absolute; left: 0px; top: 0px; }
+.primary { position: absolute; justify-content: center; align-items: center; }
+.primary-text { color: #12151C; font-weight: bold; }
+.pill { position: absolute; background-color: #1C1C1E; justify-content: center; align-items: center; }
+.pill-text { color: #FFFFFF; }
+</style>
