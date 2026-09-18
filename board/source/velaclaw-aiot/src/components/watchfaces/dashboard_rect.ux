@@ -1,0 +1,35 @@
+<template>
+  <div class="rect-dashboard-face">
+    <div class="dash-top"><div class="dash-time-block"><text class="dash-time">{{ displayHours }}:{{ displayMinutes }}</text><text class="dash-date" style="color: {{ faceAccent }};">{{ displayWeek }} · {{ displayMonth }} {{ displayDate }}</text></div><text class="dash-power" style="color: {{ batteryColor }};">{{ batteryPercent }}%</text></div>
+    <div class="dash-card dash-step-card" @click="openSteps"><div class="dash-card-head"><text class="dash-label">今日步数</text><text class="dash-value dash-steps">{{ stepsText }}</text></div><div class="dash-track"><div class="dash-fill" style="width: {{ stepsProgressWidth }};"></div></div><text class="dash-sub">目标 {{ stepsGoalText }}</text></div>
+    <div class="dash-card dash-heart-card" @click="openHealth"><div class="dash-card-head"><text class="dash-label">实时心率</text><text class="dash-value dash-heart">{{ currentHeartRate }}</text></div><div class="dash-bars"><div class="dash-bar" for="{{ heartRateData }}" style="height: {{ heartBarHeight($idx) }}px;"></div></div><text class="dash-sub">bpm</text></div>
+    <div class="dash-bottom"><text class="dash-bottom-label">STATUS</text><text class="dash-bottom-copy">全天活动数据已同步</text></div>
+  </div>
+</template>
+
+<script>
+var watchfaceChart = require('../../v2/design/watchface_chart')
+export default {
+  props: ['displayWeek','displayMonth','displayDate','displayHours','displayMinutes','faceAccent','stepsText','stepsGoalText','stepsProgressWidth','currentHeartRate','heartRateData','batteryPercent','batteryColor'],
+  heartBarHeight(index) { return watchfaceChart.sampleBarHeight(this.heartRateData, index, 4, 28, 8) },
+  openHealth() { this.$emit('openHealth') },
+  openSteps() { this.$emit('openSteps') }
+}
+</script>
+
+<style>
+.rect-dashboard-face { width: 192px; height: 228px; flex-direction: column; align-items: center; background-color: #07090D; }
+.dash-top { width: 164px; height: 58px; margin-top: 6px; border-radius: 12px; background-color: #0D1117; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 10px; padding-right: 10px; }
+.dash-time-block { width: 112px; flex-direction: column; } .dash-time { width: 112px; height: 35px; font-size: 31px; color: #FFFFFF; font-weight: bold; } .dash-date { width: 112px; font-size: 7px; font-weight: bold; margin-top: 1px; }
+.dash-power { width: 30px; font-size: 9px; font-weight: bold; text-align: right; }
+.dash-card { width: 144px; height: 59px; border-radius: 10px; background-color: #14181F; padding: 8px 10px; margin-top: 7px; flex-direction: column; }
+.dash-card-head { width: 144px; height: 20px; flex-direction: row; justify-content: space-between; align-items: center; }
+.dash-label { font-size: 8px; color: #D1D1D6; } .dash-value { width: 72px; font-size: 16px; font-weight: bold; text-align: right; lines: 1; }
+.dash-steps { font-size: 13px; color: #FFD60A; } .dash-heart { color: #FF375F; }
+.dash-track { width: 144px; height: 5px; border-radius: 3px; background-color: #2C2C2E; margin-top: 7px; } .dash-fill { height: 5px; border-radius: 3px; background-color: #FFD60A; }
+.dash-bars { width: 144px; height: 28px; flex-direction: row; justify-content: space-between; align-items: flex-end; margin-top: 3px; } .dash-bar { width: 7px; border-radius: 3px; background-color: #FF375F; }
+.dash-sub { font-size: 6px; color: #636366; margin-top: 3px; }
+.dash-heart-card { margin-top: 7px; }
+.dash-bottom { width: 164px; height: 22px; margin-top: 6px; border-radius: 8px; background-color: #0D1117; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 8px; padding-right: 8px; }
+.dash-bottom-label { font-size: 5px; color: #6F747C; } .dash-bottom-copy { font-size: 6px; color: #8E8E93; }
+</style>

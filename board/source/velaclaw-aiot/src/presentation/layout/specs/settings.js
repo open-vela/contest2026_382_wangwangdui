@@ -1,0 +1,22 @@
+module.exports = {
+  id: 'settings-l1-paged',
+  freedomLevel: 1,
+  strategy: 'auto',
+  minItems: 1,
+  maxItems: 3,
+  minScale: 0.86,
+  maxScale: 1.2,
+  maxVerticalScale: 1.5,
+  maxVisualScale: 1.5,
+  verticalScaleStep: 0.05,
+  visualExpansion: 0.65,
+  rhythmExpansion: 0.45,
+  chromeExpansion: 0.45,
+  verticalAlign: 'center',
+  scaleStep: 0.02,
+  sectionGap: 5,
+  itemGap: 8,
+  header: { width: 120, height: 20 },
+  item: { width: 148, height: 50 },
+  footer: { width: 110, height: 14 }
+}

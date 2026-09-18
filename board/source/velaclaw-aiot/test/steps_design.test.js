@@ -1,0 +1,32 @@
+const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
+const scrollFlow = require('../src/presentation/layout/scroll_flow')
+const stepsLayout = require('../src/presentation/layout/specs/steps')
+
+const root = path.resolve(__dirname, '..')
+const page = fs.readFileSync(path.join(root, 'src/pages/steps/steps.ux'), 'utf8')
+const mapper = fs.readFileSync(path.join(root, 'src/presentation/mappers/steps.js'), 'utf8')
+
+const circle = scrollFlow.resolve({ formFactor: 'circle', logicalHeight: 192 }, stepsLayout)
+const pill = scrollFlow.resolve({ formFactor: 'pill', logicalHeight: 490 }, stepsLayout)
+
+assert.strictEqual(circle.freedomLevel, 1)
+assert.strictEqual(circle.strategy, 'auto')
+assert.strictEqual(circle.flowMode, 'reserved-viewport-scroll')
+assert.strictEqual(circle.needsOverride, false)
+assert.strictEqual(circle.violations.length, 0)
+assert.ok(circle.stream.viewportHeight >= 60, 'circle Steps must reserve a useful scrolling viewport')
+assert.ok(pill.stream.viewportHeight > circle.stream.viewportHeight, 'tall pill screens must automatically expand the metric stream')
+assert.ok(pill.scale >= circle.scale, 'tall screens may use a more comfortable L1 scale')
+
+assert.ok(page.includes("../../presentation/layout/scroll_flow"), 'Steps must use Design Engine scroll flow')
+assert.ok(page.includes("../../presentation/layout/specs/steps"), 'Steps layout intent must live in a spec')
+assert.ok(page.includes("../../presentation/mappers/steps"), 'Steps chart mapping must live in presentation')
+assert.ok(!page.includes('profile.isCircle'), 'Steps must not pick chart geometry from shape flags')
+assert.ok(!page.includes('pageViewport.bind'), 'Steps must enter through layout runtime')
+assert.ok(!page.includes('@media (shape:'), 'L1 Steps must not regain shape-specific CSS')
+assert.ok(mapper.includes('mapStepsMetrics'), 'Steps presentation mapper must own metric/chart projection')
+assert.ok(!mapper.includes('isCircle') && !mapper.includes('formFactor'), 'Steps presentation mapper must remain shape-agnostic')
+
+console.log('Steps L1 verified: one activity model feeds an automatically sized scroll-flow presentation')

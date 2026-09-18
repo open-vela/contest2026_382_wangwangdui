@@ -1,0 +1,89 @@
+<template>
+  <stack class="settings-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};" @touchstart="onSwipeBackStart" @touchend="onSwipeBackEnd">
+    <div class="settings-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" @swipe="handleSwipe">
+      <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">设置</text><text class="page-text">{{ pageText }}</text></div>
+      <div class="settings-list" style="left: {{ listLeft }}px; top: {{ listTop }}px; width: {{ listWidth }}px; height: {{ listHeight }}px;">
+        <div class="setting-card" for="{{ pageItems }}" tid="id" @click="openSetting($item)" style="width: {{ listWidth }}px; height: {{ itemHeight }}px; margin-bottom: {{ $item.marginBottom }}px; border-radius: {{ itemRadius }}px; padding: {{ itemPadding }}px;"><image class="item-icon" src="{{ $item.icon }}" style="width: {{ iconSize }}px; height: {{ iconSize }}px; border-radius: {{ iconRadius }}px;"></image><div class="item-copy"><text class="item-name" style="font-size: {{ itemNameSize }}px;">{{ $item.name }}</text><text class="item-desc" style="font-size: {{ itemDescSize }}px; line-height: {{ itemDescLineHeight }}px;">{{ $item.description }}</text></div><text class="item-arrow" style="font-size: {{ arrowSize }}px;">›</text></div>
+      </div>
+      <div class="pager" style="left: {{ footerLeft }}px; top: {{ footerTop }}px; width: {{ footerWidth }}px; height: {{ footerHeight }}px;"><text class="pager-button" @click="previousPage">‹</text><div class="dots"><div class="dot" for="{{ dots }}" style="background-color: {{ $item.color }};"></div></div><text class="pager-button" @click="nextPage">›</text></div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../../v2/app/page_runtime'
+import navigation from '../../../v2/app/navigation'
+import swipeBack from '../../../v2/app/swipe_back'
+import appRoutes from '../../../v2/app/app_routes'
+import settingsMenuDesign from '../../../v2/design/specs/settings_menu'
+import settingsMenuView from '../../../v2/design/views/settings_menu'
+
+function consumeSwipe(event) {
+  if (!event) return
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
+}
+
+export default {
+  private: {
+    pageItems: [], dots: [], pageIndex: 0, pageText: '1 / 1',
+    headerLeft: 40, headerTop: 22, headerWidth: 112, headerHeight: 18, listLeft: 22, listTop: 45, listWidth: 148, listHeight: 111, footerLeft: 46, footerTop: 157, footerWidth: 100, footerHeight: 16,
+    itemHeight: 52, itemGap: 7, itemRadius: 18, itemPadding: 7, iconSize: 30, iconRadius: 15, titleSize: 12, itemNameSize: 10, itemDescSize: 6, itemDescLineHeight: 8, arrowSize: 13,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    pageRuntime.bind(this, { contentWidth: function (profile) { return settingsMenuDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      self.designPlan = settingsMenuDesign.resolve(profile, scene, safe)
+      self.refreshPage()
+    })
+  },
+  onShow() { this.refreshPage() },
+  onBackPress() { navigation.back(); return true },
+  onSwipeBackStart(event) { swipeBack.start(this, event) },
+  onSwipeBackEnd(event) { if (this.pageIndex > 0) return; swipeBack.end(this, event, navigation) },
+  refreshPage() {
+    if (!this.designPlan) return
+    var view = settingsMenuView.project(this.designPlan, this.pageIndex)
+    this.pageIndex = view.pageIndex; this.pageText = view.pageText; this.pageItems = view.pageItems; this.dots = view.dots
+    this.applyPlan(view.plan)
+    this.itemRadius = view.itemRadius; this.itemPadding = view.itemPadding; this.iconSize = view.iconSize; this.iconRadius = view.iconRadius
+    this.titleSize = view.titleSize; this.itemNameSize = view.itemNameSize; this.itemDescSize = view.itemDescSize; this.itemDescLineHeight = view.itemDescSize + 2; this.arrowSize = view.arrowSize
+  },
+  applyPlan(plan) {
+    this.headerLeft = plan.header.left; this.headerTop = plan.header.top; this.headerWidth = plan.header.width; this.headerHeight = plan.header.height
+    this.listLeft = plan.list.left; this.listTop = plan.list.top; this.listWidth = plan.list.width; this.listHeight = plan.list.height
+    this.footerLeft = plan.footer.left; this.footerTop = plan.footer.top; this.footerWidth = plan.footer.width; this.footerHeight = plan.footer.height
+    this.itemHeight = plan.itemHeight; this.itemGap = plan.itemGap
+  },
+  previousPage() { this.pageIndex--; this.refreshPage() },
+  nextPage() { this.pageIndex++; this.refreshPage() },
+  handleSwipe(event) {
+    if (!event || !event.direction) return
+    if (event.direction === 'left') { consumeSwipe(event); this.nextPage() }
+    else if (event.direction === 'right' && this.pageIndex > 0) { consumeSwipe(event); this.previousPage() }
+  },
+  openSetting(item) {
+    if (!item) return
+    var route = appRoutes.routeFor(item.id)
+    if (route) navigation.push(route)
+  }
+}
+</script>
+
+<style>
+.settings-root, .settings-scene { background-color: #000000; }
+.settings-scene { position: absolute; left: 0px; top: 0px; }
+.header, .settings-list, .pager { position: absolute; }
+.header, .pager, .setting-card { flex-direction: row; align-items: center; }
+.header, .pager { justify-content: space-between; }
+.title { color: #FFFFFF; font-weight: bold; } .page-text { color: #8E8E93; font-size: 7px; }
+.settings-list { flex-direction: column; }
+.setting-card { background-color: #12171C; }
+.item-icon { object-fit: cover; } .item-copy { flex: 1; flex-direction: column; margin-left: 8px; }
+.item-name { color: #FFFFFF; font-weight: bold; } .item-desc { color: #8E8E93; lines: 2; margin-top: 2px; }
+.item-arrow { width: 14px; color: #636366; text-align: right; }
+.pager-button { width: 24px; height: 18px; color: #0A84FF; font-size: 16px; text-align: center; }
+.dots { width: 54px; flex-direction: row; justify-content: center; align-items: center; }
+.dot { width: 6px; height: 6px; border-radius: 3px; margin-left: 3px; margin-right: 3px; }
+</style>

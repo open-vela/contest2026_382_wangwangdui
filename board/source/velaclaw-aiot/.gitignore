@@ -1,0 +1,14 @@
+/.nyc_output/
+/coverage/
+/node_modules/
+/sign/
+/dist/*
+!/dist/*.release.rpk
+/build/
+/outputs/
+/.codebuddy/
+/.idea/
+
+.DS_Store
+Thumbs.db
+*.log

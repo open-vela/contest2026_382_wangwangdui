@@ -1,0 +1,74 @@
+<template>
+  <div class="rect-analog-face">
+    <stack class="rect-analog-stage">
+      <div class="rect-chapter"></div>
+      <div class="rect-inner"></div>
+
+      <div class="hour-mark mark-12"></div><div class="hour-mark mark-1"></div><div class="hour-mark mark-2"></div>
+      <div class="hour-mark mark-3"></div><div class="hour-mark mark-4"></div><div class="hour-mark mark-5"></div>
+      <div class="hour-mark mark-6"></div><div class="hour-mark mark-7"></div><div class="hour-mark mark-8"></div>
+      <div class="hour-mark mark-9"></div><div class="hour-mark mark-10"></div><div class="hour-mark mark-11"></div>
+
+      <text class="rect-brand">VELA</text>
+      <text class="rect-mode">SQUARE AUTOMATIC</text>
+
+      <div class="rect-date-window" @click="openToday"><text class="rect-date-month">{{ displayMonth }}</text><text class="rect-date-day">{{ displayDate }}</text></div>
+
+      <div class="rect-hour-hand" style="transform: {{ hourHandTransform }};"></div>
+      <div class="rect-minute-hand" style="transform: {{ minuteHandTransform }};"></div>
+      <div class="rect-second-hand" style="transform: {{ secondHandTransform }};"></div>
+      <div class="rect-center-ring"></div><div class="rect-center-pin"></div>
+    </stack>
+
+    <div class="rect-info-strip">
+      <div class="rect-info-cell" @click="openHealth"><text class="rect-info-label">心率</text><text class="rect-info-value heart">{{ currentHeartRate }}</text></div>
+      <div class="rect-info-divider"></div>
+      <div class="rect-info-cell"><text class="rect-info-label">电量</text><text class="rect-info-value power">{{ batteryPercent }}%</text></div>
+      <div class="rect-info-divider"></div>
+      <div class="rect-info-cell" @click="openToday"><text class="rect-info-label">日期</text><text class="rect-info-value">{{ displayMonth }} {{ displayDate }}</text></div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  props: ['displayMonth','displayDate','batteryPercent','currentHeartRate','hourHandTransform','minuteHandTransform','secondHandTransform'],
+  openHealth() { this.$emit('openHealth') },
+  openToday() { this.$emit('openToday') }
+}
+</script>
+
+<style>
+.rect-analog-face { position: absolute; left: 0px; top: 0px; width: 192px; height: 228px; background-color: #050607; flex-direction: column; align-items: center; }
+.rect-analog-stage { position: absolute; left: 14px; top: 12px; width: 164px; height: 168px; }
+.rect-chapter { position: absolute; left: 0px; top: 0px; width: 164px; height: 168px; border-radius: 24px; border-width: 2px; border-color: #B89A61; background-color: #080A0D; }
+.rect-inner { position: absolute; left: 8px; top: 8px; width: 148px; height: 152px; border-radius: 18px; border-width: 1px; border-color: #413A2B; background-color: #0A0D11; }
+.hour-mark { position: absolute; background-color: #D8C18D; border-radius: 1px; }
+.mark-12 { left: 80px; top: 12px; width: 4px; height: 12px; }
+.mark-1 { left: 119px; top: 19px; width: 3px; height: 9px; transform: rotate(30deg); }
+.mark-2 { left: 142px; top: 45px; width: 3px; height: 9px; transform: rotate(60deg); }
+.mark-3 { left: 145px; top: 80px; width: 11px; height: 4px; }
+.mark-4 { left: 140px; top: 119px; width: 3px; height: 9px; transform: rotate(120deg); }
+.mark-5 { left: 118px; top: 140px; width: 3px; height: 9px; transform: rotate(150deg); }
+.mark-6 { left: 80px; top: 144px; width: 4px; height: 12px; }
+.mark-7 { left: 42px; top: 140px; width: 3px; height: 9px; transform: rotate(30deg); }
+.mark-8 { left: 20px; top: 119px; width: 3px; height: 9px; transform: rotate(60deg); }
+.mark-9 { left: 8px; top: 80px; width: 11px; height: 4px; }
+.mark-10 { left: 20px; top: 45px; width: 3px; height: 9px; transform: rotate(120deg); }
+.mark-11 { left: 42px; top: 19px; width: 3px; height: 9px; transform: rotate(150deg); }
+.rect-brand { position: absolute; left: 52px; top: 42px; width: 60px; height: 15px; font-size: 10px; font-weight: bold; color: #E9DBB8; text-align: center; }
+.rect-mode { position: absolute; left: 42px; top: 56px; width: 80px; height: 9px; font-size: 5px; color: #786D57; text-align: center; }
+.rect-date-window { position: absolute; left: 116px; top: 76px; width: 30px; height: 24px; border-radius: 5px; border-width: 1px; border-color: #6B5E43; background-color: #14171B; flex-direction: column; justify-content: center; align-items: center; }
+.rect-date-month { width: 28px; height: 7px; font-size: 4px; color: #94866B; text-align: center; } .rect-date-day { width: 28px; height: 12px; font-size: 9px; font-weight: bold; color: #F5E9CA; text-align: center; }
+.rect-hour-hand { position: absolute; left: 80px; top: 48px; width: 4px; height: 39px; border-radius: 2px; transform-origin: 2px 36px; background-color: #EEE0BC; }
+.rect-minute-hand { position: absolute; left: 81px; top: 32px; width: 2px; height: 55px; border-radius: 1px; transform-origin: 1px 52px; background-color: #D7BC7B; }
+.rect-second-hand { position: absolute; left: 82px; top: 26px; width: 1px; height: 63px; transform-origin: 0px 58px; background-color: #E05B4F; }
+.rect-center-ring { position: absolute; left: 76px; top: 78px; width: 14px; height: 14px; border-radius: 7px; background-color: #D7BC7B; }
+.rect-center-pin { position: absolute; left: 80px; top: 82px; width: 6px; height: 6px; border-radius: 3px; background-color: #3D3426; }
+.rect-info-strip { position: absolute; left: 14px; top: 188px; width: 164px; height: 30px; border-radius: 10px; background-color: #11151A; flex-direction: row; align-items: center; justify-content: center; }
+.rect-info-cell { width: 50px; height: 26px; flex-direction: column; justify-content: center; align-items: center; }
+.rect-info-divider { width: 1px; height: 18px; background-color: #2C3036; }
+.rect-info-label { width: 48px; height: 8px; font-size: 5px; color: #777D86; text-align: center; }
+.rect-info-value { width: 48px; height: 12px; font-size: 8px; color: #ECEEF1; font-weight: bold; text-align: center; lines: 1; }
+.heart { color: #FF5A6E; } .power { color: #56D879; }
+</style>

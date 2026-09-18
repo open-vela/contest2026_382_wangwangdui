@@ -1,0 +1,32 @@
+const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
+const scene = require('../src/v2/design/scene')
+
+const root = path.resolve(__dirname, '..')
+const page = fs.readFileSync(path.join(root, 'src/pages/today/today.ux'), 'utf8')
+const controller = fs.readFileSync(path.join(root, 'src/v2/features/today/controller.js'), 'utf8')
+
+const band10 = { formFactor: 'pill', logicalHeight: 471, viewportTop: '24px', viewportHeight: '447px' }
+const host = scene.resolve(band10)
+const safe = scene.safeForWidth(band10, 168)
+assert.strictEqual(host.height, 447, 'V2 Today must honor the host scene instead of enlarging the root')
+assert.ok(safe.top >= 0 && safe.bottom <= host.height, 'pill safe geometry must be projected inside the host scene')
+
+assert.ok(page.includes("../../v2/app/page_runtime"), 'Today must bind through V2 page runtime')
+assert.ok(page.includes("../../v2/features/today/controller"), 'Today must consume a V2 feature controller')
+assert.ok(page.includes('height: {{ viewportHeight }}'), 'page root must use host viewport height verbatim')
+assert.ok(page.includes('height: {{ sceneHeight }}px'), 'inner design scene must be explicitly bounded')
+assert.ok(!page.includes('@swipe=') && !page.includes('@touch'), 'V2 Today must not depend on scroll-competing gesture navigation')
+assert.ok(page.includes('@click="previousMonth"') && page.includes('@click="nextMonth"'), 'month navigation must use explicit stable controls')
+assert.ok(page.includes('@click="openCalendar"') && page.includes('@click="closeCalendar"'), 'summary/calendar navigation must stay explicit')
+assert.ok(page.includes('.pill-surface'), 'pill must retain an independent composition')
+assert.ok(page.includes('.circle-surface'), 'circle must retain an independent composition')
+assert.ok(page.includes('.rect-surface'), 'rect must retain an independent composition')
+assert.ok(!page.includes('layoutRuntime') && !page.includes('freeSurface') && !page.includes('pageMotion'), 'V2 Today must not depend on legacy presentation runtime')
+assert.ok(!page.includes('../../common/'), 'V2 Today must not consume legacy common modules')
+assert.ok(controller.includes('healthStore.subscribeHeartRate'), 'Today must activate only heart-rate capability through the health domain')
+assert.ok(controller.includes('activityStore.hydrate'), 'Today must reuse durable activity domain state')
+assert.ok(controller.includes("require('../../domain/calendar')"), 'calendar semantics must live in V2 domain')
+
+console.log('V2 Today verified: bounded host scene, explicit interaction and unified feature controller')

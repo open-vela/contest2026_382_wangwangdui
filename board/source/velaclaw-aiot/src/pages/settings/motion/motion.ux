@@ -1,0 +1,80 @@
+<template>
+  <stack class="detail-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};" @swipe="handleBackSwipe">
+    <div class="detail-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">动作与加速度</text><text class="status" style="color: {{ sensorColor }};">{{ sensorStatus }}</text></div>
+      <scroll class="content" scroll-y="true" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;">
+        <div if="{{ pageIndex === 0 }}" class="panel">
+          <div class="axis-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px;"><text class="section-label">实时三轴 · m/s²</text><div class="axis-row"><text class="axis x">X</text><text class="axis-value">{{ xText }}</text></div><div class="axis-row"><text class="axis y">Y</text><text class="axis-value">{{ yText }}</text></div><div class="axis-row"><text class="axis z">Z</text><text class="axis-value">{{ zText }}</text></div></div>
+          <div class="metric-row" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><div class="metric"><text class="metric-label">合加速度</text><text class="metric-value">{{ magnitudeText }}</text></div><div class="metric"><text class="metric-label">动作变化</text><text class="metric-value" style="color: {{ intensityColor }};">{{ scoreText }}</text></div></div>
+          <div class="action-row" style="width: {{ streamWidth }}px; margin-top: {{ cardGap }}px;"><text class="action primary" @click="toggleSensor">{{ sensorButtonText }}</text><text class="action secondary" @click="resetCalibration">校准</text></div>
+          <text class="tip">{{ sampleText }}</text>
+        </div>
+        <div if="{{ pageIndex === 1 }}" class="panel">
+          <div class="orb" style="border-color: {{ actionColor }};"><text class="orb-label">动作强度</text><text class="orb-value" style="color: {{ actionColor }};">{{ actionResult }}</text><text class="orb-score">峰值 {{ actionPeakText }}</text></div>
+          <div class="countdown-card" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;"><text class="countdown">{{ countdownText }}</text><div class="countdown-copy"><text class="setting-title">3 秒动作测量</text><text class="tip-inline">挥腕或抬腕，记录最大变化量</text></div></div>
+          <text class="measure-button" @click="startMeasure" style="width: {{ streamWidth }}px; border-radius: {{ cardRadius }}px; margin-top: {{ cardGap }}px;">{{ measureButtonText }}</text>
+          <text class="tip">仅用于传感器演示，不代表医疗或专业运动测量。</text>
+        </div>
+        <div class="pager" style="width: {{ streamWidth }}px;"><text class="pager-button" @click="previousPage">‹</text><text class="pager-label">{{ pageLabel }}</text><text class="pager-button" @click="nextPage">›</text></div>
+      </scroll>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../../v2/app/page_runtime'
+import navigation from '../../../v2/app/navigation'
+import { createMotionController } from '../../../v2/features/settings/motion_controller'
+import detailDesign from '../../../v2/design/specs/settings_detail'
+import motionView from '../../../v2/design/views/motion'
+
+export default {
+  private: {
+    pageIndex: 0, pageLabel: '实时诊断', sensorStatus: '未启动', sensorColor: '#8E8E93', sensorButtonText: '开始诊断', xText: '0.00', yText: '0.00', zText: '0.00', magnitudeText: '0.00', scoreText: '0.00', intensityColor: '#30D158', sampleText: '启动后显示真实样本与采样数量', countdownText: '3.0', actionResult: '待测量', actionColor: '#8E8E93', actionPeakText: '0.00', measureButtonText: '开始测量',
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 20, streamLeft: 22, streamTop: 49, streamWidth: 148, streamHeight: 120, titleSize: 12, cardRadius: 16, cardGap: 6,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    this.controller = createMotionController(function (model) { self.applyModel(model) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return detailDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = detailDesign.resolve(profile, scene, safe)
+      self.headerLeft = plan.header.left; self.headerTop = plan.header.top; self.headerWidth = plan.header.width; self.headerHeight = plan.header.height
+      self.streamLeft = plan.stream.left; self.streamTop = plan.stream.top; self.streamWidth = plan.stream.width; self.streamHeight = plan.stream.height
+      self.titleSize = plan.titleSize; self.cardRadius = plan.cardRadius; self.cardGap = plan.cardGap
+    })
+  },
+  onShow() { if (this.controller) this.controller.refresh() },
+  onHide() { if (this.controller) this.controller.stop() },
+  onDestroy() { if (this.controller) this.controller.stop() },
+  onBackPress() { navigation.back(); return true },
+  handleBackSwipe(event) { if (event && event.direction === 'right') navigation.back() },
+  applyModel(model) {
+    var view = motionView.project(model)
+    this.sensorStatus = view.sensorStatus; this.sensorColor = view.sensorColor; this.sensorButtonText = view.sensorButtonText
+    this.xText = view.xText; this.yText = view.yText; this.zText = view.zText; this.magnitudeText = view.magnitudeText; this.scoreText = view.scoreText; this.intensityColor = view.intensityColor; this.sampleText = view.sampleText
+    this.countdownText = view.countdownText; this.actionResult = view.actionResult; this.actionColor = view.actionColor; this.actionPeakText = view.actionPeakText; this.measureButtonText = view.measureButtonText
+  },
+  toggleSensor() { if (this.controller) this.controller.toggleSensor() },
+  resetCalibration() { if (this.controller) this.controller.reset() },
+  startMeasure() { if (this.controller) this.controller.startMeasure() },
+  previousPage() { if (this.pageIndex > 0) this.pageIndex--; this.pageLabel = motionView.pageLabel(this.pageIndex) },
+  nextPage() { if (this.pageIndex < 1) this.pageIndex++; this.pageLabel = motionView.pageLabel(this.pageIndex) }
+}
+</script>
+
+<style>
+.detail-root, .detail-scene { background-color: #000000; } .detail-scene { position: absolute; left: 0px; top: 0px; }
+.header, .content { position: absolute; } .header { flex-direction: row; justify-content: space-between; align-items: center; }
+.title { color: #BF5AF2; font-weight: bold; } .status { width: 56px; font-size: 7px; text-align: right; }
+.content, .panel { flex-direction: column; } .axis-card, .metric-row, .countdown-card { background-color: #14131A; padding: 10px; }
+.section-label, .metric-label, .tip, .tip-inline, .orb-label, .orb-score { color: #8E8E93; font-size: 7px; }
+.axis-row { width: 100%; height: 30px; flex-direction: row; justify-content: space-between; align-items: center; } .axis { width: 22px; font-size: 13px; font-weight: bold; } .x { color: #FF453A; } .y { color: #30D158; } .z { color: #0A84FF; } .axis-value { flex: 1; color: #FFFFFF; font-size: 16px; text-align: right; }
+.metric-row { min-height: 58px; flex-direction: row; justify-content: space-between; } .metric { width: 48%; flex-direction: column; } .metric-value { color: #FFFFFF; font-size: 18px; font-weight: bold; margin-top: 4px; }
+.action-row { height: 34px; flex-direction: row; justify-content: space-between; } .action { height: 32px; border-radius: 12px; color: #FFFFFF; font-size: 10px; font-weight: bold; text-align: center; } .primary { width: 66%; background-color: #BF5AF2; } .secondary { width: 30%; background-color: #2C2C2E; }
+.tip { width: 100%; text-align: center; margin-top: 6px; line-height: 10px; }
+.orb { width: 132px; height: 132px; border-width: 5px; border-radius: 66px; align-self: center; flex-direction: column; justify-content: center; align-items: center; background-color: #111116; } .orb-value { font-size: 25px; font-weight: bold; margin-top: 4px; } .orb-score { margin-top: 5px; }
+.countdown-card { min-height: 58px; flex-direction: row; align-items: center; } .countdown { width: 46px; color: #BF5AF2; font-size: 22px; font-weight: bold; text-align: center; } .countdown-copy { flex: 1; flex-direction: column; margin-left: 8px; } .setting-title { color: #FFFFFF; font-size: 10px; font-weight: bold; }
+.measure-button { height: 36px; background-color: #0A84FF; color: #FFFFFF; font-size: 11px; font-weight: bold; text-align: center; }
+.pager { height: 30px; flex-direction: row; justify-content: space-between; align-items: center; margin-top: 4px; } .pager-button { width: 32px; font-size: 20px; color: #BF5AF2; text-align: center; } .pager-label { color: #8E8E93; font-size: 7px; }
+</style>

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vela Layout Studio</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">V</div>
+      <div>
+        <h1>Vela Layout Studio</h1>
+        <p>直接调 Recipe，不写布局算法</p>
+      </div>
+    </div>
+    <div class="toolbar">
+      <label class="toolbar-field">
+        <span>页面</span>
+        <select id="appSelect" aria-label="选择页面"></select>
+      </label>
+      <div class="profile-switch" id="profileSwitch" aria-label="设备形态"></div>
+      <label class="safe-toggle"><input id="safeToggle" type="checkbox" checked><span>显示安全区</span></label>
+      <div class="save-state" id="saveState"><span class="state-dot"></span><span>已同步</span></div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel component-panel">
+      <div class="panel-head">
+        <div><span class="eyebrow">COMPONENTS</span><h2>组件</h2></div>
+        <span class="level-chip" id="levelChip">L1</span>
+      </div>
+      <p class="panel-intro">点一个组件，只显示它能调的参数。无需编辑代码。</p>
+      <div class="component-list" id="componentList"></div>
+      <div class="tip-card">
+        <strong>快捷操作</strong>
+        <span>• 预览框可上下拖动</span>
+        <span>• 右下角可快速缩放</span>
+        <span>• “恢复继承”会删除当前机型覆盖</span>
+      </div>
+    </aside>
+
+    <section class="preview-panel">
+      <div class="preview-head">
+        <div>
+          <span class="eyebrow">LIVE PREVIEW</span>
+          <h2 id="previewTitle">健康 · 圆屏</h2>
+        </div>
+        <div class="preview-meta">
+          <span id="fileBadge" class="file-badge">layout.js</span>
+          <span class="translator-badge">UX 浏览器翻译预览</span>
+        </div>
+      </div>
+      <div class="preview-help" id="previewHelp">蓝框来自真实 Adapter Plan；页面底图由真实 .ux 翻译，仅用于布局预览。</div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="device-shell" id="deviceShell">
+          <div class="device-logical" id="deviceLogical">
+            <iframe id="uxFrame" title="Vela UX 预览" tabindex="-1"></iframe>
+            <div class="safe-area" id="safeArea"><span>SAFE</span></div>
+            <div class="component-overlay" id="componentOverlay"></div>
+          </div>
+        </div>
+      </div>
+      <div class="warning-strip" id="warningStrip"></div>
+    </section>
+
+    <aside class="panel inspector-panel">
+      <div class="panel-head inspector-title-row">
+        <div><span class="eyebrow">INSPECTOR</span><h2 id="inspectorTitle">内容区域</h2></div>
+        <button class="ghost-button" id="resetGroupButton" title="恢复当前组件的所有覆盖">恢复组件</button>
+      </div>
+      <p class="group-hint" id="groupHint"></p>
+      <div class="source-legend">
+        <span><i class="legend-dot inherited"></i>继承 base</span>
+        <span><i class="legend-dot override"></i>当前机型覆盖</span>
+      </div>
+      <div class="field-list" id="fieldList"></div>
+      <div class="recipe-note">
+        <strong>写入规则</strong>
+        <p>只保存你改过的字段。未修改参数继续继承 base，不会生成冗余配置。</p>
+      </div>
+    </aside>
+  </main>
+
+  <section class="change-dock" id="changeDock">
+    <div class="change-summary">
+      <span class="change-count" id="changeCount">0</span>
+      <div><strong>待保存改动</strong><span id="changeHint">当前没有改动</span></div>
+    </div>
+    <div class="change-list" id="changeList"></div>
+    <div class="dock-actions">
+      <button class="secondary-button" id="revertButton" disabled>撤销本次</button>
+      <button class="primary-button" id="saveButton" disabled>保存到本地</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
