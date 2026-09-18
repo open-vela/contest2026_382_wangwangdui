@@ -1,0 +1,78 @@
+<template>
+  <stack class="history-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};" @swipe="handleBackSwipe">
+    <div class="history-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="top-row" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="page-title" style="font-size: {{ titleSize }}px; height: {{ headerHeight }}px; line-height: {{ headerHeight }}px;">运动记录</text><text class="back-text" style="font-size: {{ backSize }}px; height: {{ headerHeight }}px; line-height: {{ headerHeight }}px;" @click="goBack">返回</text></div>
+      <div class="summary-row" style="left: {{ summaryLeft }}px; top: {{ summaryTop }}px; width: {{ summaryWidth }}px; height: {{ summaryHeight }}px;">
+        <div class="summary-card" style="width: {{ summaryCardWidth }}px; height: {{ summaryHeight }}px; padding-left: {{ summaryPaddingLeft }}px; border-radius: {{ radius }}px;"><text class="summary-value" style="font-size: {{ summaryValueSize }}px;">{{ totalCount }}</text><text class="summary-label" style="font-size: {{ summaryLabelSize }}px;">运动次数</text></div>
+        <div class="summary-card" style="width: {{ summaryCardWidth }}px; height: {{ summaryHeight }}px; padding-left: {{ summaryPaddingLeft }}px; margin-left: {{ summaryGap }}px; border-radius: {{ radius }}px;"><text class="summary-value step-color" style="font-size: {{ summaryValueSize }}px;">{{ totalSteps }}</text><text class="summary-label" style="font-size: {{ summaryLabelSize }}px;">累计步数</text></div>
+      </div>
+      <div class="empty-state" if="{{ emptyVisible }}" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;"><text class="empty-title">暂无运动记录</text><text class="empty-copy">完成一次步行或跑步后会显示在这里</text></div>
+      <list class="record-list" if="{{ !emptyVisible }}" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ streamWidth }}px; height: {{ streamHeight }}px;">
+        <list-item type="record" class="record-card" for="{{ records }}" tid="id" style="width: {{ recordWidth }}px; height: {{ recordHeight }}px; margin-bottom: {{ recordGap }}px; border-radius: {{ radius }}px; padding: {{ padding }}px;">
+          <div class="record-head"><text class="record-title" style="font-size: {{ recordTitleSize }}px;">{{ $item.typeName }}</text><text class="sync-text" style="font-size: {{ recordMetaSize }}px;">{{ $item.syncText }}</text></div>
+          <text class="record-meta" style="font-size: {{ recordMetaSize }}px;">{{ $item.startText }} · {{ $item.durationText }}</text>
+          <div class="record-metrics"><text class="record-value" style="font-size: {{ recordMetaSize }}px;">{{ $item.stepsText }} 步</text><text class="record-value" style="font-size: {{ recordMetaSize }}px;">{{ $item.distanceText }}</text><text class="record-value" style="font-size: {{ recordMetaSize }}px;">{{ $item.caloriesText }} kcal</text></div>
+          <text class="record-source" style="font-size: {{ recordMetaSize }}px;">{{ $item.distanceSourceText }} · {{ $item.heartText }}</text>
+        </list-item>
+      </list>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createWorkoutHistoryController } from '../../v2/features/workout/history_controller'
+import workoutHistoryDesign from '../../v2/design/specs/workout_history'
+import workoutHistoryView from '../../v2/design/views/workout_history'
+
+function applyRegion(page, prefix, value) {
+  page[prefix + 'Left'] = value.left; page[prefix + 'Top'] = value.top; page[prefix + 'Width'] = value.width; page[prefix + 'Height'] = value.height
+}
+
+export default {
+  private: {
+    totalCount: '0', totalSteps: '0', emptyVisible: true, records: [],
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 20, summaryLeft: 22, summaryTop: 49, summaryWidth: 148, summaryHeight: 38, streamLeft: 22, streamTop: 92, streamWidth: 148, streamHeight: 70,
+    summaryGap: 6, summaryPaddingLeft: 10, summaryCardWidth: 61, recordWidth: 134, recordHeight: 52, recordGap: 7, titleSize: 12, backSize: 7, summaryValueSize: 13, summaryLabelSize: 6, recordTitleSize: 10, recordMetaSize: 6, radius: 14, padding: 7,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    this.controller = createWorkoutHistoryController(function (model) { self.applyView(workoutHistoryView.project(model)) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return workoutHistoryDesign.contentWidth(profile) } }, function (profile, scene, safe) { self.applyPlan(workoutHistoryDesign.resolve(profile, scene, safe)) })
+  },
+  onShow() { this.controller.refresh() },
+  onHide() { this.records = [] },
+  onDestroy() { this.records = [] },
+  onBackPress() { navigation.back(); return true },
+  handleBackSwipe(event) { if (event && event.direction === 'right') navigation.back() },
+  applyPlan(plan) {
+    applyRegion(this, 'header', plan.header); applyRegion(this, 'summary', plan.summary)
+    this.streamLeft = plan.stream.left; this.streamTop = plan.stream.top; this.streamWidth = plan.stream.width; this.streamHeight = plan.stream.height; this.recordWidth = plan.stream.itemWidth; this.recordHeight = plan.stream.itemHeight; this.recordGap = plan.stream.gap
+    this.summaryGap = plan.summaryGap; this.summaryPaddingLeft = plan.summaryPaddingLeft; this.summaryCardWidth = plan.summaryCardWidth
+    this.titleSize = plan.titleSize; this.backSize = plan.backSize; this.summaryValueSize = plan.summaryValueSize; this.summaryLabelSize = plan.summaryLabelSize; this.recordTitleSize = plan.recordTitleSize; this.recordMetaSize = plan.recordMetaSize; this.radius = plan.radius; this.padding = plan.padding
+  },
+  applyView(view) { this.totalCount = view.totalCount; this.totalSteps = view.totalSteps; this.emptyVisible = view.empty; this.records = view.records },
+  goBack() { navigation.back() }
+}
+</script>
+
+<style>
+.history-root, .history-scene { background-color: #000000; }
+.history-scene { position: absolute; left: 0px; top: 0px; }
+.top-row, .summary-row, .empty-state, .record-list { position: absolute; }
+.top-row { flex-direction: row; justify-content: space-between; align-items: center; }
+.page-title { color: #FFFFFF; font-weight: bold; } .back-text { color: #8E8E93; text-align: right; }
+.summary-row { flex-direction: row; justify-content: center; }
+.summary-card { background-color: #14181F; flex-direction: column; justify-content: center; }
+.summary-value { color: #FFFFFF; font-weight: bold; } .step-color { color: #FFD60A; } .summary-label { color: #8E8E93; margin-top: 2px; }
+.record-list { flex-direction: column; }
+.record-card { background-color: #111317; flex-direction: column; }
+.record-head, .record-metrics { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
+.record-title { color: #FFFFFF; font-weight: bold; } .sync-text { color: #0A84FF; }
+.record-meta { color: #8E8E93; margin-top: 4px; } .record-metrics { margin-top: 7px; } .record-value { color: #D1D1D6; }
+.record-source { color: #30D158; margin-top: 4px; }
+.empty-state { justify-content: center; align-items: center; flex-direction: column; }
+.empty-title { color: #FFFFFF; font-size: 12px; font-weight: bold; } .empty-copy { width: 130px; color: #8E8E93; font-size: 8px; line-height: 13px; text-align: center; margin-top: 8px; }
+</style>

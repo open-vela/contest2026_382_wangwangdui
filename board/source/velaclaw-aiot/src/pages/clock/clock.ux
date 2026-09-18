@@ -1,0 +1,236 @@
+<import name="sportface" src="../../components/watchfaces/sport.ux"></import>
+<import name="simpleface" src="../../components/watchfaces/simple.ux"></import>
+<import name="dashboardface" src="../../components/watchfaces/dashboard.ux"></import>
+<import name="sportcircle" src="../../components/watchfaces/sport_circle.ux"></import>
+<import name="simplecircle" src="../../components/watchfaces/simple_circle.ux"></import>
+<import name="dashboardcircle" src="../../components/watchfaces/dashboard_circle.ux"></import>
+<import name="mechanicalcircle" src="../../components/watchfaces/mechanical_circle.ux"></import>
+<import name="alpineface" src="../../components/watchfaces/alpine.ux"></import>
+<import name="sportrect" src="../../components/watchfaces/sport_rect.ux"></import>
+<import name="simplerect" src="../../components/watchfaces/simple_rect.ux"></import>
+<import name="dashboardrect" src="../../components/watchfaces/dashboard_rect.ux"></import>
+<import name="mechanicalrect" src="../../components/watchfaces/mechanical_rect.ux"></import>
+
+<template>
+  <stack class="clock-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }}; background-color: {{ faceBackground }};" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+    <div class="clock-scene" if="{{ profileReady }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px; background-color: {{ faceBackground }};" @click="markActive">
+      <div class="pill-stage" if="{{ isPill }}">
+        <sportface if="{{ faceId === 'sport' }}" onopen-health="openHealth" onopen-steps="openSteps" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-minutes="{{ displayMinutes }}" display-hours="{{ displayHours }}" face-accent="{{ faceAccent }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}" heart-rate-data="{{ heartRateData }}" current-heart-rate="{{ currentHeartRate }}" steps-text="{{ stepsText }}" steps-goal-text="{{ stepsGoalText }}"></sportface>
+        <simpleface if="{{ faceId === 'simple' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" goal-percent="{{ goalPercent }}" steps-text="{{ stepsText }}" current-heart-rate="{{ currentHeartRate }}" battery-percent="{{ batteryPercent }}" battery-color="{{ batteryColor }}"></simpleface>
+        <dashboardface if="{{ faceId === 'dashboard' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" steps-text="{{ stepsText }}" steps-goal-text="{{ stepsGoalText }}" steps-progress-width="{{ stepsProgressWidth }}" current-heart-rate="{{ currentHeartRate }}" heart-rate-data="{{ heartRateData }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}"></dashboardface>
+        <alpineface if="{{ faceId === 'alpine' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" onopen-today="openToday" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" steps-text="{{ stepsText }}" current-heart-rate="{{ currentHeartRate }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}" panel-glass-top="{{ alpineDataGlassTop }}" panel-row-top="{{ alpineDataRowTop }}" battery-row-top="{{ alpineBatteryRowTop }}"></alpineface>
+      </div>
+
+      <div class="rect-stage" if="{{ isRect }}">
+        <sportrect if="{{ faceId === 'sport' }}" onopen-health="openHealth" onopen-steps="openSteps" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-minutes="{{ displayMinutes }}" display-hours="{{ displayHours }}" face-accent="{{ faceAccent }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}" current-heart-rate="{{ currentHeartRate }}" steps-text="{{ stepsText }}" steps-goal-text="{{ stepsGoalText }}"></sportrect>
+        <simplerect if="{{ faceId === 'simple' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" goal-percent="{{ goalPercent }}" steps-text="{{ stepsText }}" current-heart-rate="{{ currentHeartRate }}" battery-percent="{{ batteryPercent }}" battery-color="{{ batteryColor }}"></simplerect>
+        <dashboardrect if="{{ faceId === 'dashboard' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" steps-text="{{ stepsText }}" steps-goal-text="{{ stepsGoalText }}" steps-progress-width="{{ stepsProgressWidth }}" current-heart-rate="{{ currentHeartRate }}" heart-rate-data="{{ heartRateData }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}"></dashboardrect>
+        <mechanicalrect if="{{ faceId === 'mechanical' }}" onopen-today="openToday" onopen-health="openHealth" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" battery-percent="{{ batteryPercent }}" current-heart-rate="{{ currentHeartRate }}" hour-hand-transform="{{ hourHandTransform }}" minute-hand-transform="{{ minuteHandTransform }}" second-hand-transform="{{ secondHandTransform }}"></mechanicalrect>
+      </div>
+
+      <div class="circle-stage" if="{{ isCircle && faceMounted }}">
+        <sportcircle if="{{ faceId === 'sport' }}" onopen-health="openHealth" onopen-steps="openSteps" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-minutes="{{ displayMinutes }}" display-hours="{{ displayHours }}" face-accent="{{ faceAccent }}" goal-percent="{{ goalPercent }}" battery-percent="{{ batteryPercent }}" battery-color="{{ batteryColor }}" current-heart-rate="{{ currentHeartRate }}" steps-text="{{ stepsText }}"></sportcircle>
+        <simplecircle if="{{ faceId === 'simple' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" goal-percent="{{ goalPercent }}" steps-text="{{ stepsText }}" current-heart-rate="{{ currentHeartRate }}" battery-percent="{{ batteryPercent }}" battery-color="{{ batteryColor }}"></simplecircle>
+        <dashboardcircle if="{{ faceId === 'dashboard' }}" onopen-health="openHealth" onopen-steps="openSteps" display-week="{{ displayWeek }}" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" display-hours="{{ displayHours }}" display-minutes="{{ displayMinutes }}" face-accent="{{ faceAccent }}" steps-text="{{ stepsText }}" steps-progress-width="{{ stepsProgressWidth }}" current-heart-rate="{{ currentHeartRate }}" heart-rate-data="{{ heartRateData }}" battery-percent="{{ batteryPercent }}" battery-width="{{ batteryWidth }}" battery-color="{{ batteryColor }}"></dashboardcircle>
+        <mechanicalcircle if="{{ faceId === 'mechanical' }}" onopen-today="openToday" onopen-health="openHealth" display-month="{{ displayMonth }}" display-date="{{ displayDate }}" battery-percent="{{ batteryPercent }}" current-heart-rate="{{ currentHeartRate }}" analog-ticks="{{ analogTicks }}" hour-hand-transform="{{ hourHandTransform }}" minute-hand-transform="{{ minuteHandTransform }}" second-hand-transform="{{ secondHandTransform }}"></mechanicalcircle>
+      </div>
+
+      <div class="dim-cover" if="{{ powerDimVisible }}" @click="wake"><text class="dim-text">{{ powerModeText }} · {{ powerRefreshText }}</text></div>
+      <div class="sleep-cover" if="{{ powerSleepVisible }}" @click="wake"><text class="sleep-time">{{ displayHours }}:{{ displayMinutes }}</text><text class="sleep-label">息屏模式</text><text class="sleep-tip">点击模拟抬腕亮屏</text></div>
+
+      <div class="notification-cover" if="{{ notificationVisible && notificationOverlay }}">
+        <div class="notification-body" if="{{ notificationType !== 'call' }}"><div class="notification-app"><image class="notification-icon" src="{{ notificationAppIcon }}"></image><text class="notification-name">{{ notificationAppName }}</text></div><text class="notification-content">{{ notificationContent }}</text></div>
+        <div class="notification-body" if="{{ notificationType === 'call' }}"><text class="call-contact">{{ notificationContact }}</text><text class="call-phone">{{ notificationPhone }}</text></div>
+        <div class="notification-actions"><text class="notification-button" @click="dismissNotification">忽略</text><text class="notification-button hangup" if="{{ notificationType === 'call' }}" @click="hangUpNotification" style="color: {{ notificationHangUpColor }};">挂断</text></div>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createClockController } from '../../v2/features/clock/controller'
+import clockDesign from '../../v2/design/specs/clock'
+import clockView from '../../v2/design/views/clock'
+import notificationView from '../../v2/design/views/notification'
+
+function getGestureDirection(dx, dy) {
+  var absX = Math.abs(dx)
+  var absY = Math.abs(dy)
+  if (Math.max(absX, absY) < 36) return ''
+  if (absY > absX * 1.2) return dy < 0 ? 'up' : 'down'
+  if (absX > absY * 1.2) return dx < 0 ? 'left' : 'right'
+  return ''
+}
+
+function consumeGestureEvent(event) {
+  if (!event) return
+  if (event.preventDefault) event.preventDefault()
+  if (event.stopPropagation) event.stopPropagation()
+}
+
+export default {
+  private: {
+    profileReady: false, isCircle: false, isPill: false, isRect: false, notificationOverlay: false, clockPlan: null, clockModel: null,
+    faceId: 'sport', faceMounted: true, faceMountTimer: null, faceBackground: '#000000', faceAccent: '#0A84FF',
+    displayMonth: 'JAN', displayDate: '01', displayWeek: 'MON', displayHours: '00', displayMinutes: '00',
+    analogTicks: [], hourHandTransform: '', minuteHandTransform: '', secondHandTransform: '',
+    batteryPercent: 75, batteryWidth: '75%', batteryColor: '#30D158', currentHeartRate: 88, heartRateData: [], stepsText: '0', stepsGoalText: '0', goalPercent: 0, stepsProgressWidth: '0%',
+    powerModeText: '亮屏', powerRefreshText: '实时刷新', powerDimVisible: false, powerSleepVisible: false,
+    notificationVisible: false, notificationType: '', notificationAppName: '', notificationAppIcon: '/common/logo.png', notificationContent: '', notificationContact: '', notificationPhone: '', notificationHangUp: false, notificationHangUpColor: '#FFFFFF',
+    alpineDataGlassTop: '319px', alpineDataRowTop: '327px', alpineBatteryRowTop: '401px',
+    touchTracking: false, touchStartX: 0, touchStartY: 0, pendingGesture: '', lastGestureAt: 0, lastGestureDirection: '', longPressTimer: null, longPressFired: false,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+
+  onInit() {
+    var self = this
+    this.controller = createClockController(function (model) { self.acceptClockModel(model) }, function (state) { self.applyNotification(state) })
+    pageRuntime.bind(this, { contentWidth: 168 }, function (profile, scene, safe) {
+      var plan = clockDesign.resolve(profile, scene, safe)
+      self.clockPlan = plan
+      self.isCircle = plan.shape === 'circle'
+      self.isPill = plan.shape === 'pill'
+      self.isRect = plan.shape === 'rect'
+      self.notificationOverlay = plan.notificationOverlay
+      self.alpineDataGlassTop = plan.alpineDataGlassTop
+      self.alpineDataRowTop = plan.alpineDataRowTop
+      self.alpineBatteryRowTop = plan.alpineBatteryRowTop
+      if (self.clockModel) self.applyClockState(clockView.project(self.clockModel, plan))
+      self.controller.configureFaces(plan.faceIds)
+      self.profileReady = true
+      if (self.pageVisible) self.controller.start()
+    })
+  },
+
+  onShow() { this.pageVisible = true; if (this.profileReady) { this.controller.start(); this.controller.refreshSelectedFace() } },
+  onHide() { this.pageVisible = false; this.touchTracking = false; this.pendingGesture = ''; this.clearLongPressTimer(); clearTimeout(this.faceMountTimer); this.faceMountTimer = null; if (this.controller) this.controller.stop() },
+  onDestroy() { this.pageVisible = false; this.touchTracking = false; this.pendingGesture = ''; this.clearLongPressTimer(); clearTimeout(this.faceMountTimer); this.faceMountTimer = null; if (this.controller) this.controller.stop(); this.clockModel = null; this.heartRateData = []; this.analogTicks = [] },
+  onBackPress() { this.controller.markActive('back-face-switch'); this.controller.switchFace(-1); return true },
+
+  acceptClockModel(model) { this.clockModel = model; if (this.clockPlan) this.applyClockState(clockView.project(model, this.clockPlan)) },
+  applyClockState(state) {
+    var faceChanged = state.faceId !== this.faceId
+    this.faceId = state.faceId; this.faceBackground = state.faceBackground; this.faceAccent = state.faceAccent
+    this.displayMonth = state.displayMonth; this.displayDate = state.displayDate; this.displayWeek = state.displayWeek; this.displayHours = state.displayHours; this.displayMinutes = state.displayMinutes
+    this.analogTicks = state.analogTicks; this.hourHandTransform = state.hourHandTransform; this.minuteHandTransform = state.minuteHandTransform; this.secondHandTransform = state.secondHandTransform
+    this.batteryPercent = state.batteryPercent; this.batteryWidth = state.batteryWidth; this.batteryColor = state.batteryColor
+    this.currentHeartRate = state.currentHeartRate; this.heartRateData = state.heartRateData; this.stepsText = state.stepsText; this.stepsGoalText = state.stepsGoalText; this.goalPercent = state.goalPercent; this.stepsProgressWidth = state.stepsProgressWidth
+    this.powerModeText = state.powerModeText; this.powerRefreshText = state.powerRefreshText; this.powerDimVisible = state.powerDimVisible; this.powerSleepVisible = state.powerSleepVisible
+    if (faceChanged && this.isCircle) {
+      var self = this
+      this.faceMounted = false
+      clearTimeout(this.faceMountTimer)
+      this.faceMountTimer = setTimeout(function () { self.faceMountTimer = null; self.faceMounted = true }, 0)
+    }
+  },
+
+  applyNotification(state) {
+    var view = notificationView.project(state)
+    this.notificationVisible = view.visible; this.notificationType = view.type; this.notificationAppName = view.appName; this.notificationAppIcon = view.appIcon; this.notificationContent = view.content; this.notificationContact = view.contact; this.notificationPhone = view.phone; this.notificationHangUp = view.hangUp; this.notificationHangUpColor = view.hangUpColor
+    if (this.notificationVisible) { this.touchTracking = false; this.pendingGesture = ''; this.clearLongPressTimer() }
+  },
+
+  routeGesture(direction) {
+    if (!direction || this.powerSleepVisible || this.notificationVisible) return
+    var now = Date.now()
+    if (direction === this.lastGestureDirection && now - this.lastGestureAt < 800) return
+    this.lastGestureAt = now
+    this.lastGestureDirection = direction
+    this.controller.markActive('swipe-' + direction)
+    if (direction === 'up') navigation.push('/pages/applist')
+    else if (direction === 'left') this.controller.switchFace(1)
+    else if (direction === 'right') this.controller.switchFace(-1)
+  },
+
+  handleTouchStart(event) {
+    this.touchTracking = false
+    this.pendingGesture = ''
+    this.longPressFired = false
+    this.clearLongPressTimer()
+    if (this.powerSleepVisible || this.notificationVisible || !event || !event.touches || !event.touches[0]) return
+    var point = event.touches[0]
+    this.touchStartX = point.pageX
+    this.touchStartY = point.pageY
+    this.touchTracking = true
+    this.controller.markActive('touch')
+    var self = this
+    this.longPressTimer = setTimeout(function () {
+      self.longPressTimer = null
+      if (!self.touchTracking || self.pendingGesture || self.powerSleepVisible || self.notificationVisible) return
+      self.longPressFired = true
+      self.touchTracking = false
+      self.openFaceSelector()
+    }, 650)
+  },
+
+  handleTouchMove(event) {
+    if (!this.touchTracking || !event || !event.touches || !event.touches[0]) return
+    var point = event.touches[0]
+    var dx = point.pageX - this.touchStartX
+    var dy = point.pageY - this.touchStartY
+    if (Math.max(Math.abs(dx), Math.abs(dy)) > 10) this.clearLongPressTimer()
+    var direction = getGestureDirection(dx, dy)
+    if (!direction) return
+    consumeGestureEvent(event)
+    this.pendingGesture = direction
+  },
+
+  handleTouchEnd(event) {
+    this.clearLongPressTimer()
+    if (this.longPressFired) {
+      this.longPressFired = false
+      this.touchTracking = false
+      this.pendingGesture = ''
+      consumeGestureEvent(event)
+      return
+    }
+    var direction = this.pendingGesture
+    if (!direction && this.touchTracking && event && event.changedTouches && event.changedTouches[0]) {
+      var point = event.changedTouches[0]
+      direction = getGestureDirection(point.pageX - this.touchStartX, point.pageY - this.touchStartY)
+    }
+    if (direction) consumeGestureEvent(event)
+    this.touchTracking = false
+    this.pendingGesture = ''
+    this.routeGesture(direction)
+  },
+
+  clearLongPressTimer() {
+    clearTimeout(this.longPressTimer)
+    this.longPressTimer = null
+  },
+
+  openFaceSelector() {
+    if (this.powerSleepVisible || this.notificationVisible) return
+    this.controller.markActive('longpress')
+    this.controller.markFaceSelectorEntry(function () { navigation.push('/pages/watchface') })
+  },
+  openHealth() { this.controller.markActive('complication-health'); navigation.push('/pages/heartrate') },
+  openSteps() { this.controller.markActive('complication-steps'); navigation.push('/pages/steps') },
+  openToday() { this.controller.markActive('complication-today'); navigation.push('/pages/today') },
+  markActive() { this.controller.markActive('tap') },
+  wake() { this.controller.wake('wake') },
+  dismissNotification() { this.controller.dismissNotification() },
+  hangUpNotification() { this.controller.hangUpNotification() }
+}
+</script>
+
+<style>
+.clock-root, .clock-scene { background-color: #000000; }
+.clock-scene { position: absolute; left: 0px; top: 0px; overflow: visible; }
+.pill-stage, .rect-stage, .circle-stage { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
+.dim-cover, .sleep-cover, .notification-cover { position: absolute; left: 0px; top: 0px; width: 100%; height: 100%; }
+.dim-cover { background-color: #000000; opacity: 0.55; justify-content: flex-end; align-items: center; padding-bottom: 40px; }
+.dim-text { width: 128px; height: 22px; border-radius: 11px; background-color: #141414; color: #FFD60A; font-size: 10px; text-align: center; }
+.sleep-cover { background-color: #000000; flex-direction: column; justify-content: center; align-items: center; }
+.sleep-time { color: #FFFFFF; font-size: 32px; font-weight: bold; } .sleep-label { color: #8E8E93; font-size: 10px; margin-top: 8px; } .sleep-tip { color: #4D4D52; font-size: 7px; margin-top: 10px; }
+.notification-cover { background-color: #000000; flex-direction: column; justify-content: center; align-items: center; }
+.notification-body { width: 168px; flex: 1; flex-direction: column; justify-content: center; align-items: center; }
+.notification-app { flex-direction: row; align-items: center; } .notification-icon { width: 38px; height: 38px; margin-right: 10px; } .notification-name { color: #FFFFFF; font-size: 18px; font-weight: bold; }
+.notification-content { width: 160px; color: #D1D1D6; font-size: 14px; line-height: 20px; text-align: center; margin-top: 18px; lines: 3; }
+.call-contact { color: #FFFFFF; font-size: 22px; font-weight: bold; text-align: center; } .call-phone { color: #8E8E93; font-size: 15px; margin-top: 10px; }
+.notification-actions { width: 168px; height: 56px; margin-bottom: 32px; flex-direction: row; justify-content: center; align-items: center; }
+.notification-button { width: 70px; height: 34px; margin-left: 6px; margin-right: 6px; border-radius: 17px; background-color: #1C1C1E; color: #FFFFFF; font-size: 12px; text-align: center; } .hangup { background-color: #C83245; }
+</style>

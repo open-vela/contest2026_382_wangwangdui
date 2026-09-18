@@ -1,0 +1,96 @@
+<template>
+  <stack class="steps-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};" @swipe="handleBackSwipe">
+    <div class="steps-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <text class="steps-title" style="left: {{ titleLeft }}px; top: {{ titleTop }}px; width: {{ contentWidth }}px; font-size: {{ titleSize }}px;">运动</text>
+      <div class="history-entry" @click="goToHistory" style="left: {{ historyLeft }}px; top: {{ historyTop }}px; width: {{ contentWidth }}px; height: {{ historyHeight }}px; border-radius: {{ historyRadius }}px;">
+        <text class="history-title" style="font-size: {{ historyTitleSize }}px;">7日趋势</text><text class="history-sub" style="font-size: {{ historySubSize }}px;">查看趋势 ›</text>
+      </div>
+      <scroll class="metric-scroll" scroll-y="true" style="left: {{ streamLeft }}px; top: {{ streamTop }}px; width: {{ contentWidth }}px; height: {{ streamHeight }}px;">
+        <div class="metric-card" for="{{ metrics }}" tid="id" style="width: {{ contentWidth }}px; min-height: {{ metricHeight }}px; margin-bottom: {{ metricGap }}px; border-radius: {{ metricRadius }}px; padding: {{ metricPadding }}px;">
+          <div class="metric-head">
+            <text class="metric-name" style="font-size: {{ labelSize }}px; color: {{ $item.color }};">{{ $item.name }}</text>
+            <text class="metric-progress" style="font-size: {{ progressTextSize }}px; color: {{ $item.color }};">{{ $item.progressText }}</text>
+          </div>
+          <div class="metric-value-row">
+            <text class="metric-value" style="font-size: {{ valueSize }}px; color: {{ $item.color }};">{{ $item.current }}</text>
+            <text class="metric-unit" style="font-size: {{ unitSize }}px;">{{ $item.unit }}</text>
+          </div>
+          <div class="progress-track" style="width: {{ progressTrackWidth }}px; height: {{ progressTrackHeight }}px; border-radius: {{ progressTrackRadius }}px; margin-top: {{ progressGap }}px;">
+            <div class="progress-fill" style="width: {{ $item.progressWidth }}px; height: {{ progressTrackHeight }}px; border-radius: {{ progressTrackRadius }}px; background-color: {{ $item.color }};"></div>
+          </div>
+          <div class="metric-foot" style="width: {{ progressTrackWidth }}px;">
+            <text class="metric-goal" style="font-size: {{ footerSize }}px;">{{ $item.goalText }}</text>
+            <text class="metric-status" style="font-size: {{ footerSize }}px; color: {{ $item.statusColor }};">{{ $item.statusText }}</text>
+          </div>
+        </div>
+      </scroll>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createActivityController } from '../../v2/features/activity/controller'
+import activityDesign from '../../v2/design/specs/activity'
+var activityView = require('../../v2/design/views/activity')
+
+export default {
+  private: {
+    ready: false, metrics: [], contentWidth: 148,
+    titleLeft: 22, titleTop: 35, titleSize: 14,
+    historyLeft: 22, historyTop: 52, historyHeight: 34, historyRadius: 17, historyTitleSize: 9, historySubSize: 7,
+    streamLeft: 22, streamTop: 92, streamHeight: 80, metricHeight: 91, metricGap: 7, metricRadius: 16, metricPadding: 9,
+    labelSize: 9, valueSize: 24, unitSize: 7, progressTextSize: 8,
+    progressTrackWidth: 130, progressTrackHeight: 7, progressTrackRadius: 4, footerSize: 7, progressGap: 7,
+    sceneWidth: 192, sceneHeight: 192,
+    viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    this.pageVisible = false
+    this.controller = createActivityController(function (metrics) { self.applyMetrics(metrics) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return activityDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = activityDesign.resolve(profile, scene, safe)
+      self.applyPlan(plan)
+      self.ready = true
+      if (self.pageVisible) self.controller.start()
+    })
+  },
+  onShow() { this.pageVisible = true; if (this.ready && this.controller) this.controller.start() },
+  onHide() { this.pageVisible = false; if (this.controller) this.controller.stop(); this.metrics = [] },
+  onDestroy() { this.pageVisible = false; if (this.controller) this.controller.stop(); this.metrics = [] },
+  onBackPress() { navigation.back(); return true },
+  handleBackSwipe(event) { if (event && event.direction === 'right') navigation.back() },
+  applyPlan(plan) {
+    this.contentWidth = plan.stream.width
+    this.titleLeft = plan.title.left; this.titleTop = plan.title.top; this.titleSize = plan.titleSize
+    this.historyLeft = plan.history.left; this.historyTop = plan.history.top; this.historyHeight = plan.history.height; this.historyRadius = plan.historyRadius; this.historyTitleSize = plan.historyTitleSize; this.historySubSize = plan.historySubSize
+    this.streamLeft = plan.stream.left; this.streamTop = plan.stream.top; this.streamHeight = plan.stream.height
+    this.metricHeight = plan.metricHeight; this.metricGap = plan.metricGap; this.metricRadius = plan.metricRadius; this.metricPadding = plan.metricPadding
+    this.labelSize = plan.labelSize; this.valueSize = plan.valueSize; this.unitSize = plan.unitSize; this.progressTextSize = plan.progressTextSize
+    this.progressTrackWidth = plan.progressTrackWidth; this.progressTrackHeight = plan.progressTrackHeight; this.progressTrackRadius = plan.progressTrackRadius; this.footerSize = plan.footerSize; this.progressGap = plan.progressGap
+  },
+  applyMetrics(metrics) { this.metrics = activityView.present(metrics, this.progressTrackWidth) },
+  goToHistory() { navigation.push('/pages/history') }
+}
+</script>
+
+<style>
+.steps-root, .steps-scene { background-color: #000000; }
+.steps-scene { position: absolute; left: 0px; top: 0px; }
+.steps-title { position: absolute; height: 22px; color: #FFD60A; font-weight: bold; text-align: center; }
+.history-entry { position: absolute; background-color: #15171B; flex-direction: row; justify-content: space-between; align-items: center; padding-left: 12px; padding-right: 12px; }
+.history-title { color: #FFFFFF; font-weight: bold; } .history-sub { color: #8E8E93; }
+.metric-scroll { position: absolute; flex-direction: column; }
+.metric-card { background-color: #101215; flex-direction: column; }
+.metric-head { width: 100%; height: 14px; flex-direction: row; justify-content: space-between; align-items: center; }
+.metric-name, .metric-progress { font-weight: bold; }
+.metric-value-row { width: 100%; height: 28px; flex-direction: row; align-items: flex-end; }
+.metric-value { font-weight: bold; }
+.metric-unit { color: #8E8E93; margin-left: 4px; margin-bottom: 4px; }
+.progress-track { background-color: #24262C; overflow: hidden; flex-direction: row; align-items: center; }
+.metric-foot { height: 12px; margin-top: 5px; flex-direction: row; justify-content: space-between; align-items: center; }
+.metric-goal { color: #8E8E93; }
+.metric-status { text-align: right; }
+</style>

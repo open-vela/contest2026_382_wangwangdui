@@ -1,0 +1,156 @@
+<template>
+  <stack class="today-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <stack class="today-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="circle-surface" if="{{ ready && isCircle && pageIndex === 0 }}" style="left: {{ circleFrameLeft }}px; top: {{ circleFrameTop }}px; height: {{ circleFrameHeight }}px;">
+        <div class="circle-date-row"><div class="circle-day"><text class="circle-day-value">{{ dayText }}</text><text class="circle-month">{{ monthText }}</text></div><div class="circle-date-copy"><text class="circle-weekday">{{ weekdayText }}</text><text class="circle-lunar">{{ lunarText }}</text></div></div>
+        <div class="circle-goal-row"><text class="circle-title">今日</text><text class="circle-goal">{{ goalPercent }}%</text></div>
+        <div class="circle-goal-track"><div class="circle-goal-fill" style="width: {{ goalWidth }};"></div></div>
+        <div class="circle-metrics">
+          <div class="circle-metric-card circle-steps"><text class="circle-metric-label steps-text">步数</text><text class="circle-metric-value">{{ stepsText }}</text></div>
+          <div class="circle-metric-card circle-calories"><text class="circle-metric-label calories-text">热量</text><text class="circle-metric-value">{{ caloriesText }}</text></div>
+          <div class="circle-metric-card circle-heart"><text class="circle-metric-label heart-text">心率</text><text class="circle-metric-value">{{ heartText }}</text></div>
+          <div class="circle-metric-card circle-stand"><text class="circle-metric-label stand-text">站立</text><text class="circle-metric-value">{{ standText }}h</text></div>
+        </div>
+        <div class="circle-action" @click="openCalendar"><text class="circle-action-text">月历</text></div>
+      </div>
+
+      <div class="circle-surface" if="{{ ready && isCircle && pageIndex === 1 }}" style="left: {{ circleFrameLeft }}px; top: {{ circleFrameTop }}px; height: {{ circleFrameHeight }}px;">
+        <div class="circle-calendar-head"><div class="circle-nav" @click="previousMonth"><text class="circle-nav-text">‹</text></div><text class="circle-calendar-title">{{ calendarTitle }}</text><div class="circle-nav" @click="nextMonth"><text class="circle-nav-text">›</text></div></div>
+        <div class="circle-week-row"><text class="circle-week">日</text><text class="circle-week">一</text><text class="circle-week">二</text><text class="circle-week">三</text><text class="circle-week">四</text><text class="circle-week">五</text><text class="circle-week">六</text></div>
+        <div class="circle-calendar-grid"><div class="circle-cell" for="{{ calendarCells }}" tid="key"><text class="circle-cell-text" style="color: {{ $item.textColor }}; background-color: {{ $item.backgroundColor }};">{{ $item.day }}</text></div></div>
+        <div class="circle-action" @click="closeCalendar"><text class="circle-action-text">今日摘要</text></div>
+      </div>
+
+      <div class="pill-surface" if="{{ ready && isPill && pageIndex === 0 }}" style="left: {{ sceneSafeLeft }}px; top: {{ sceneSafeTop }}px; height: {{ sceneSafeHeight }}px;">
+        <div class="pill-date-hero"><div class="pill-day-block"><text class="pill-month-badge">{{ monthText }}</text><text class="pill-day-value">{{ dayText }}</text></div><div class="pill-date-copy"><text class="pill-weekday">{{ weekdayText }}</text><text class="pill-year">{{ yearText }}</text><text class="pill-lunar">{{ lunarText }}</text></div></div>
+        <div class="pill-summary-row"><text class="pill-summary-title">今日摘要</text><text class="pill-goal">目标 {{ goalPercent }}%</text></div>
+        <div class="pill-goal-track"><div class="pill-goal-fill" style="width: {{ goalWidth }};"></div></div>
+        <div class="pill-grid"><div class="pill-card blue" style="margin-bottom: 8px;"><text class="pill-label">步数</text><text class="pill-value pill-steps">{{ stepsText }}</text><text class="pill-unit">步</text></div><div class="pill-card orange" style="margin-left: 8px; margin-bottom: 8px;"><text class="pill-label">热量</text><text class="pill-value">{{ caloriesText }}</text><text class="pill-unit">千卡</text></div><div class="pill-card red"><text class="pill-label">心率</text><text class="pill-value">{{ heartText }}</text><text class="pill-unit">bpm</text></div><div class="pill-card green" style="margin-left: 8px;"><text class="pill-label">站立</text><text class="pill-value">{{ standText }}</text><text class="pill-unit">小时</text></div></div>
+        <div class="pill-calendar-entry" @click="openCalendar"><text class="pill-calendar-entry-title">打开月历</text><text class="pill-calendar-entry-icon">›</text></div>
+      </div>
+
+      <div class="pill-surface" if="{{ ready && isPill && pageIndex === 1 }}" style="left: {{ sceneSafeLeft }}px; top: {{ sceneSafeTop }}px; height: {{ sceneSafeHeight }}px;">
+        <div class="pill-month-hero"><text class="pill-month-number">{{ monthNumberText }}</text><div class="pill-month-copy"><text class="pill-calendar-title">{{ calendarTitle }}</text><text class="pill-calendar-lunar">{{ lunarText }}</text></div></div>
+        <div class="pill-month-controls"><div class="pill-month-button" @click="previousMonth"><text class="pill-month-button-text">‹ 上个月</text></div><div class="pill-month-button" @click="nextMonth"><text class="pill-month-button-text">下个月 ›</text></div></div>
+        <div class="pill-week-row"><text class="pill-week">日</text><text class="pill-week">一</text><text class="pill-week">二</text><text class="pill-week">三</text><text class="pill-week">四</text><text class="pill-week">五</text><text class="pill-week">六</text></div>
+        <div class="pill-calendar-card"><div class="pill-calendar-grid"><div class="pill-cell" for="{{ calendarCells }}" tid="key"><text class="pill-cell-text" style="color: {{ $item.textColor }}; background-color: {{ $item.backgroundColor }};">{{ $item.day }}</text></div></div></div>
+        <div class="pill-back" @click="closeCalendar"><text class="pill-back-text">返回今日摘要</text></div>
+      </div>
+
+      <div class="rect-surface" if="{{ ready && isRect && pageIndex === 0 }}" style="left: {{ sceneSafeLeft }}px; top: {{ sceneSafeTop }}px; height: {{ sceneSafeHeight }}px;">
+        <div class="rect-date-card"><div class="rect-date"><text class="rect-day">{{ dayText }}</text><text class="rect-month">{{ monthText }}</text></div><div class="rect-copy"><text class="rect-weekday">{{ weekdayText }}</text><text class="rect-lunar">{{ lunarText }}</text></div><text class="rect-goal">{{ goalPercent }}%</text></div>
+        <div class="rect-goal-row"><text class="rect-summary-title">今日摘要</text><text class="rect-goal-copy">目标 {{ goalPercent }}%</text></div>
+        <div class="rect-goal-track"><div class="rect-goal-fill" style="width: {{ goalWidth }};"></div></div>
+        <div class="rect-summary-grid">
+          <div class="rect-summary-row"><div class="rect-summary-card blue"><text class="rect-card-label">步数</text><text class="rect-card-value rect-step-value">{{ stepsText }}</text><text class="rect-card-unit">步</text></div><div class="rect-summary-card orange rect-card-right"><text class="rect-card-label">热量</text><text class="rect-card-value">{{ caloriesText }}</text><text class="rect-card-unit">千卡</text></div></div>
+          <div class="rect-summary-row rect-row-bottom"><div class="rect-summary-card red"><text class="rect-card-label">心率</text><text class="rect-card-value">{{ heartText }}</text><text class="rect-card-unit">bpm</text></div><div class="rect-summary-card green rect-card-right"><text class="rect-card-label">站立</text><text class="rect-card-value">{{ standText }}</text><text class="rect-card-unit">小时</text></div></div>
+        </div>
+        <div class="rect-action" @click="openCalendar"><text class="rect-action-text">打开月历</text></div>
+      </div>
+
+      <div class="rect-surface" if="{{ ready && isRect && pageIndex === 1 }}" style="left: {{ sceneSafeLeft }}px; top: {{ sceneSafeTop }}px; height: {{ sceneSafeHeight }}px;">
+        <div class="rect-calendar-head"><div class="rect-nav" @click="previousMonth"><text class="rect-nav-text">‹</text></div><text class="rect-calendar-title">{{ calendarTitle }}</text><div class="rect-nav" @click="nextMonth"><text class="rect-nav-text">›</text></div></div>
+        <div class="rect-week-row"><text class="rect-week">日</text><text class="rect-week">一</text><text class="rect-week">二</text><text class="rect-week">三</text><text class="rect-week">四</text><text class="rect-week">五</text><text class="rect-week">六</text></div>
+        <div class="rect-calendar-grid"><div class="rect-cell" for="{{ calendarCells }}" tid="key"><text class="rect-cell-text" style="color: {{ $item.textColor }}; background-color: {{ $item.backgroundColor }};">{{ $item.day }}</text></div></div>
+        <div class="rect-action rect-calendar-back" @click="closeCalendar"><text class="rect-action-text">返回今日摘要</text></div>
+      </div>
+    </stack>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import { createTodayController } from '../../v2/features/today/controller'
+import todayDesign from '../../v2/design/specs/today'
+import todayView from '../../v2/design/views/today'
+
+export default {
+  private: {
+    ready: false, pageVisible: false, isCircle: false, isPill: false, isRect: false, pageIndex: 0, designPlan: null, todayModel: null,
+    sceneWidth: 192, sceneHeight: 192, sceneSafeLeft: 0, sceneSafeTop: 0, sceneSafeHeight: 192,
+    circleFrameLeft: 28, circleFrameTop: 30, circleFrameHeight: 128,
+    viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%',
+    yearText: '', monthText: '', monthNumberText: '', dayText: '', weekdayText: '', lunarText: '',
+    stepsText: '0', caloriesText: '0', standText: '0', heartText: '--', goalPercent: 0, goalWidth: '0%', calendarTitle: '', calendarCells: []
+  },
+  onInit() {
+    var self = this
+    this.controller = createTodayController(function (model) { self.acceptModel(model) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return todayDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = todayDesign.resolve(profile, scene, safe)
+      self.designPlan = plan
+      if (plan.circleFrame) {
+        self.circleFrameLeft = plan.circleFrame.left
+        self.circleFrameTop = plan.circleFrame.top
+        self.circleFrameHeight = plan.circleFrame.height
+      }
+      self.isCircle = plan.shape === 'circle'; self.isPill = plan.shape === 'pill'; self.isRect = plan.shape === 'rect'; self.ready = true
+      if (self.todayModel) self.applyModel(todayView.project(self.todayModel, plan))
+      if (self.pageVisible) self.controller.start()
+    })
+  },
+  onShow() { this.pageVisible = true; if (this.ready && this.controller) this.controller.start() },
+  onHide() { this.pageVisible = false; if (this.controller) this.controller.stop() },
+  onDestroy() { this.pageVisible = false; if (this.controller) this.controller.stop(); this.todayModel = null; this.calendarCells = [] },
+  onBackPress() { if (this.pageIndex === 1) { this.pageIndex = 0; return true } navigation.back(); return true },
+  acceptModel(model) { this.todayModel = model; if (this.designPlan) this.applyModel(todayView.project(model, this.designPlan)) },
+  applyModel(model) {
+    this.yearText = model.yearText; this.monthText = model.monthText; this.monthNumberText = model.monthNumberText; this.dayText = model.dayText; this.weekdayText = model.weekdayText; this.lunarText = model.lunarText
+    this.stepsText = model.stepsText; this.caloriesText = model.caloriesText; this.standText = model.standText; this.heartText = model.heartText; this.goalPercent = model.goalPercent; this.goalWidth = model.goalWidth; this.calendarTitle = model.calendarTitle; this.calendarCells = model.calendarCells
+  },
+  openCalendar() { this.pageIndex = 1 }, closeCalendar() { this.pageIndex = 0 },
+  previousMonth() { if (this.controller) this.controller.shiftMonth(-1) }, nextMonth() { if (this.controller) this.controller.shiftMonth(1) }
+}
+</script>
+
+<style>
+.today-root, .today-scene { background-color: #000000; }
+.today-scene { position: absolute; left: 0px; top: 0px; }
+.blue { background-color: #101D2B; } .orange { background-color: #2A1B0B; } .red { background-color: #2B1117; } .green { background-color: #10251A; }
+.circle-surface { position: absolute; width: 136px; flex-direction: column; align-items: center; }
+.circle-date-row { width: 136px; height: 42px; border-radius: 20px; background-color: #171318; flex-direction: row; align-items: center; padding: 5px 10px; }
+.circle-day { width: 48px; height: 34px; flex-direction: row; align-items: flex-end; } .circle-day-value { font-size: 27px; color: #FFFFFF; font-weight: bold; } .circle-month { font-size: 6px; color: #FF375F; margin-left: 2px; margin-bottom: 4px; }
+.circle-date-copy { width: 66px; flex-direction: column; margin-left: 4px; } .circle-weekday { font-size: 9px; color: #FFFFFF; font-weight: bold; } .circle-lunar { font-size: 5px; color: #8E8E93; margin-top: 2px; }
+.circle-goal-row { width: 130px; height: 12px; margin-top: 3px; flex-direction: row; justify-content: space-between; } .circle-title { font-size: 8px; color: #FFFFFF; font-weight: bold; } .circle-goal { font-size: 6px; color: #30D158; }
+.circle-goal-track { width: 130px; height: 3px; border-radius: 2px; background-color: #242426; } .circle-goal-fill { height: 3px; border-radius: 2px; background-color: #30D158; }
+.circle-metrics { width: 130px; height: 42px; margin-top: 4px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.circle-metric-card { width: 51px; height: 19px; border-radius: 9px; padding-left: 6px; padding-right: 6px; margin-bottom: 3px; flex-direction: row; justify-content: space-between; align-items: center; }
+.circle-steps { background-color: #101D2B; } .circle-calories { background-color: #2A1B0B; margin-left: 4px; } .circle-heart { background-color: #2B1117; } .circle-stand { background-color: #10251A; margin-left: 4px; }
+.circle-metric-label { width: 18px; font-size: 6px; font-weight: bold; } .steps-text { color: #64D2FF; } .calories-text { color: #FF9F0A; } .heart-text { color: #FF375F; } .stand-text { color: #30D158; }
+.circle-metric-value { width: 33px; font-size: 7px; color: #FFFFFF; font-weight: bold; text-align: right; lines: 1; }
+.circle-action { width: 74px; height: 20px; margin-top: 2px; border-radius: 10px; background-color: #222226; justify-content: center; align-items: center; } .circle-action-text { font-size: 7px; color: #FF375F; }
+.circle-calendar-head { width: 136px; height: 18px; flex-direction: row; justify-content: space-between; align-items: center; } .circle-calendar-title { width: 92px; font-size: 9px; color: #FFFFFF; text-align: center; font-weight: bold; }
+.circle-nav { width: 20px; height: 18px; justify-content: center; align-items: center; } .circle-nav-text { font-size: 15px; color: #FF375F; }
+.circle-week-row, .circle-calendar-grid { width: 133px; flex-direction: row; flex-wrap: wrap; } .circle-week-row { height: 10px; } .circle-week { width: 19px; font-size: 5px; color: #8E8E93; text-align: center; }
+.circle-calendar-grid { height: 78px; } .circle-cell { width: 19px; height: 13px; justify-content: center; align-items: center; } .circle-cell-text { width: 14px; height: 12px; border-radius: 6px; font-size: 6px; text-align: center; }
+.pill-surface { position: absolute; width: 168px; flex-direction: column; align-items: center; }
+.pill-date-hero { width: 168px; height: 88px; border-radius: 26px; background-color: #171318; flex-direction: row; align-items: center; padding: 12px; }
+.pill-day-block { width: 72px; height: 66px; flex-direction: column; } .pill-month-badge { width: 42px; height: 20px; border-radius: 10px; background-color: #FF375F; font-size: 10px; color: #FFFFFF; text-align: center; padding-top: 4px; } .pill-day-value { width: 72px; height: 48px; font-size: 46px; color: #FFFFFF; font-weight: bold; }
+.pill-date-copy { width: 76px; flex-direction: column; margin-left: 4px; } .pill-weekday { font-size: 16px; color: #FF375F; font-weight: bold; } .pill-year { font-size: 10px; color: #D1D1D6; margin-top: 6px; } .pill-lunar { font-size: 8px; color: #8E8E93; margin-top: 5px; }
+.pill-summary-row { width: 168px; height: 24px; margin-top: 10px; flex-direction: row; justify-content: space-between; align-items: center; } .pill-summary-title { font-size: 15px; color: #FFFFFF; font-weight: bold; } .pill-goal { font-size: 9px; color: #30D158; }
+.pill-goal-track { width: 168px; height: 5px; border-radius: 3px; background-color: #242426; } .pill-goal-fill { height: 5px; border-radius: 3px; background-color: #30D158; }
+.pill-grid { width: 168px; height: 144px; margin-top: 10px; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.pill-card { width: 60px; height: 50px; border-radius: 18px; padding: 9px 10px; flex-direction: column; } .pill-label { font-size: 8px; color: #8E8E93; } .pill-value { width: 60px; font-size: 22px; color: #FFFFFF; font-weight: bold; margin-top: 3px; lines: 1; } .pill-steps { font-size: 18px; } .pill-unit { font-size: 7px; color: #8E8E93; margin-top: 1px; }
+.pill-calendar-entry { width: 168px; height: 38px; margin-top: 8px; border-radius: 19px; background-color: #15171B; flex-direction: row; justify-content: space-between; align-items: center; padding: 0px 14px; } .pill-calendar-entry-title { font-size: 11px; color: #FFFFFF; font-weight: bold; } .pill-calendar-entry-icon { font-size: 18px; color: #FF375F; }
+.pill-month-hero { width: 168px; height: 70px; flex-direction: row; align-items: center; } .pill-month-number { width: 68px; font-size: 46px; color: #FF375F; font-weight: bold; } .pill-month-copy { width: 100px; flex-direction: column; } .pill-calendar-title { font-size: 14px; color: #FFFFFF; font-weight: bold; } .pill-calendar-lunar { font-size: 8px; color: #8E8E93; margin-top: 6px; }
+.pill-month-controls { width: 168px; height: 32px; flex-direction: row; justify-content: space-between; } .pill-month-button { width: 80px; height: 30px; border-radius: 15px; background-color: #15171B; justify-content: center; align-items: center; } .pill-month-button-text { font-size: 8px; color: #FFFFFF; }
+.pill-week-row { width: 154px; height: 20px; margin-top: 5px; flex-direction: row; } .pill-week { width: 22px; font-size: 8px; color: #8E8E93; text-align: center; }
+.pill-calendar-card { width: 168px; height: 180px; border-radius: 24px; background-color: #101215; justify-content: center; align-items: center; } .pill-calendar-grid { width: 154px; height: 168px; flex-direction: row; flex-wrap: wrap; } .pill-cell { width: 22px; height: 28px; justify-content: center; align-items: center; } .pill-cell-text { width: 22px; height: 22px; border-radius: 11px; font-size: 9px; text-align: center; }
+.pill-back { width: 132px; height: 34px; margin-top: 9px; border-radius: 17px; background-color: #15171B; justify-content: center; align-items: center; } .pill-back-text { font-size: 9px; color: #FF375F; }
+.rect-surface { position: absolute; width: 164px; height: 228px; flex-direction: column; align-items: center; }
+.rect-date-card { width: 164px; height: 48px; margin-top: 6px; border-radius: 12px; background-color: #15171B; flex-direction: row; align-items: center; }
+.rect-date { width: 56px; height: 48px; flex-direction: row; align-items: center; justify-content: center; } .rect-day { font-size: 30px; color: #FFFFFF; font-weight: bold; } .rect-month { font-size: 7px; color: #FF375F; margin-left: 3px; margin-top: 11px; }
+.rect-copy { width: 76px; flex-direction: column; } .rect-weekday { font-size: 11px; color: #FFFFFF; font-weight: bold; } .rect-lunar { font-size: 6px; color: #8E8E93; margin-top: 3px; } .rect-goal { width: 30px; font-size: 12px; color: #30D158; text-align: center; font-weight: bold; }
+.rect-goal-row { width: 160px; height: 18px; margin-top: 7px; flex-direction: row; justify-content: space-between; align-items: center; } .rect-summary-title { font-size: 9px; color: #FFFFFF; font-weight: bold; } .rect-goal-copy { font-size: 7px; color: #30D158; }
+.rect-goal-track { width: 160px; height: 5px; border-radius: 3px; background-color: #242426; } .rect-goal-fill { height: 5px; border-radius: 3px; background-color: #30D158; }
+.rect-summary-grid { width: 160px; height: 112px; margin-top: 8px; flex-direction: column; }
+.rect-summary-row { width: 160px; height: 52px; flex-direction: row; justify-content: center; } .rect-row-bottom { margin-top: 8px; }
+.rect-summary-card { width: 77px; height: 52px; border-radius: 10px; flex-direction: column; justify-content: center; align-items: center; } .rect-card-right { margin-left: 6px; }
+.rect-card-label { width: 69px; height: 10px; font-size: 6px; color: #8E8E93; text-align: center; } .rect-card-value { width: 69px; height: 22px; margin-top: 2px; font-size: 15px; color: #FFFFFF; font-weight: bold; text-align: center; lines: 1; } .rect-step-value { font-size: 12px; } .rect-card-unit { width: 69px; height: 9px; margin-top: 1px; font-size: 5px; color: #636366; text-align: center; }
+.rect-action { width: 100px; height: 26px; margin-top: 4px; border-radius: 10px; background-color: #222226; justify-content: center; align-items: center; } .rect-action-text { width: 92px; font-size: 7px; color: #FF375F; text-align: center; }
+.rect-calendar-head { width: 164px; height: 32px; margin-top: 8px; flex-direction: row; justify-content: space-between; align-items: center; } .rect-calendar-title { width: 112px; font-size: 12px; color: #FFFFFF; font-weight: bold; text-align: center; } .rect-nav { width: 26px; height: 30px; justify-content: center; align-items: center; } .rect-nav-text { font-size: 19px; color: #FF375F; }
+.rect-week-row, .rect-calendar-grid { width: 161px; flex-direction: row; flex-wrap: wrap; } .rect-week-row { height: 22px; margin-top: 3px; } .rect-week { width: 23px; font-size: 7px; color: #8E8E93; text-align: center; }
+.rect-calendar-grid { height: 144px; margin-top: 2px; } .rect-cell { width: 23px; height: 24px; justify-content: center; align-items: center; } .rect-cell-text { width: 21px; height: 21px; border-radius: 10px; font-size: 8px; text-align: center; }
+.rect-calendar-back { margin-top: 5px; }
+</style>

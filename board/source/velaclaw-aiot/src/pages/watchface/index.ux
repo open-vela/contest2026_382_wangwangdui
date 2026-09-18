@@ -1,0 +1,173 @@
+<template>
+  <stack class="selector-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};" @touchstart="onSwipeBackStart" @touchend="onSwipeBackEnd">
+    <div class="selector-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="circle-surface" if="{{ surface === 'preview-swiper' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+        <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">表盘库</text><text class="back" @click="goBack">返回</text></div>
+        <swiper class="circle-swiper" index="{{ selectedIndex }}" indicator="true" @change="onCircleChange" style="left: {{ previewLeft }}px; top: {{ previewTop }}px; width: {{ previewWidth }}px; height: {{ previewHeight }}px;">
+          <div class="circle-slide" for="{{ faces }}" tid="id" @click="selectFaceById($item.id)">
+            <div class="circle-preview" style="width: {{ previewHeight }}px; height: {{ previewHeight }}px; border-radius: {{ previewRadius }}px; background-color: {{ $item.background }}; border-color: {{ $item.accent }};"><text class="circle-time" style="font-size: {{ previewTimeSize }}px; color: {{ $item.accent }};">08:32</text><text class="circle-face-name" style="font-size: {{ previewNameSize }}px;">{{ $item.name }}</text><text class="circle-tag">{{ $item.tag }}</text><div class="selected-line" if="{{ $item.previewed }}" style="background-color: {{ $item.accent }};"></div></div>
+          </div>
+        </swiper>
+        <text class="circle-footer" style="left: {{ footerLeft }}px; top: {{ footerTop }}px; width: {{ footerWidth }}px; height: {{ footerHeight }}px;">{{ previewName }} · 点按应用</text>
+      </div>
+
+      <div class="pill-surface" if="{{ surface === 'cards-pager' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+        <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">表盘库</text><text class="back" @click="goBack">返回</text></div>
+        <div class="pill-cards" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+          <div class="face-card" for="{{ visibleFaces }}" tid="id" @click="selectFaceById($item.id)" style="width: {{ contentWidth }}px; height: {{ cardHeight }}px; margin-bottom: {{ cardGap }}px; border-color: {{ $item.borderColor }};">
+            <div class="pill-preview" style="width: {{ pillPreviewWidth }}px; height: {{ cardInnerHeight }}px; background-color: {{ $item.background }}; border-color: {{ $item.accent }};"><text class="pill-preview-time" style="color: {{ $item.accent }};">08</text><text class="pill-preview-minute">32</text></div>
+            <div class="face-copy"><div class="face-name-row"><text class="face-name" style="font-size: {{ nameSize }}px;">{{ $item.name }}</text><text class="selected-badge" if="{{ $item.selected }}" style="background-color: {{ $item.accent }};">已选</text></div><text class="face-desc" style="font-size: {{ descSize }}px;">{{ $item.description }}</text><text class="face-tag" style="color: {{ $item.accent }};">{{ $item.tag }}</text></div>
+          </div>
+        </div>
+        <div class="pager" style="left: {{ pagerLeft }}px; top: {{ pagerTop }}px; width: {{ pagerWidth }}px; height: {{ pagerHeight }}px;"><text class="pager-button" @click="previousPage">‹</text><text class="pager-text">{{ pageText }}</text><text class="pager-button" @click="nextPage">›</text></div>
+      </div>
+
+      <div class="rect-surface" if="{{ surface === 'preview-grid' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+        <div class="header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="title" style="font-size: {{ titleSize }}px;">表盘库</text><text class="back" @click="goBack">返回</text></div>
+        <div class="rect-grid" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+          <div class="rect-card" for="{{ rectFaces }}" tid="id" @click="selectFaceById($item.id)" style="width: {{ cardWidth }}px; height: {{ cardHeight }}px; margin-right: {{ $item.marginRight }}px; margin-bottom: {{ $item.marginBottom }}px; border-color: {{ $item.borderColor }};"><div class="rect-preview" style="background-color: {{ $item.background }};"><text class="rect-time" style="font-size: {{ previewTimeSize }}px; color: {{ $item.accent }};">08:32</text><div class="rect-accent" style="background-color: {{ $item.accent }};"></div></div><text class="rect-name" style="font-size: {{ nameSize }}px;">{{ $item.name }}</text><text class="rect-selected" if="{{ $item.selected }}" style="color: {{ $item.accent }};">已选</text></div>
+          <div class="current-card" style="width: {{ cardWidth }}px; height: {{ cardHeight }}px;"><text class="current-label">CURRENT</text><text class="current-name" style="color: {{ selectedAccent }};">{{ selectedName }}</text><div class="current-line" style="background-color: {{ selectedAccent }};"></div><text class="current-hint">点击任意预览应用</text></div>
+        </div>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import swipeBack from '../../v2/app/swipe_back'
+import { createWatchfaceController } from '../../v2/features/watchface/controller'
+import selectorDesign from '../../v2/design/specs/watchface_selector'
+import selectorView from '../../v2/design/views/watchface_selector'
+import pager from '../../v2/design/pager'
+
+export default {
+  private: {
+    surface: '', faces: [], visibleFaces: [], rectFaces: [], selectedIndex: 0, selectedName: '活力数字', selectedAccent: '#0A84FF', previewName: '活力数字', pageIndex: 0, pageText: '1 / 1', pageSize: 2,
+    headerLeft: 22, headerTop: 24, headerWidth: 148, headerHeight: 24, previewLeft: 28, previewTop: 48, previewWidth: 136, previewHeight: 112, footerLeft: 36, footerTop: 160, footerWidth: 120, footerHeight: 16,
+    contentLeft: 12, contentTop: 62, contentWidth: 168, contentHeight: 300, pagerLeft: 12, pagerTop: 400, pagerWidth: 168, pagerHeight: 24,
+    titleSize: 14, previewNameSize: 8, previewTimeSize: 24, previewRadius: 56, cardHeight: 126, cardGap: 12, cardInnerHeight: 106, pillPreviewWidth: 64, nameSize: 14, descSize: 8, cardWidth: 78, gridGap: 8,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    this.controller = createWatchfaceController(function (state) { self.applyState(state) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return selectorDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      self.plan = selectorDesign.resolve(profile, scene, safe)
+      self.applyPlan(self.plan)
+      self.controller.configure(self.plan.faceIds)
+      self.planReady = true
+      if (self.pageVisible) self.loadCurrentFace()
+    })
+  },
+  onShow() { this.pageVisible = true; if (this.planReady) this.loadCurrentFace() },
+  onHide() { this.pageVisible = false },
+  onDestroy() { this.pageVisible = false; this.faces = []; this.visibleFaces = []; this.rectFaces = [] },
+  onBackPress() { navigation.back(); return true },
+  onSwipeBackStart(event) { swipeBack.start(this, event) },
+  onSwipeBackEnd(event) { swipeBack.end(this, event, navigation) },
+  loadCurrentFace() {
+    this.controller.loadFromEntry()
+  },
+
+  applyPlan(plan) {
+    this.surface = plan.surface
+    if (plan.header) { this.headerLeft = plan.header.left; this.headerTop = plan.header.top; this.headerWidth = plan.header.width; this.headerHeight = plan.header.height }
+    if (plan.preview) { this.previewLeft = plan.preview.left; this.previewTop = plan.preview.top; this.previewWidth = plan.preview.width; this.previewHeight = plan.preview.height }
+    if (plan.footer) { this.footerLeft = plan.footer.left; this.footerTop = plan.footer.top; this.footerWidth = plan.footer.width; this.footerHeight = plan.footer.height }
+    if (plan.content) { this.contentLeft = plan.content.left; this.contentTop = plan.content.top; this.contentWidth = plan.content.width; this.contentHeight = plan.content.height }
+    if (plan.pager) { this.pagerLeft = plan.pager.left; this.pagerTop = plan.pager.top; this.pagerWidth = plan.pager.width; this.pagerHeight = plan.pager.height }
+    this.pageSize = plan.pageSize || this.pageSize; this.titleSize = plan.titleSize || this.titleSize; this.previewNameSize = plan.previewNameSize || this.previewNameSize; this.previewTimeSize = plan.previewTimeSize || this.previewTimeSize; this.previewRadius = plan.previewRadius || this.previewRadius
+    this.cardHeight = plan.cardHeight || this.cardHeight; this.cardGap = plan.cardGap || this.cardGap; this.cardInnerHeight = Math.max(50, this.cardHeight - 20); this.pillPreviewWidth = plan.previewWidth || this.pillPreviewWidth; this.nameSize = plan.nameSize || this.nameSize; this.descSize = plan.descSize || this.descSize; this.cardWidth = plan.cardWidth || this.cardWidth; this.gridGap = plan.gap || this.gridGap
+  },
+
+  applyState(state) {
+    var view = selectorView.project(state, this.gridGap)
+    this.selectedIndex = view.selectedIndex
+    this.selectedName = view.selectedName
+    this.selectedAccent = view.selectedAccent
+    this.previewName = view.previewName
+    this.faces = this.withCirclePreview(view.faces, view.selectedIndex)
+    this.rectFaces = view.rectFaces
+    if (!this.userPaged) this.pageIndex = Math.floor((Number(view.selectedIndex) || 0) / Math.max(1, this.pageSize))
+    this.refreshPage()
+  },
+  refreshPage() { var state = pager.resolve(this.faces, this.pageIndex, this.pageSize); this.pageIndex = state.pageIndex; this.pageText = state.pageText; this.visibleFaces = state.items },
+  previousPage() { this.userPaged = true; this.pageIndex--; this.refreshPage() },
+  nextPage() { this.userPaged = true; this.pageIndex++; this.refreshPage() },
+  withCirclePreview(faces, previewIndex) {
+    var source = faces || []
+    var result = []
+    for (var i = 0; i < source.length; i++) {
+      var face = {}
+      for (var key in source[i]) face[key] = source[i][key]
+      face.previewed = i === previewIndex
+      result.push(face)
+    }
+    return result
+  },
+  onCircleChange(event) {
+    var detail = event && event.detail
+    var index = event && event.index
+    if (index === undefined && event) index = event.current
+    if (index === undefined && event) index = event.currentIndex
+    if (index === undefined && detail) index = detail.index
+    if (index === undefined && detail) index = detail.current
+    if (index === undefined && detail) index = detail.currentIndex
+    if (index === undefined || index === null) return
+    index = Math.max(0, Math.min(Number(index) || 0, this.faces.length - 1))
+    this.selectedIndex = index
+    var face = this.faces[index]
+    if (face) this.previewName = face.name
+    this.faces = this.withCirclePreview(this.faces, index)
+  },
+  faceById(id) {
+    var source = this.faces || []
+    for (var i = 0; i < source.length; i++) if (source[i].id === id) return source[i]
+    return null
+  },
+  selectFaceById(id) {
+    this.selectFace(this.faceById(id))
+  },
+  selectFace(face) {
+    var current = face || this.faces[this.selectedIndex]
+    if (!current || this.saving) return
+    var self = this
+    this.saving = true
+    this.controller.setCurrent(current.id)
+    this.userPaged = false
+    this.controller.select(current.id, function () {
+      self.saving = false
+      navigation.back()
+    })
+  },
+  goBack() { navigation.back() }
+}
+</script>
+
+<style>
+.selector-root, .selector-scene, .circle-surface, .pill-surface, .rect-surface { background-color: #000000; }
+.selector-scene, .circle-surface, .pill-surface, .rect-surface { position: absolute; left: 0px; top: 0px; }
+.header, .circle-swiper, .circle-footer, .pill-cards, .pager, .rect-grid { position: absolute; }
+.header { flex-direction: row; justify-content: space-between; align-items: center; }
+.title { color: #FFFFFF; font-weight: bold; } .back { color: #8E8E93; font-size: 8px; text-align: right; }
+.circle-slide { width: 100%; height: 100%; justify-content: center; align-items: center; }
+.circle-preview { border-width: 1px; flex-direction: column; justify-content: center; align-items: center; }
+.circle-time { font-weight: bold; } .circle-face-name { color: #FFFFFF; font-weight: bold; margin-top: 6px; } .circle-tag { color: #8E8E93; font-size: 6px; margin-top: 3px; }
+.selected-line { width: 34px; height: 3px; border-radius: 2px; margin-top: 7px; }
+.circle-footer { color: #8E8E93; font-size: 7px; text-align: center; }
+.pill-cards { flex-direction: column; overflow: hidden; }
+.face-card { border-width: 1px; border-radius: 24px; background-color: #111317; flex-direction: row; align-items: center; padding: 10px; }
+.pill-preview { border-width: 1px; border-radius: 20px; flex-direction: column; justify-content: center; align-items: center; }
+.pill-preview-time { font-size: 30px; font-weight: bold; } .pill-preview-minute { color: #FFFFFF; font-size: 17px; font-weight: bold; }
+.face-copy { flex: 1; margin-left: 10px; flex-direction: column; } .face-name-row { flex-direction: row; justify-content: space-between; align-items: center; }
+.face-name { color: #FFFFFF; font-weight: bold; } .selected-badge { height: 18px; border-radius: 9px; color: #FFFFFF; font-size: 7px; padding-left: 7px; padding-right: 7px; }
+.face-desc { color: #8E8E93; line-height: 13px; margin-top: 7px; } .face-tag { font-size: 7px; margin-top: 8px; }
+.pager { flex-direction: row; justify-content: space-between; align-items: center; } .pager-button { width: 32px; font-size: 22px; color: #0A84FF; text-align: center; } .pager-text { color: #8E8E93; font-size: 8px; }
+.rect-grid { flex-direction: row; flex-wrap: wrap; align-content: flex-start; }
+.rect-card, .current-card { border-radius: 14px; background-color: #111317; padding: 7px; flex-direction: column; }
+.rect-card { border-width: 1px; } .rect-preview { width: 100%; height: 42px; border-radius: 9px; flex-direction: column; justify-content: center; align-items: center; }
+.rect-time { font-weight: bold; } .rect-accent { width: 28px; height: 3px; border-radius: 2px; margin-top: 4px; } .rect-name { color: #FFFFFF; font-weight: bold; margin-top: 5px; } .rect-selected { font-size: 6px; margin-top: 2px; }
+.current-card { margin-left: 8px; justify-content: center; } .current-label { color: #636366; font-size: 6px; letter-spacing: 1px; } .current-name { font-size: 12px; font-weight: bold; margin-top: 5px; } .current-line { width: 36px; height: 3px; border-radius: 2px; margin-top: 6px; } .current-hint { color: #8E8E93; font-size: 6px; margin-top: 6px; }
+</style>

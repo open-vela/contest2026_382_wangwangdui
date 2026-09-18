@@ -1,0 +1,36 @@
+<template>
+  <div class="guard {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};"></div>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+
+export default {
+  private: {
+    ready: false,
+    visible: false,
+    redirectTimer: null,
+    viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%',
+    sceneWidth: 192, sceneHeight: 192, sceneSafeLeft: 0, sceneSafeTop: 0, sceneSafeBottom: 192, sceneSafeHeight: 192
+  },
+  onInit() {
+    var self = this
+    pageRuntime.bind(this, { contentWidth: 136 }, function () { self.ready = true; self.queueClock() })
+  },
+  onShow() { this.visible = true; this.queueClock() },
+  onHide() { this.visible = false; this.clearRedirect() },
+  onDestroy() { this.visible = false; this.clearRedirect() },
+  onBackPress() { this.queueClock(); return true },
+  clearRedirect() { if (this.redirectTimer) { clearTimeout(this.redirectTimer); this.redirectTimer = null } },
+  queueClock() {
+    if (!this.ready || !this.visible || this.redirectTimer) return
+    var self = this
+    this.redirectTimer = setTimeout(function () { self.redirectTimer = null; if (self.visible) navigation.push('/pages/clock') }, 30)
+  }
+}
+</script>
+
+<style>
+.guard { background-color: #000000; }
+</style>

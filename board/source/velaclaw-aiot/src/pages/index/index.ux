@@ -1,0 +1,42 @@
+<template>
+  <stack class="index-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="index-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <div class="content" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+        <text class="title" style="font-size: {{ titleSize }}px;">欢迎打开 VelaClaw</text>
+        <text class="subtitle">V2.3 Declarative Adapter</text>
+        <text class="action" @click="routeDetail" style="height: {{ buttonHeight }}px; border-radius: {{ radius }}px;">打开详情页</text>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import indexDesign from '../../v2/design/apps/index'
+
+export default {
+  private: {
+    contentLeft: 28, contentTop: 44, contentWidth: 136, contentHeight: 108, titleSize: 15, buttonHeight: 32, radius: 16,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    pageRuntime.bind(this, { contentWidth: function (profile) { return indexDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      var plan = indexDesign.resolve(profile, scene, safe)
+      self.contentLeft = plan.region.left; self.contentTop = plan.region.top; self.contentWidth = plan.region.width; self.contentHeight = plan.region.height
+      self.titleSize = plan.titleSize; self.buttonHeight = plan.buttonHeight; self.radius = plan.radius
+    })
+  },
+  routeDetail() { navigation.push('/pages/detail') }
+}
+</script>
+
+<style>
+.index-root, .index-scene { background-color: #000000; }
+.index-scene { position: absolute; left: 0px; top: 0px; }
+.content { position: absolute; flex-direction: column; justify-content: center; align-items: center; }
+.title { width: 100%; color: #FFFFFF; font-weight: bold; text-align: center; }
+.subtitle { width: 100%; color: #636366; font-size: 7px; text-align: center; margin-top: 6px; }
+.action { width: 128px; background-color: #0A84FF; color: #FFFFFF; font-size: 10px; font-weight: bold; text-align: center; margin-top: 16px; }
+</style>

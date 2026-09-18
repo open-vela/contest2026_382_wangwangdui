@@ -1,0 +1,340 @@
+<template>
+  <stack class="launcher-root {{ viewportClass }}" style="position: {{ viewportPosition }}; left: {{ viewportLeft }}; top: {{ viewportTop }}; width: {{ viewportWidth }}; height: {{ viewportHeight }};">
+    <div class="launcher-scene" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;">
+      <stack class="honeycomb" if="{{ surface === 'honeycomb' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" @touchstart="onHoneyStart" @touchmove="onHoneyMove" @touchend="onHoneyEnd">
+        <div class="honey-app" for="{{ circleVisibleSlots }}" tid="slotKey" style="left: {{ $item.left }}px; top: {{ $item.top }}px; opacity: {{ $item.opacity }}; transform: {{ $item.transform }}; background-color: {{ $item.accent }};" @click="tapHoney($item)"><text class="drawn-icon-glyph" style="font-size: {{ $item.glyphSize }}px; color: {{ $item.glyphColor }};">{{ $item.glyph }}</text></div>
+        <div class="honey-label" style="opacity: {{ honeyLabelOpacity }};"><text class="honey-name">{{ focusedLabel }}</text></div>
+        <div class="honey-edge-back" @touchstart="onEdgeBackStart" @touchmove="onEdgeBackMove" @touchend="onEdgeBackEnd"></div>
+      </stack>
+
+      <div class="list-surface" if="{{ surface === 'paged-list' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" @swipe="handleListSwipe">
+        <div class="launcher-header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="launcher-title" style="font-size: {{ titleSize }}px;">应用</text><text class="page-text">{{ pageText }}</text></div>
+        <div class="pill-list" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+          <div class="pill-app" for="{{ pageApps }}" tid="id" @click="openApp($item)" style="width: {{ contentWidth }}px; height: {{ itemHeight }}px; margin-bottom: {{ itemGap }}px; border-radius: {{ itemRadius }}px;"><div class="pill-icon-zone" style="width: {{ iconZoneWidth }}px;"><div class="drawn-icon" style="background-color: {{ $item.accent }};"><text class="drawn-icon-glyph" style="font-size: {{ $item.glyphSize }}px; color: {{ $item.glyphColor }};">{{ $item.glyph }}</text></div></div><text class="pill-name" style="font-size: {{ nameSize }}px;">{{ $item.label }}</text><text class="pill-arrow" style="font-size: {{ arrowSize }}px;">›</text></div>
+        </div>
+        <div class="pager" style="left: {{ pagerLeft }}px; top: {{ pagerTop }}px; width: {{ pagerWidth }}px; height: {{ pagerHeight }}px;"><text class="pager-button" style="color: {{ previousColor }};" @click="previousPage">‹</text><div class="pager-track"><div class="pager-fill" style="width: {{ pageProgress }};"></div></div><text class="pager-button" style="color: {{ nextColor }};" @click="nextPage">›</text></div>
+      </div>
+
+      <div class="grid-surface" if="{{ surface === 'designed-grid' }}" style="width: {{ sceneWidth }}px; height: {{ sceneHeight }}px;" @swipe="handleListSwipe">
+        <div class="launcher-header" style="left: {{ headerLeft }}px; top: {{ headerTop }}px; width: {{ headerWidth }}px; height: {{ headerHeight }}px;"><text class="launcher-title" style="font-size: {{ titleSize }}px;">应用</text><text class="page-text">{{ pageText }}</text></div>
+        <div class="rect-grid" style="left: {{ contentLeft }}px; top: {{ contentTop }}px; width: {{ contentWidth }}px; height: {{ contentHeight }}px;">
+          <div class="grid-app" for="{{ gridApps }}" tid="id" @click="openApp($item)" style="width: {{ itemWidth }}px; height: {{ itemHeight }}px; margin-right: {{ $item.marginRight }}px; margin-bottom: {{ $item.marginBottom }}px; border-radius: {{ itemRadius }}px; border-color: {{ $item.accent }};"><div class="drawn-icon" style="background-color: {{ $item.accent }};"><text class="drawn-icon-glyph" style="font-size: {{ $item.glyphSize }}px; color: {{ $item.glyphColor }};">{{ $item.glyph }}</text></div><text class="grid-name" style="font-size: {{ nameSize }}px;">{{ $item.label }}</text><div class="grid-accent" style="background-color: {{ $item.accent }};"></div></div>
+        </div>
+        <div class="pager" style="left: {{ pagerLeft }}px; top: {{ pagerTop }}px; width: {{ pagerWidth }}px; height: {{ pagerHeight }}px;"><text class="pager-button" style="color: {{ previousColor }};" @click="previousPage">‹</text><div class="pager-track"><div class="pager-fill" style="width: {{ pageProgress }};"></div></div><text class="pager-button" style="color: {{ nextColor }};" @click="nextPage">›</text></div>
+      </div>
+    </div>
+  </stack>
+</template>
+
+<script>
+import pageRuntime from '../../v2/app/page_runtime'
+import navigation from '../../v2/app/navigation'
+import appRoutes from '../../v2/app/app_routes'
+import { createLauncherController } from '../../v2/features/launcher/controller'
+import launcherDesign from '../../v2/design/specs/launcher'
+import launcherView from '../../v2/design/views/launcher'
+import honeycomb from '../../v2/design/engines/honeycomb'
+
+export default {
+  private: {
+    surface: '', pageApps: [], gridApps: [], pageText: '1 / 1', pageProgress: '100%', previousColor: '#3A3A3C', nextColor: '#3A3A3C', hasPrevious: false, hasNext: false,
+    headerLeft: 12, headerTop: 24, headerWidth: 168, headerHeight: 28, contentLeft: 12, contentTop: 60, contentWidth: 168, contentHeight: 300, pagerLeft: 12, pagerTop: 400, pagerWidth: 168, pagerHeight: 24,
+    itemHeight: 62, itemGap: 8, itemWidth: 79, itemRadius: 20, titleSize: 18, nameSize: 14, arrowSize: 20, iconSize: 40, iconRadius: 20, iconZoneWidth: 74, badgeSize: 48, badgeRadius: 24, iconVisualClass: 'icon-40', gridIconVisualClass: 'icon-28', gridGap: 6,
+    circleSlots: [], circleVisibleSlots: [], focusedLabel: '', honeyLabelOpacity: 1, circleFocusIndex: 0, circlePanX: 0, circlePanY: 0, circlePanBounds: null, circleTouchActive: false, circleVelocityX: 0, circleVelocityY: 0, honeyEdgeBack: false, honeyMoving: false, honeyLastFocusIndex: -1,
+    edgeBackActive: false, edgeBackStartX: 0, edgeBackStartY: 0,
+    sceneWidth: 192, sceneHeight: 192, viewportClass: '', viewportPosition: 'relative', viewportLeft: '0px', viewportTop: '0px', viewportWidth: '100%', viewportHeight: '100%'
+  },
+  onInit() {
+    var self = this
+    this.controller = createLauncherController(function (state) { self.applyState(state) })
+    pageRuntime.bind(this, { contentWidth: function (profile) { return launcherDesign.contentWidth(profile) } }, function (profile, scene, safe) {
+      self.plan = launcherDesign.resolve(profile, scene, safe)
+      self.applyPlan(self.plan)
+      self.controller.configure(self.plan.appIds, self.plan.pageSize)
+    })
+  },
+  onHide() { this.circleTouchActive = false; this.honeyEdgeBack = false; this.isOpeningApp = false; clearTimeout(this.openRouteTimer); this.openRouteTimer = null; this.stopHoneycombMotion() },
+  onDestroy() { this.circleTouchActive = false; this.honeyEdgeBack = false; this.isOpeningApp = false; clearTimeout(this.openRouteTimer); this.openRouteTimer = null; this.stopHoneycombMotion(); this.circleSlots = []; this.circleVisibleSlots = []; this.circlePanBounds = null },
+  onBackPress() { navigation.back(); return true },
+
+  returnToClock(event) {
+    if (event && event.preventDefault) event.preventDefault()
+    if (event && event.stopPropagation) event.stopPropagation()
+    this.circleTouchActive = false
+    this.honeyEdgeBack = false
+    this.stopHoneycombMotion()
+    navigation.replace('/pages/clock')
+  },
+
+  applyPlan(plan) {
+    this.surface = plan.surface
+    if (plan.header) { this.headerLeft = plan.header.left; this.headerTop = plan.header.top; this.headerWidth = plan.header.width; this.headerHeight = plan.header.height }
+    if (plan.content) { this.contentLeft = plan.content.left; this.contentTop = plan.content.top; this.contentWidth = plan.content.width; this.contentHeight = plan.content.height }
+    if (plan.pager) { this.pagerLeft = plan.pager.left; this.pagerTop = plan.pager.top; this.pagerWidth = plan.pager.width; this.pagerHeight = plan.pager.height }
+    this.itemHeight = plan.itemHeight || this.itemHeight; this.itemGap = plan.itemGap || plan.gap || this.itemGap; this.itemWidth = plan.itemWidth || this.itemWidth; this.itemRadius = plan.itemRadius || this.itemRadius
+    this.titleSize = plan.titleSize || this.titleSize; this.nameSize = plan.nameSize || this.nameSize; this.arrowSize = plan.arrowSize || this.arrowSize; this.iconSize = plan.iconSize || this.iconSize; this.iconRadius = Math.round(this.iconSize / 2); this.gridGap = plan.gap || 6
+    this.iconZoneWidth = Math.max(this.iconSize + 18, Math.round((this.contentWidth || 0) * 0.44))
+    this.badgeSize = this.iconSize
+    this.badgeRadius = Math.round(this.badgeSize / 2)
+    this.iconVisualClass = this.iconSize <= 28 ? 'icon-28' : (this.iconSize >= 40 ? 'icon-40' : 'icon-34')
+    this.gridIconVisualClass = this.iconSize <= 28 ? 'icon-24' : 'icon-28'
+  },
+
+  applyState(state) {
+    var view = launcherView.project(state, this.plan)
+    this.pageApps = view.pageApps
+    this.gridApps = view.gridApps
+    this.pageText = view.pageText
+    this.pageProgress = view.pageProgress
+    this.previousColor = view.previousColor
+    this.nextColor = view.nextColor
+    this.hasPrevious = !!(state && state.hasPrevious)
+    this.hasNext = !!(state && state.hasNext)
+    if (this.surface === 'honeycomb' && !this.circleSlots.length) this.initHoneycomb(view.allApps)
+  },
+
+  initHoneycomb(apps) {
+    this.circleSlots = honeycomb.buildSlots(apps)
+    this.circlePanBounds = honeycomb.panBounds(this.circleSlots)
+    this.circleFocusIndex = 0
+    var target = honeycomb.panForSlot(this.circleSlots[0], 82)
+    this.circlePanX = target ? target.x : 0
+    this.circlePanY = target ? target.y : 0
+    this.renderHoneycomb()
+  },
+
+  renderHoneycomb() {
+    if (!this.circleSlots.length) { this.circleVisibleSlots = []; return }
+    var activeMotion = this.circleTouchActive || this.honeyMoving
+    var frame = honeycomb.layoutSlots(this.circleSlots, this.circlePanX, this.circlePanY, 0, 0, !activeMotion)
+    this.circleVisibleSlots = honeycomb.visibleSlots(frame.slots, activeMotion ? honeycomb.DEFAULT_VISIBLE_LIMIT : 0)
+    this.lastHoneyRenderAt = Date.now()
+    if (frame.nearestIndex >= 0 && frame.nearestIndex !== this.honeyLastFocusIndex) {
+      this.honeyLastFocusIndex = frame.nearestIndex
+      this.circleFocusIndex = frame.nearestIndex
+      this.focusedLabel = this.circleSlots[frame.nearestIndex].label
+      this.circleFocusDistance = frame.nearestDistance
+    }
+  },
+
+  scheduleHoneycombLayout() {
+    var now = Date.now()
+    var elapsed = now - (this.lastHoneyRenderAt || 0)
+    var frameMs = this.circleTouchActive ? honeycomb.DRAG_FRAME_MS : honeycomb.FRAME_MS
+    if (elapsed >= frameMs) { this.renderHoneycomb(); return }
+    if (this.honeyLayoutTimer) return
+    var self = this
+    this.honeyLayoutTimer = setTimeout(function () {
+      self.honeyLayoutTimer = null
+      self.renderHoneycomb()
+    }, Math.max(1, frameMs - elapsed))
+  },
+
+  stopHoneycombMotion() {
+    clearTimeout(this.honeyLayoutTimer)
+    clearTimeout(this.honeyMotionTimer)
+    this.honeyLayoutTimer = null
+    this.honeyMotionTimer = null
+    this.honeyMoving = false
+    this.circleVelocityX = 0
+    this.circleVelocityY = 0
+  },
+
+  onHoneyStart(event) {
+    if (!event.touches || !event.touches[0]) return
+    this.stopHoneycombMotion()
+    var p = event.touches[0]
+    this.touchStartX = p.pageX; this.touchStartY = p.pageY; this.touchLastX = p.pageX; this.touchLastY = p.pageY; this.touchLastAt = Date.now()
+    this.honeyEdgeBack = p.pageX <= 42
+    this.circleTouchActive = true; this.dragMoved = false; this.honeyLabelOpacity = 0
+  },
+  onHoneyMove(event) {
+    if (!this.circleTouchActive || !event.touches || !event.touches[0]) return
+    var p = event.touches[0]
+    var now = Date.now()
+    var totalX = p.pageX - this.touchStartX
+    var totalY = p.pageY - this.touchStartY
+    var wasDragging = this.dragMoved
+    if (this.honeyEdgeBack && totalX > 26 && Math.abs(totalY) < 42 && totalX > Math.abs(totalY) * 1.15) {
+      if (event.preventDefault) event.preventDefault()
+      if (event.stopPropagation) event.stopPropagation()
+      return
+    }
+    if (!this.dragMoved && (Math.abs(totalX) > honeycomb.DRAG_CAPTURE_DISTANCE || Math.abs(totalY) > honeycomb.DRAG_CAPTURE_DISTANCE)) this.dragMoved = true
+    if (!this.dragMoved) { this.touchLastX = p.pageX; this.touchLastY = p.pageY; this.touchLastAt = now; return }
+    if (event.preventDefault) event.preventDefault()
+    if (event.stopPropagation) event.stopPropagation()
+    var dx = wasDragging ? p.pageX - this.touchLastX : totalX
+    var dy = wasDragging ? p.pageY - this.touchLastY : totalY
+    var dt = Math.max(8, now - (this.touchLastAt || now))
+    this.touchLastX = p.pageX; this.touchLastY = p.pageY; this.touchLastAt = now
+    var pan = honeycomb.nextPan(this.circleSlots, this.circlePanX, this.circlePanY, dx, dy, this.circlePanBounds)
+    this.circlePanX = pan.x; this.circlePanY = pan.y
+    this.circleVelocityX = this.circleVelocityX * 0.45 + (dx / dt) * 0.55
+    this.circleVelocityY = this.circleVelocityY * 0.45 + (dy / dt) * 0.55
+    this.scheduleHoneycombLayout()
+  },
+  onHoneyEnd(event) {
+    if (!this.circleTouchActive) return
+    this.circleTouchActive = false
+    var p = event.changedTouches && event.changedTouches[0]
+    var totalX = p ? p.pageX - this.touchStartX : 0
+    var totalY = p ? p.pageY - this.touchStartY : 0
+    if (this.honeyEdgeBack && totalX > 34 && Math.abs(totalY) < 50 && totalX > Math.abs(totalY) * 1.15) {
+      if (event && event.preventDefault) event.preventDefault()
+      if (event && event.stopPropagation) event.stopPropagation()
+      this.honeyEdgeBack = false; this.stopHoneycombMotion(); navigation.back(); return
+    }
+    this.honeyEdgeBack = false
+    if (!this.dragMoved) { this.honeyLabelOpacity = 1; this.scheduleHoneycombLayout(); return }
+    if (event && event.preventDefault) event.preventDefault()
+    if (event && event.stopPropagation) event.stopPropagation()
+    this.suppressTapUntil = Date.now() + 180
+    var speed = Math.sqrt(this.circleVelocityX * this.circleVelocityX + this.circleVelocityY * this.circleVelocityY)
+    if (speed >= honeycomb.MIN_VELOCITY * 1.7) this.startHoneyInertia(this.circleVelocityX, this.circleVelocityY)
+    else this.settleHoneycomb()
+  },
+
+  onEdgeBackStart(event) {
+    var p = event && event.touches && event.touches[0]
+    if (!p) return
+    this.edgeBackStartX = p.pageX
+    this.edgeBackStartY = p.pageY
+    this.edgeBackActive = true
+  },
+  onEdgeBackMove(event) {
+    if (!this.edgeBackActive) return
+    var p = event && event.touches && event.touches[0]
+    if (!p) return
+    var totalX = p.pageX - this.edgeBackStartX
+    var totalY = p.pageY - this.edgeBackStartY
+    if (totalX > 24 && Math.abs(totalY) < 54 && totalX > Math.abs(totalY) * 1.05) {
+      this.returnToClock(event)
+      this.edgeBackActive = false
+    }
+  },
+  onEdgeBackEnd(event) {
+    if (!this.edgeBackActive) return
+    this.edgeBackActive = false
+    var p = event && event.changedTouches && event.changedTouches[0]
+    if (!p) return
+    var totalX = p.pageX - this.edgeBackStartX
+    var totalY = p.pageY - this.edgeBackStartY
+    if (totalX > 30 && Math.abs(totalY) < 58 && totalX > Math.abs(totalY) * 1.05) this.returnToClock(event)
+  },
+
+  startHoneyInertia(vx, vy) {
+    clearTimeout(this.honeyMotionTimer)
+    this.honeyMoving = true
+    this.circleVelocityX = Number(vx) || 0
+    this.circleVelocityY = Number(vy) || 0
+    this.honeyLabelOpacity = 0.45
+    var self = this
+    var tickCount = 0
+    function tick() {
+      var speed = Math.sqrt(self.circleVelocityX * self.circleVelocityX + self.circleVelocityY * self.circleVelocityY)
+      if (speed < honeycomb.MIN_VELOCITY || tickCount >= 6) { self.honeyMotionTimer = null; self.settleHoneycomb(); return }
+      tickCount++
+      var pan = honeycomb.nextPan(self.circleSlots, self.circlePanX, self.circlePanY, self.circleVelocityX * honeycomb.FRAME_MS, self.circleVelocityY * honeycomb.FRAME_MS, self.circlePanBounds)
+      self.circlePanX = pan.x; self.circlePanY = pan.y
+      self.circleVelocityX *= honeycomb.INERTIA_DECAY
+      self.circleVelocityY *= honeycomb.INERTIA_DECAY
+      self.renderHoneycomb()
+      self.honeyMotionTimer = setTimeout(tick, honeycomb.DRAG_FRAME_MS)
+    }
+    tick()
+  },
+
+  settleHoneycomb() {
+    if (!this.circleSlots.length) return
+    var strict = honeycomb.clampPan(this.circleSlots, this.circlePanX, this.circlePanY, 0, this.circlePanBounds)
+    var frame = honeycomb.layoutSlots(this.circleSlots, strict.x, strict.y, 0, 0)
+    var target = strict
+    if (frame.nearestIndex >= 0 && frame.nearestDistance <= honeycomb.MAGNET_DISTANCE) target = honeycomb.panForSlot(this.circleSlots[frame.nearestIndex]) || strict
+    target = honeycomb.clampPan(this.circleSlots, target.x, target.y, 0, this.circlePanBounds)
+    this.animateHoneyPan(target)
+  },
+
+  animateHoneyPan(target) {
+    clearTimeout(this.honeyMotionTimer)
+    this.honeyMoving = true
+    var startX = this.circlePanX
+    var startY = this.circlePanY
+    var startedAt = Date.now()
+    var duration = 96
+    var self = this
+    function tick() {
+      var progress = Math.min(1, (Date.now() - startedAt) / duration)
+      var eased = 1 - Math.pow(1 - progress, 3)
+      self.circlePanX = startX + (target.x - startX) * eased
+      self.circlePanY = startY + (target.y - startY) * eased
+      self.renderHoneycomb()
+      if (progress >= 1) { self.honeyMotionTimer = null; self.honeyMoving = false; self.honeyLabelOpacity = 1; self.renderHoneycomb(); return }
+      self.honeyMotionTimer = setTimeout(tick, honeycomb.FRAME_MS)
+    }
+    tick()
+  },
+
+  tapHoney(item) {
+    if (!item || Date.now() < (this.suppressTapUntil || 0)) return
+    this.stopHoneycombMotion()
+    this.openApp(item)
+  },
+
+
+  handleListSwipe(event) {
+    if (!event || this.surface === 'honeycomb') return
+    if (event.preventDefault) event.preventDefault()
+    if (event.stopPropagation) event.stopPropagation()
+    if (event.direction === 'down') navigation.back()
+    else if (event.direction === 'left') this.controller.next()
+    else if (event.direction === 'right') this.controller.previous()
+  },
+
+  previousPage() { this.controller.previous() },
+  nextPage() { this.controller.next() },
+  openApp(item) {
+    if (!item || this.isOpeningApp) return
+    var route = appRoutes.routeFor(item.id)
+    this.isOpeningApp = true
+    this.circleTouchActive = false
+    this.stopHoneycombMotion()
+    var self = this
+    clearTimeout(this.openRouteTimer)
+    this.openRouteTimer = setTimeout(function () {
+      self.openRouteTimer = null
+      if (!route) navigation.back()
+      else navigation.push(route)
+      self.isOpeningApp = false
+    }, 1)
+  }
+}
+</script>
+
+<style>
+.launcher-root, .launcher-scene { background-color: #000000; }
+.launcher-scene { position: absolute; left: 0px; top: 0px; }
+.list-surface, .grid-surface { position: absolute; left: 0px; top: 0px; background-color: #000000; }
+.honeycomb { position: absolute; left: 0px; top: 0px; background-color: #000000; }
+.honey-app { position: absolute; width: 48px; height: 48px; border-radius: 24px; transform-origin: 24px 24px; justify-content: center; align-items: center; }
+.honey-edge-back { position: absolute; left: 0px; top: 0px; width: 48px; height: 100%; opacity: 0.01; }
+.honey-label { position: absolute; left: 54px; top: 159px; width: 84px; height: 18px; border-radius: 9px; background-color: #111317; justify-content: center; align-items: center; }
+.honey-name { width: 78px; color: #FFFFFF; font-size: 8px; font-weight: bold; text-align: center; lines: 1; }
+.launcher-header, .pill-list, .rect-grid, .pager { position: absolute; }
+.launcher-header { flex-direction: row; justify-content: space-between; align-items: center; }
+.launcher-title { color: #FFFFFF; font-weight: bold; } .page-text { color: #636366; font-size: 8px; }
+.pill-list { flex-direction: column; overflow: hidden; }
+.pill-app { background-color: #14161A; flex-direction: row; align-items: center; padding-left: 0px; padding-right: 10px; }
+.pill-icon-zone { height: 100%; justify-content: center; align-items: center; }
+.drawn-icon { width: 34px; height: 34px; border-radius: 17px; justify-content: center; align-items: center; }
+.drawn-icon-glyph { width: 34px; height: 34px; text-align: center; font-weight: bold; }
+.pill-name { flex: 1; color: #FFFFFF; font-weight: bold; margin-left: 0px; } .pill-arrow { width: 18px; color: #636366; text-align: right; }
+.rect-grid { flex-direction: row; flex-wrap: wrap; align-content: flex-start; }
+.grid-app { border-width: 1px; background-color: #111317; flex-direction: row; align-items: center; padding: 8px; }
+.grid-name { flex: 1; color: #FFFFFF; font-weight: bold; margin-left: 6px; lines: 1; }
+.grid-accent { width: 3px; height: 24px; border-radius: 2px; margin-left: 4px; }
+.pager { flex-direction: row; justify-content: space-between; align-items: center; }
+.pager-button { width: 28px; height: 24px; font-size: 20px; text-align: center; }
+.pager-track { width: 96px; height: 4px; border-radius: 2px; background-color: #242426; }
+.pager-fill { height: 4px; border-radius: 2px; background-color: #0A84FF; }
+</style>

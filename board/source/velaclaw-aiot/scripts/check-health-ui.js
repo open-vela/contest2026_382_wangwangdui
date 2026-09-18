@@ -1,0 +1,106 @@
+const fs = require('fs')
+const path = require('path')
+
+const root = path.resolve(__dirname, '..')
+const read = function (name) { return fs.readFileSync(path.join(root, name), 'utf8') }
+const manifest = JSON.parse(read('src/manifest.json'))
+const pageSource = read('src/pages/heartrate/heartrate.ux')
+const todaySource = read('src/pages/today/today.ux')
+const clockSource = read('src/pages/clock/clock.ux')
+const powerControllerSource = read('src/runtime/power/controller.js')
+const powerCoreSource = read('src/runtime/power/core.js')
+const healthChannelSource = read('src/capabilities/internal/health_channel.js')
+const heartCapabilitySource = read('src/capabilities/heart_rate.js')
+const spo2CapabilitySource = read('src/capabilities/blood_oxygen.js')
+const stressCapabilitySource = read('src/capabilities/stress.js')
+const domainSource = read('src/domain/health/store.js')
+const metricDomainSource = read('src/domain/health/metrics.js')
+const chartSource = read('src/presentation/mappers/health_chart.js')
+const textSource = read('src/presentation/mappers/health_text.js')
+const watchDataSource = read('src/common/watch_data.js')
+const metricsTestSource = read('test/health_metrics.test.js')
+const errors = []
+
+function requireCondition(condition, message) {
+  if (!condition) errors.push(message)
+}
+
+const featureNames = new Set((manifest.features || []).map(function (feature) { return feature.name }))
+const permissionNames = new Set((manifest.permissions || []).map(function (permission) { return permission.name }))
+
+requireCondition(featureNames.has('service.health'), 'manifest must declare service.health')
+requireCondition(permissionNames.has('hapjs.permission.HEALTH'), 'manifest must request hapjs.permission.HEALTH')
+requireCondition(!manifest.config.background, 'health sampling must remain foreground-only')
+
+requireCondition(healthChannelSource.includes("from '@service.health'"), 'raw health API must live in capability runtime')
+requireCondition(healthChannelSource.includes('health.getRecentSamples'), 'health capability must load recent samples')
+requireCondition(healthChannelSource.includes('health.subscribeSample'), 'health capability must subscribe to live samples')
+requireCondition(healthChannelSource.includes('health.unsubscribeSample'), 'health capability must release subscriptions')
+requireCondition(healthChannelSource.includes('if (listeners.length === 1) startNative()'), 'health capability must lazily start on first consumer')
+requireCondition(healthChannelSource.includes('if (listeners.length === 0) stopNative()'), 'health capability must stop after last consumer')
+requireCondition(heartCapabilitySource.includes("dataTypeName: 'HEART_RATE'"), 'heart-rate gateway must be independent')
+requireCondition(spo2CapabilitySource.includes("dataTypeName: 'SPO2'"), 'SpO2 gateway must be independent')
+requireCondition(stressCapabilitySource.includes("dataTypeName: 'STRESS'"), 'stress gateway must be independent')
+
+requireCondition(domainSource.includes("../../capabilities/heart_rate"), 'health domain must consume heart-rate capability')
+requireCondition(domainSource.includes("../../capabilities/blood_oxygen"), 'health domain must consume SpO2 capability')
+requireCondition(domainSource.includes("../../capabilities/stress"), 'health domain must consume stress capability')
+requireCondition(!domainSource.includes('platform/vela'), 'health domain must not depend on legacy platform adapters')
+requireCondition(domainSource.includes("var source = metrics && metrics.length ? metrics : ['heartRate']"), 'default health consumer must activate heart rate only')
+requireCondition(domainSource.includes('subscribeAll'), 'all-metric pages must opt into all health capabilities')
+requireCondition(domainSource.includes('heartRateChanged'), 'health domain must own heart-rate dirty tracking')
+requireCondition(domainSource.includes('spo2Changed'), 'health domain must own SpO2 dirty tracking')
+requireCondition(domainSource.includes('stressChanged'), 'health domain must own stress dirty tracking')
+requireCondition(!domainSource.includes('watch_data'), 'health domain must not depend on watch_data')
+requireCondition(metricDomainSource.includes('function pushWindow'), 'health domain metrics must provide a sliding window')
+requireCondition(metricDomainSource.includes('function stats'), 'health domain metrics must provide statistics')
+requireCondition(chartSource.includes('function barHeights'), 'presentation chart mapper must own bar geometry')
+requireCondition(chartSource.includes('function sampleBarHeight'), 'presentation chart mapper must project semantic samples')
+requireCondition(textSource.includes('function codeMessage'), 'presentation text mapper must normalize service errors')
+
+;['心率', '血氧', '压力'].forEach(function (label) {
+  requireCondition(pageSource.includes(label), 'health card is missing: ' + label)
+})
+requireCondition(pageSource.includes('healthDomain.start(this.healthListener)'), 'health page must subscribe through the health domain compatibility entry')
+requireCondition(pageSource.includes('healthDomain.stop(this.healthListener)'), 'health page must release the health domain subscription')
+requireCondition(pageSource.includes('scroll-y="true"'), 'health cards must remain vertically scrollable')
+requireCondition(pageSource.includes('{{ viewportClass }}'), 'health page must use the shared viewport')
+requireCondition(pageSource.includes('pageViewport.bind('), 'health page must bind the shared viewport')
+requireCondition(pageSource.includes('healthMetrics.barHeights'), 'health trends must use adaptive bar heights')
+requireCondition(pageSource.includes('spo2Trend'), 'SpO2 card must include a sample trend')
+requireCondition(pageSource.includes('stressTrend'), 'stress card must include a sample trend')
+requireCondition(pageSource.includes('stressAvg'), 'stress card must expose window statistics')
+
+requireCondition(todaySource.includes("import healthStore from '../../domain/health/store'"), 'today page must consume health domain directly')
+requireCondition(todaySource.includes('healthStore.subscribe(this.healthListener)'), 'today page must use default heart-rate-only health subscription')
+requireCondition(todaySource.includes('healthStore.unsubscribe(this.healthListener)'), 'today page must release health store subscription')
+requireCondition(todaySource.includes("import activityStore from '../../domain/activity/store'"), 'today page must consume persisted activity domain directly')
+requireCondition(todaySource.includes('activityStore.hydrate'), 'today page must hydrate cross-page activity state on show')
+requireCondition(!todaySource.includes('watch_data'), 'today page must not regress to watch_data')
+
+requireCondition(clockSource.includes("../../runtime/power/controller"), 'clock must delegate health/power cadence to Power Runtime')
+requireCondition(clockSource.includes('applyRuntimeHeartRate'), 'clock must only consume semantic HR events from runtime')
+requireCondition(!clockSource.includes('healthSampleService'), 'clock must not own the legacy health sampling service')
+requireCondition(!clockSource.includes('startWatchFaceHealth'), 'clock must not own health subscription lifecycle')
+requireCondition(!clockSource.includes('stopWatchFaceHealth'), 'clock must not own health release lifecycle')
+requireCondition(!clockSource.includes('setInterval('), 'clock must not own power/health cadence timers')
+requireCondition(powerControllerSource.includes("import heartRate from '../../capabilities/heart_rate'"), 'Power controller must inject heart-rate capability with native module semantics')
+requireCondition(powerControllerSource.includes('core.create({'), 'Power controller must inject capabilities into executable core')
+requireCondition(powerCoreSource.includes("currentMode === stateMachine.MODE_ACTIVE) onHeartRate(sample, 'live')"), 'ACTIVE must still apply fresh HR immediately')
+requireCondition(powerCoreSource.includes("onHeartRate(latestHeartSample, 'cadence')"), 'DIM must still publish buffered HR on its lower cadence')
+requireCondition(powerCoreSource.includes('powerPolicy.get(mode).healthEnabled'), 'Power Runtime must derive health lifecycle from power policy')
+requireCondition(powerCoreSource.includes('else stopHealth()'), 'Power Runtime must stop HR in SLEEP')
+requireCondition(powerCoreSource.includes("../../domain/power/raise_wake"), 'raw motion must pass through semantic raise-wake detection')
+requireCondition(!clockSource.includes('watchData.tickHeartRate()'), 'watch face must not generate a second random heart rate')
+
+requireCondition(watchDataSource.includes("../domain/health/recent"), 'watch_data compatibility layer must delegate recent heart state')
+requireCondition(watchDataSource.includes("../presentation/mappers/watch_snapshot"), 'watch_data compatibility layer must delegate display mapping')
+requireCondition(!watchDataSource.includes('barHeight:'), 'watch_data must not own chart geometry')
+requireCondition(metricsTestSource.includes('自适应柱高保持起伏'), 'health metrics tests must cover visible bar fluctuation')
+
+if (errors.length > 0) {
+  errors.forEach(function (error) { console.error('health UI error: ' + error) })
+  process.exitCode = 1
+} else {
+  console.log('Checked health capability/domain/runtime/presentation boundaries and wearable UI integration')
+}
