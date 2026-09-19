@@ -212,14 +212,6 @@ npm run start
 npm run release
 ```
 
-布局辅助工具：
-
-```bash
-npm run studio
-```
-
-Studio 的使用方式和安全边界见 [Layout Studio](docs/LAYOUT_STUDIO.md)。
-
 ## 辅助设计工具：Design Studio
 
 `tools/design-studio/` 是一个本地网页辅助设计工具（JSON 型提示词生成器），用一个和 PowerPoint 相近的操作方式产出**可直接交给 agent 的设计 JSON**：
@@ -294,7 +286,7 @@ quickapp/velaclaw-aiot/
 │   │   └── system/         # 设备 Profile 与系统抽象
 │   ├── pages/              # Vela 页面与生命周期绑定
 │   └── components/         # 可复用组件
-├── tools/layout-studio/    # 本地布局辅助工具
+├── tools/design-studio/    # 本地辅助设计工具（JSON 提示词生成器）
 ├── scripts/                # 构建、检查和模拟器辅助脚本
 ├── test/                   # 契约与纯逻辑测试
 ├── docs/                   # 长期维护文档
@@ -313,7 +305,7 @@ quickapp/velaclaw-aiot/
 - [Architecture](docs/ARCHITECTURE.md)
 - [Design System](docs/DESIGN_SYSTEM.md)
 - [Innovations](docs/INNOVATIONS.md)
-- [Layout Studio](docs/LAYOUT_STUDIO.md)
+- [Design Studio](tools/design-studio/README.md)
 - [Workout and Sync](docs/WORKOUT_AND_SYNC.md)
 - [Compatibility](docs/COMPATIBILITY.md)
 - [Contributing](CONTRIBUTING.md)

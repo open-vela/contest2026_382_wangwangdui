@@ -72,7 +72,7 @@ npm run check
 npm run build
 ```
 
-涉及 Layout Studio 时运行：
+涉及 Design Studio 时运行：
 
 ```bash
 npm run studio:check
@@ -93,7 +93,7 @@ npm run bundle:audit
 - 用户可见能力变化：更新 `README.md` 与 `docs/README_EN.md`。
 - 架构边界变化：更新 `docs/ARCHITECTURE.md`。
 - 形态和设计规则变化：更新 `docs/DESIGN_SYSTEM.md`。
-- Layout Studio 行为变化：更新 `docs/LAYOUT_STUDIO.md`。
+- Design Studio 行为变化：更新 `tools/design-studio/README.md`。
 - 运动与同步边界变化：更新 `docs/WORKOUT_AND_SYNC.md`。
 - 模拟器、系统 API 或设备差异：更新 `docs/COMPATIBILITY.md`。
 - 能体现项目方法论的新增能力：更新 `docs/INNOVATIONS.md`。

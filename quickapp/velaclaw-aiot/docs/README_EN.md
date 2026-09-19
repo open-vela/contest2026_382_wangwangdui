@@ -170,7 +170,7 @@ src/
 ├── pages/              # Vela pages and lifecycle binding
 └── components/         # reusable components
 
-tools/layout-studio/    # local visual layout tool
+tools/design-studio/    # local assisted design tool (JSON prompt generator)
 scripts/                # build and verification utilities
 test/                   # contract and pure-logic tests
 docs/                   # maintained project documentation
@@ -183,7 +183,7 @@ docs/                   # maintained project documentation
 - [Architecture](ARCHITECTURE.md)
 - [Design System](DESIGN_SYSTEM.md)
 - [Innovations](INNOVATIONS.md)
-- [Layout Studio](LAYOUT_STUDIO.md)
+- [Design Studio](../tools/design-studio/README.md)
 - [Workout and Sync](WORKOUT_AND_SYNC.md)
 - [Compatibility](COMPATIBILITY.md)
 - [Contributing](../CONTRIBUTING.md)
