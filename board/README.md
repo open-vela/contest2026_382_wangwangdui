@@ -67,6 +67,38 @@ feca0789cca59949eeba32290492edfdb81c5b1ff32101e96a04d7f879af87bc  board/rpk/com.
 
 本次验证环境中 `aiot build` 输出的 Node 版本为 `v24.16.0`，工具链版本为 `aiot-toolkit 2.0.5`。
 
+## 目标真机资料
+
+本作品面向 openvela / NuttX 真机环境下的圆屏手表 Quick App 验证，开发和调试过程中使用的目标板信息如下：
+
+- SoC / 板级：Sifli SF32LB52 系列，实际验证使用黄山派 / LCKFB 黄山派相关配置。
+- 屏幕：480 x 480 圆形 LCD。
+- 触摸：`/dev/input0` 单点触摸输入。
+- LCD 设备：`/dev/lcd0`。
+- 串口：USB 转串口，常用设备为 `/dev/ttyUSB0`。
+- 串口参数：`1000000` baud，8N1，无流控。
+- 系统 Shell：NuttShell，启动后可看到 `nsh>` 提示符。
+
+常用串口连接命令：
+
+```bash
+picocom -b 1000000 --noreset --lower-rts --lower-dtr /dev/ttyUSB0
+```
+
+调试中使用过的应用启动命令示例：
+
+```text
+vapp hap://app/com.application.watch.demo &
+```
+
+早期调试曾使用过旧包名 `com.openvela.contest2026.team382.vela_band`。当前交付 RPK 和源码快照使用的包名为：
+
+```text
+com.application.watch.demo
+```
+
+若将应用集成进板级固件，需要确保 RPK 或解包后的应用目录被放入目标系统的应用数据目录，并且 `vapp` 启动 URI 与 `src/manifest.json` 中的 `package` 保持一致。
+
 ## 从源码构建
 
 ```bash
@@ -126,6 +158,25 @@ cmake_out/lckfb_huangshan_pi/nuttx.bin
 SHA256: 28950645cd8b1f4ed00865e7939e15b5d4b4b886b5eeb01a5717c8b2e4e1a33c
 ```
 
+真机调试中确认过以下基础链路：
+
+- 系统可进入 NuttShell。
+- `vapp` 可启动 Quick App 运行时。
+- LVGL framebuffer loop 可启动。
+- LCD `/dev/lcd0` 可打开。
+- 触摸 `/dev/input0` 可打开。
+- 应用可以进入表盘、应用列表、设置、健康、运动等主要页面。
+
+真机问题定位过程中重点修复和规避过：
+
+- 应用首屏白屏和页面加载失败。
+- RPK / 固件集成后资源路径不一致。
+- 表盘快速左右切换与表盘库状态不同步。
+- 应用内部右滑返回。
+- 蜂窝 / 应用列表在低性能硬件上的卡顿和图标显示问题。
+- `system.storage` 数据库不可用时的降级存储。
+- 缺失 `system.brightness`、`system.sensor`、`service.health`、`system.battery`、`system.vibrator` 等 native feature 时的兼容处理。
+
 ## 功能范围
 
 当前应用覆盖：
@@ -138,6 +189,20 @@ SHA256: 28950645cd8b1f4ed00865e7939e15b5d4b4b886b5eeb01a5717c8b2e4e1a33c
 - 设置、亮度、震动、动作诊断、自检等页面
 
 部分能力依赖目标硬件和 Vela native feature 支持。硬件或系统 feature 不可用时，应用会使用降级逻辑或演示数据。
+
+## 真机能力限制与降级
+
+当前目标硬件和系统镜像并不保证提供所有 watch native feature。已知验证情况如下：
+
+- 亮度页：UI 和设置项可用；若系统未提供 `system.brightness` 或底层背光控制未接入，滑动条只保存状态，不保证改变真实屏幕亮度。
+- 振动页：若硬件或系统未提供 `system.vibrator`，页面保留交互和提示，不触发真实马达。
+- 运动 / 心率 / 趋势：若无健康传感器或 `service.health`，使用模拟数据或降级数据展示。
+- 加速度 / 动作诊断：若缺少 `system.sensor` 或对应 IMU 通道，页面展示兼容状态。
+- 电量：若缺少 `system.battery`，使用演示值或保守默认值。
+- 同步 / 互联：若缺少 `system.interconnect`，保留页面入口和演示状态。
+- 通知：若系统事件能力不完整，通知演示页面保留本地展示能力。
+
+这些限制属于目标板硬件能力或系统 native feature 暴露范围，不影响 RPK 构建和基础 UI 路由验证。
 
 ## PR 注意事项
 
