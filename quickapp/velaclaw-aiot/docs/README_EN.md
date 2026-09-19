@@ -170,11 +170,12 @@ src/
 ├── pages/              # Vela pages and lifecycle binding
 └── components/         # reusable components
 
-tools/design-studio/    # local assisted design tool (JSON prompt generator)
 scripts/                # build and verification utilities
 test/                   # contract and pure-logic tests
 docs/                   # maintained project documentation
 ```
+
+The local assisted design tool (Design Studio, a JSON prompt generator) is no longer inside this app project; it lives at the repository root in `tools/design-studio/`.
 
 `src/common` and `src/presentation` still contain compatibility code or resources. New work should prefer the Capability → Domain → Feature → Design → Page dependency direction.
 
@@ -183,7 +184,7 @@ docs/                   # maintained project documentation
 - [Architecture](ARCHITECTURE.md)
 - [Design System](DESIGN_SYSTEM.md)
 - [Innovations](INNOVATIONS.md)
-- [Design Studio](../tools/design-studio/README.md)
+- [Design Studio](../../../tools/design-studio/README.md)
 - [Workout and Sync](WORKOUT_AND_SYNC.md)
 - [Compatibility](COMPATIBILITY.md)
 - [Contributing](../CONTRIBUTING.md)
