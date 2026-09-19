@@ -4,14 +4,24 @@
 
 它取代了旧的 `tools/layout-studio`（Recipe 参数表单）。旧工具调整的是已有 `.ux` 的数值；新工具先产出设计与交互意图，agent 再把 JSON 变成代码。
 
+工具当前位于仓库根目录 `tools/design-studio/`，已经不再放在应用工程内部：它可以脱离 `quickapp/velaclaw-aiot` 单独打开，也不需要先安装应用依赖。
+
 ## 启动
 
 ```bash
+cd tools/design-studio
+node server.js                 # http://127.0.0.1:4174
+node server.js --no-open       # 不自动打开浏览器
+DESIGN_STUDIO_PORT=4200 node server.js   # 自定义端口
+node test/design_studio.test.js          # 静态检查 + 几何/导出契约测试
+```
+
+也可以沿用应用工程里的转发脚本：
+
+```bash
 cd quickapp/velaclaw-aiot
-npm run studio          # http://127.0.0.1:4174
-node tools/design-studio/server.js --no-open   # 不自动打开浏览器
-DESIGN_STUDIO_PORT=4200 npm run studio         # 自定义端口
-npm run studio:check    # 静态检查 + 几何/导出契约测试
+npm run studio          # 等价于 node ../../tools/design-studio/server.js
+npm run studio:check    # 等价于 node ../../tools/design-studio/test/design_studio.test.js
 ```
 
 服务只监听 `127.0.0.1`，没有第三方依赖，前端没有构建步骤（原生 ES module）。

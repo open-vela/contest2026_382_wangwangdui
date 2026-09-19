@@ -214,11 +214,14 @@ npm run release
 
 ## 辅助设计工具：Design Studio
 
-`tools/design-studio/` 是一个本地网页辅助设计工具（JSON 型提示词生成器），用一个和 PowerPoint 相近的操作方式产出**可直接交给 agent 的设计 JSON**：
+仓库根目录的 `tools/design-studio/` 是一个本地网页辅助设计工具（JSON 型提示词生成器），用一个和 PowerPoint 相近的操作方式产出**可直接交给 agent 的设计 JSON**。工具已移出本应用工程，也可以从应用工程里转发调用：
 
 ```bash
 npm run studio        # http://127.0.0.1:4174
 npm run studio:check  # 工具自身的几何 / 导出契约测试
+
+# 直接从工具目录运行
+cd ../../tools/design-studio && node server.js
 ```
 
 - 多设备画板（Rect / Circle / Pill / Phone），组件拖放、缩放、旋转、吸附、对齐、图层与组合；
@@ -227,7 +230,7 @@ npm run studio:check  # 工具自身的几何 / 导出契约测试
 - 导出五个视图：Agent 提示词 JSON、中文摘要、Vela `<template>` 脚手架、字段说明、原始文档；
 - 零依赖：服务端只用 Node 内置模块，前端是原生 ES module（无构建步骤）。
 
-它取代了早期的 Recipe 参数表单工具（`tools/layout-studio`），后者已删除。详细用法见 [tools/design-studio/README.md](tools/design-studio/README.md)。
+它取代了早期的 Recipe 参数表单工具（`tools/layout-studio`），后者已删除。详细用法见 [tools/design-studio/README.md](../../tools/design-studio/README.md)。
 
 ## 番茄钟入口
 
@@ -286,7 +289,6 @@ quickapp/velaclaw-aiot/
 │   │   └── system/         # 设备 Profile 与系统抽象
 │   ├── pages/              # Vela 页面与生命周期绑定
 │   └── components/         # 可复用组件
-├── tools/design-studio/    # 本地辅助设计工具（JSON 提示词生成器）
 ├── scripts/                # 构建、检查和模拟器辅助脚本
 ├── test/                   # 契约与纯逻辑测试
 ├── docs/                   # 长期维护文档
@@ -294,6 +296,8 @@ quickapp/velaclaw-aiot/
 ├── LICENSE
 └── NOTICE
 ```
+
+本地辅助设计工具（Design Studio / JSON 提示词生成器）不在本工程内，位于仓库根目录 `tools/design-studio/`，见 [tools/design-studio/README.md](../../tools/design-studio/README.md)。
 
 - [V2 Architecture](docs/ARCHITECTURE.md)
 - [Wearable Design System](docs/DESIGN_SYSTEM.md)
@@ -305,7 +309,7 @@ quickapp/velaclaw-aiot/
 - [Architecture](docs/ARCHITECTURE.md)
 - [Design System](docs/DESIGN_SYSTEM.md)
 - [Innovations](docs/INNOVATIONS.md)
-- [Design Studio](tools/design-studio/README.md)
+- [Design Studio](../../tools/design-studio/README.md)
 - [Workout and Sync](docs/WORKOUT_AND_SYNC.md)
 - [Compatibility](docs/COMPATIBILITY.md)
 - [Contributing](CONTRIBUTING.md)
